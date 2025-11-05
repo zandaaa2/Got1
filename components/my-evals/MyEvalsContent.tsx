@@ -79,7 +79,15 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
 
       const { data: evaluationsData, error: evaluationsError } = await query
 
-      if (evaluationsError) throw evaluationsError
+      if (evaluationsError) {
+        console.error('Error loading evaluations:', evaluationsError)
+        console.error('Error details:', JSON.stringify(evaluationsError, null, 2))
+        console.error('Error code:', evaluationsError.code)
+        console.error('Error message:', evaluationsError.message)
+        throw evaluationsError
+      }
+      
+      console.log('✅ Loaded evaluations from database:', evaluationsData?.length || 0)
 
       if (!evaluationsData || evaluationsData.length === 0) {
         setEvaluations([])
@@ -130,8 +138,10 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
       })
 
       setEvaluations(evaluationsWithProfiles)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading evaluations:', error)
+      console.error('Error message:', error?.message)
+      console.error('Error details:', JSON.stringify(error, null, 2))
       setEvaluations([])
     } finally {
       setLoading(false)
