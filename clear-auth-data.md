@@ -27,3 +27,4 @@ The `sb-placeholder-auth-token-code-verifier` cookie is leftover from a previous
 The "placeholder" name suggests the PKCE verifier wasn't stored correctly. This is likely causing the authentication failures.
 
 
+

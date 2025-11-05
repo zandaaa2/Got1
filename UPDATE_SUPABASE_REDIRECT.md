@@ -28,3 +28,4 @@ The PKCE error is happening because Supabase is redirecting to `/api/auth/callba
 The key is that Supabase must redirect **directly** to `/auth/callback` (client-side), not `/api/auth/callback` (server-side), for the PKCE flow to work correctly.
 
 
+

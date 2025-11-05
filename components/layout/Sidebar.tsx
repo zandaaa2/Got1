@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
@@ -17,6 +18,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     }
     return false
   })
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -37,12 +39,33 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
         isCollapsed ? 'w-16' : 'w-64'
       } p-6`}
     >
-      <div className="mb-8 flex items-center justify-between">
-        {!isCollapsed && (
-          <Link href="/" className="text-2xl font-bold text-black hover:opacity-70 transition-opacity">
-            Got1
-          </Link>
-        )}
+      <div className={`mb-8 ${isCollapsed ? 'flex flex-col items-center gap-4' : 'flex items-center justify-between'}`}>
+        <Link 
+          href="/" 
+          className="hover:opacity-70 transition-opacity"
+        >
+          {imageError ? (
+            <span className="text-2xl font-bold text-black">Got1</span>
+          ) : isCollapsed ? (
+            <Image
+              src="/logos/got1-icon.png"
+              alt="Got1"
+              width={48}
+              height={48}
+              className="object-contain"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <Image
+              src="/logos/got1-full-logo.png"
+              alt="Got1"
+              width={120}
+              height={40}
+              className="object-contain"
+              onError={() => setImageError(true)}
+            />
+          )}
+        </Link>
         <button
           onClick={toggleSidebar}
           className="p-2 hover:bg-gray-100 rounded transition-colors"

@@ -30,3 +30,4 @@ If Supabase is still redirecting to `/api/auth/callback`, there might be:
 - Site URL mismatch causing Supabase to use a different redirect
 
 
+

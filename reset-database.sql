@@ -42,3 +42,4 @@ DROP INDEX IF EXISTS idx_scout_applications_user_id;
 DROP INDEX IF EXISTS idx_scout_applications_status;
 
 
+

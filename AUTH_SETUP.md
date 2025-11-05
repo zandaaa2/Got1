@@ -120,3 +120,4 @@ Got1 supports two authentication methods:
 - Use environment variables for all secrets
 
 
+
