@@ -69,7 +69,7 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
         if (error) throw error
         
         // Wait for session cookies to be set
-        await new Promise(resolve => setTimeout(resolve, 300))
+        await new Promise(resolve => setTimeout(resolve, 500))
         
         // Verify session is accessible
         const { data: { session } } = await supabase.auth.getSession()
@@ -81,8 +81,10 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
         setLoading(false)
         onClose() // Close modal on successful signin
         
-        // Use window.location for full page reload to ensure server-side session check works
-        window.location.href = '/' // Refresh to show logged-in state
+        // Use router refresh and push to ensure server components re-render with new session
+        // Add timestamp to force fresh server render
+        const timestamp = Date.now()
+        window.location.href = `/?refresh=${timestamp}` // Full reload with cache bust
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')

@@ -79,11 +79,12 @@ function AuthCallbackContent() {
           // Wait a bit more to ensure cookies are fully set
           await new Promise(resolve => setTimeout(resolve, 500))
 
-          // Use window.location for full page reload to ensure session is synced
+          // Use window.location with cache bust to force fresh server render
+          const timestamp = Date.now()
           if (!profile) {
-            window.location.href = '/profile/edit'
+            window.location.href = `/profile/edit?refresh=${timestamp}`
           } else {
-            window.location.href = '/'
+            window.location.href = `/?refresh=${timestamp}`
           }
 
           return
@@ -320,11 +321,12 @@ function AuthCallbackContent() {
         // Wait a bit more to ensure cookies are fully set
         await new Promise(resolve => setTimeout(resolve, 500))
 
-        // Use window.location for full page reload to ensure session is synced
+        // Use window.location with cache bust to force fresh server render
+        const timestamp = Date.now()
         if (!profile) {
-          window.location.href = '/profile/edit'
+          window.location.href = `/profile/edit?refresh=${timestamp}`
         } else {
-          window.location.href = '/'
+          window.location.href = `/?refresh=${timestamp}`
         }
       } catch (error: any) {
         console.error('Callback error:', error)

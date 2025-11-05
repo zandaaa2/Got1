@@ -50,7 +50,7 @@ export default function AuthInline({ mode }: AuthInlineProps) {
         if (error) throw error
         
         // Wait for session cookies to be set
-        await new Promise(resolve => setTimeout(resolve, 300))
+        await new Promise(resolve => setTimeout(resolve, 500))
         
         // Verify session is accessible
         const { data: { session } } = await supabase.auth.getSession()
@@ -61,8 +61,9 @@ export default function AuthInline({ mode }: AuthInlineProps) {
         
         setLoading(false)
         
-        // Use window.location for full page reload to ensure server-side session check works
-        window.location.href = '/' // Refresh to show logged-in state
+        // Use window.location with cache bust to force fresh server render
+        const timestamp = Date.now()
+        window.location.href = `/?refresh=${timestamp}` // Full reload with cache bust
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')
