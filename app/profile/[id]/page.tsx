@@ -4,6 +4,7 @@ import ProfileView from '@/components/profile/ProfileView'
 import Sidebar from '@/components/layout/Sidebar'
 import ShareButton from '@/components/shared/ShareButton'
 import DynamicLayout from '@/components/layout/DynamicLayout'
+import AuthButtons from '@/components/auth/AuthButtons'
 import Link from 'next/link'
 
 export default async function ProfilePage({
@@ -56,20 +57,7 @@ export default async function ProfilePage({
       </Link>
     </>
   ) : (
-    <>
-      <a
-        href="/auth/signin"
-        className="px-4 py-2 border border-black rounded text-black hover:bg-gray-50"
-      >
-        Sign In
-      </a>
-      <a
-        href="/auth/signup"
-        className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
-      >
-        Sign Up
-      </a>
-    </>
+    <AuthButtons />
   )
 
   return (
