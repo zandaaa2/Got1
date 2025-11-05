@@ -31,7 +31,7 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
       {/* Hero Section */}
       <div className="text-center mb-0 pt-8 sm:pt-12 md:pt-16 lg:pt-20 pb-0 px-4 sm:px-6 md:px-8 lg:px-12 bg-gradient-to-b from-gray-50 to-white rounded-xl md:rounded-2xl border-2 border-gray-100 shadow-sm max-w-6xl mx-auto">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-black mb-6 sm:mb-8 md:mb-10 leading-tight max-w-4xl mx-auto">
-          The marketplace connecting high school athletes* with college scouts for professional film evaluations
+          The marketplace connecting high school athletes with college scouts for HUDL film evaluations.
         </h1>
         {!hasSession && (
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6 sm:mb-8">
@@ -49,7 +49,7 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
             </button>
           </div>
         )}
-        <p className="text-xs sm:text-sm md:text-base text-gray-500 italic">
+        <p className="text-xs sm:text-sm md:text-base text-gray-500 italic mb-6 sm:mb-8 md:mb-10">
           *Must be 16 years or older
         </p>
       </div>

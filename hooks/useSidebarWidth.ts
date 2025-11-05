@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 /**
  * Custom hook to get the current sidebar width based on collapsed state.
- * Returns the width in pixels (64px when collapsed, 256px when expanded).
+ * Returns the width in pixels (96px when collapsed, 256px when expanded).
  * 
  * @returns {number} The sidebar width in pixels
  */
@@ -15,7 +15,7 @@ export function useSidebarWidth(): number {
     const checkSidebarState = () => {
       if (typeof window !== 'undefined') {
         const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true'
-        setSidebarWidth(isCollapsed ? 64 : 256) // w-16 = 64px, w-64 = 256px
+        setSidebarWidth(isCollapsed ? 96 : 256) // w-24 = 96px, w-64 = 256px
       }
     }
 
@@ -24,7 +24,7 @@ export function useSidebarWidth(): number {
     // Listen for custom sidebar toggle event
     const handleSidebarToggle = (e: CustomEvent) => {
       const isCollapsed = e.detail.isCollapsed
-      setSidebarWidth(isCollapsed ? 64 : 256)
+      setSidebarWidth(isCollapsed ? 96 : 256)
     }
 
     // Listen for storage changes (for cross-tab updates)

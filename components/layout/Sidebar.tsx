@@ -68,7 +68,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
               ? 'w-64 translate-x-0'
               : '-translate-x-full'
             : isCollapsed
-            ? 'w-16'
+            ? 'w-24'
             : 'w-64'
         } p-4 md:p-6`}
       >
@@ -93,8 +93,8 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
             <Image
               src="/logos/got1-icon.png"
               alt="Got1"
-              width={48}
-              height={48}
+              width={64}
+              height={64}
               className="object-contain"
               onError={() => setImageError(true)}
             />
@@ -245,7 +245,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     {isMobile && !isMobileOpen && (
       <button
         onClick={() => setIsMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 p-2 bg-white border border-gray-200 rounded-lg shadow-md md:hidden"
+        className="fixed top-4 left-4 z-50 p-2 md:hidden"
         aria-label="Open menu"
       >
         <svg

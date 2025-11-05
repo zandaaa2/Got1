@@ -13,7 +13,7 @@ export default function PageContent({ children, header }: PageContentProps) {
   useEffect(() => {
     const checkSidebarState = () => {
       const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true'
-      setSidebarWidth(isCollapsed ? 64 : 256) // 16 * 4 = 64px (w-16) or 64 * 4 = 256px (w-64)
+      setSidebarWidth(isCollapsed ? 96 : 256) // 24 * 4 = 96px (w-24) or 64 * 4 = 256px (w-64)
     }
 
     checkSidebarState()
@@ -21,7 +21,7 @@ export default function PageContent({ children, header }: PageContentProps) {
     // Listen for custom sidebar toggle event
     const handleSidebarToggle = (e: CustomEvent) => {
       const isCollapsed = e.detail.isCollapsed
-      setSidebarWidth(isCollapsed ? 64 : 256)
+      setSidebarWidth(isCollapsed ? 96 : 256)
     }
     
     // Listen for storage changes (for cross-tab updates)
