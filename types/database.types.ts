@@ -1,0 +1,56 @@
+export type UserRole = 'player' | 'scout'
+
+export interface Profile {
+  id: string
+  user_id: string
+  role: UserRole
+  full_name: string | null
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PlayerProfile extends Profile {
+  role: 'player'
+  hudl_link: string | null
+  position: string | null
+  school: string | null
+  graduation_year: number | null
+  parent_name: string | null
+}
+
+export interface ScoutProfile extends Profile {
+  role: 'scout'
+  bio: string | null
+  credentials: string | null
+  organization: string | null
+  price_per_eval?: number
+  social_link: string | null
+  turnaround_time: string | null
+}
+
+export interface Evaluation {
+  id: string
+  scout_id: string
+  player_id: string
+  status: 'pending' | 'in_progress' | 'completed'
+  price: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+}
+
+export interface ScoutApplication {
+  id: string
+  user_id: string
+  current_workplace: string
+  current_position: string
+  work_history: string
+  additional_info: string | null
+  status: 'pending' | 'approved' | 'denied'
+  created_at: string
+  reviewed_at: string | null
+  reviewed_by: string | null
+}
+
