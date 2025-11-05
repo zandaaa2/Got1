@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Modal from '@/components/shared/Modal'
+import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
+import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 
 interface ProfileEditFormProps {
   profile: any
@@ -23,6 +25,21 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   // Check if birthday is already set (locked)
   const isBirthdayLocked = !!profile.birthday
 
+  // Initialize hudl_links - migrate from old hudl_link field if needed
+  const getInitialHudlLinks = () => {
+    if (profile.hudl_links && Array.isArray(profile.hudl_links) && profile.hudl_links.length > 0) {
+      return profile.hudl_links.map((hl: any) => ({
+        link: hl.link || hl.url || '',
+        sport: hl.sport || ''
+      }))
+    }
+    // Migrate from old hudl_link field
+    if (profile.hudl_link) {
+      return [{ link: profile.hudl_link, sport: profile.sport || '' }]
+    }
+    return [{ link: '', sport: '' }]
+  }
+
   // Form state based on role
   const [formData, setFormData] = useState({
     full_name: profile.full_name || '',
@@ -39,9 +56,13 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     additional_info: profile.additional_info || '',
     // Player fields
     hudl_link: profile.hudl_link || '',
+    hudl_links: getInitialHudlLinks(),
     school: profile.school || '',
     graduation_year: profile.graduation_year?.toString() || '',
     parent_name: profile.parent_name || '',
+    sport: profile.sport || '',
+    // Scout fields
+    sports: profile.sports || [],
   })
 
   /**
@@ -208,10 +229,18 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.position = formData.position || null
         updateData.work_history = formData.work_history || null
         updateData.additional_info = formData.additional_info || null
+        updateData.sports = Array.isArray(formData.sports) ? formData.sports : []
         // Bio is not available for scouts
         updateData.bio = null
       } else {
-        updateData.hudl_link = formData.hudl_link || null
+        // Save hudl_links as JSONB array, filtering out empty entries
+        const validHudlLinks = formData.hudl_links
+          .filter(hl => hl.link && hl.link.trim() !== '')
+          .map(hl => ({ link: hl.link.trim(), sport: hl.sport || null }))
+        updateData.hudl_links = validHudlLinks.length > 0 ? validHudlLinks : null
+        // Keep old hudl_link for backward compatibility (use first link if exists)
+        updateData.hudl_link = validHudlLinks.length > 0 ? validHudlLinks[0].link : null
+        updateData.sport = validHudlLinks.length > 0 ? (validHudlLinks[0].sport || null) : null
         updateData.position = formData.position || null
         updateData.school = formData.school || null
         updateData.graduation_year = formData.graduation_year ? parseInt(formData.graduation_year.toString()) : null
@@ -486,6 +515,20 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
             <div className="mt-8 pt-8 border-t border-gray-200">
               <h2 className="text-xl font-bold text-black mb-4">Scout Info</h2>
               
+              <div className="mb-6">
+                <MultiSportSelector
+                  selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
+                  onToggle={(sport) => {
+                    const currentSports = Array.isArray(formData.sports) ? formData.sports : []
+                    const newSports = currentSports.includes(sport)
+                      ? currentSports.filter(s => s !== sport)
+                      : [...currentSports, sport]
+                    setFormData((prev) => ({ ...prev, sports: newSports }))
+                  }}
+                  label="Sports You Evaluate For"
+                />
+              </div>
+
               <div>
                 <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
                   Position
@@ -535,17 +578,9 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         ) : (
           <>
             <div>
-              <label htmlFor="hudl_link" className="block text-sm font-medium text-black mb-2">
-                Hudl Link
-              </label>
-              <input
-                type="url"
-                id="hudl_link"
-                name="hudl_link"
-                value={formData.hudl_link}
-                onChange={handleChange}
-                placeholder="https://www.hudl.com/profile/yourname"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              <HudlLinkSelector
+                hudlLinks={formData.hudl_links}
+                onChange={(links) => setFormData((prev) => ({ ...prev, hudl_links: links }))}
               />
             </div>
 

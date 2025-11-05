@@ -27,7 +27,7 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
 
   return (
     <div 
-      className="flex-1 transition-all duration-300"
+      className="flex-1 transition-all duration-300 overflow-x-hidden"
       style={{ marginLeft: isMobile ? '0px' : `${sidebarWidth}px` }}
     >
       <header
@@ -38,7 +38,7 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
       >
         {header}
       </header>
-      <main className={`pt-16 md:pt-20 pb-8 ${isMobile ? 'px-4' : 'px-8'}`}>
+      <main className={`pt-16 md:pt-20 pb-8 overflow-x-hidden ${isMobile ? 'px-2 sm:px-4' : 'px-4 md:px-8'}`}>
         {children}
       </main>
     </div>

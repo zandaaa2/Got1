@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Modal from '@/components/shared/Modal'
+import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
+import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 
 interface ProfileSetupFormProps {
   userEmail: string
@@ -35,10 +37,14 @@ export default function ProfileSetupForm({
     bio: '',
     // Player fields
     hudl_link: '',
+    hudl_links: [{ link: '', sport: '' }],
     position: '',
     school: '',
     graduation_year: '',
     parent_name: '',
+    sport: '',
+    // Scout fields
+    sports: [],
   })
 
   /**
@@ -108,8 +114,16 @@ export default function ProfileSetupForm({
           : 99
         profileData.social_link = formData.social_link || null
         profileData.turnaround_time = formData.turnaround_time || null
+        profileData.sports = Array.isArray(formData.sports) ? formData.sports : []
       } else {
-        profileData.hudl_link = formData.hudl_link || null
+        // Save hudl_links as JSONB array, filtering out empty entries
+        const validHudlLinks = formData.hudl_links
+          .filter(hl => hl.link && hl.link.trim() !== '')
+          .map(hl => ({ link: hl.link.trim(), sport: hl.sport || null }))
+        profileData.hudl_links = validHudlLinks.length > 0 ? validHudlLinks : null
+        // Keep old hudl_link for backward compatibility (use first link if exists)
+        profileData.hudl_link = validHudlLinks.length > 0 ? validHudlLinks[0].link : null
+        profileData.sport = validHudlLinks.length > 0 ? (validHudlLinks[0].sport || null) : null
         profileData.position = formData.position || null
         profileData.school = formData.school || null
         profileData.graduation_year = formData.graduation_year
@@ -260,6 +274,20 @@ export default function ProfileSetupForm({
         {/* Scout-specific fields */}
         {role === 'scout' && (
           <>
+            <div className="mb-6">
+              <MultiSportSelector
+                selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
+                onToggle={(sport) => {
+                  const currentSports = Array.isArray(formData.sports) ? formData.sports : []
+                  const newSports = currentSports.includes(sport)
+                    ? currentSports.filter(s => s !== sport)
+                    : [...currentSports, sport]
+                  setFormData((prev) => ({ ...prev, sports: newSports }))
+                }}
+                label="Sports You Evaluate For"
+              />
+            </div>
+
             <div>
               <label
                 htmlFor="organization"
@@ -349,21 +377,9 @@ export default function ProfileSetupForm({
         {role === 'player' && (
           <>
             <div>
-              <label
-                htmlFor="hudl_link"
-                className="block text-sm font-medium text-black mb-2"
-              >
-                Hudl Link *
-              </label>
-              <input
-                type="url"
-                id="hudl_link"
-                name="hudl_link"
-                value={formData.hudl_link}
-                onChange={handleChange}
-                required
-                placeholder="https://www.hudl.com/profile/yourname"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              <HudlLinkSelector
+                hudlLinks={formData.hudl_links}
+                onChange={(links) => setFormData((prev) => ({ ...prev, hudl_links: links }))}
               />
             </div>
 
