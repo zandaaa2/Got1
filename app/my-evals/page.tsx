@@ -26,7 +26,7 @@ export default async function MyEvalsPage() {
         <Sidebar activePage="my-evals" />
         <PageContent header={headerContent}>
           <div className="pt-8">
-            <h1 className="text-4xl font-bold text-black mb-8">My Evals</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">My Evals</h1>
             <AuthInline mode="signin" />
           </div>
         </PageContent>
@@ -79,7 +79,7 @@ export default async function MyEvalsPage() {
       <Sidebar activePage="my-evals" />
       <PageContent header={headerContent}>
         <div>
-          <h1 className="text-4xl font-bold text-black mb-8">My Evals</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">My Evals</h1>
           <MyEvalsContent role={validRole} userId={session.user.id} />
         </div>
       </PageContent>

@@ -18,7 +18,24 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     }
     return false
   })
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
+  
+  // Check if mobile viewport
+  const [isMobile, setIsMobile] = useState(false)
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+      if (window.innerWidth >= 768) {
+        setIsMobileOpen(false) // Close mobile menu when resizing to desktop
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -34,19 +51,45 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
   }
 
   return (
-    <aside
-      className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200 transition-all duration-300 ${
-        isCollapsed ? 'w-16' : 'w-64'
-      } p-6`}
-    >
-      <div className={`mb-8 ${isCollapsed ? 'flex flex-col items-center gap-4' : 'flex items-center justify-between'}`}>
+    <>
+      {/* Mobile overlay */}
+      {isMobile && isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200 transition-all duration-300 z-50 ${
+          isMobile
+            ? isMobileOpen
+              ? 'w-64 translate-x-0'
+              : '-translate-x-full'
+            : isCollapsed
+            ? 'w-16'
+            : 'w-64'
+        } p-4 md:p-6`}
+      >
+      <div className={`mb-6 md:mb-8 ${isMobile || !isCollapsed ? 'flex items-center justify-between' : 'flex flex-col items-center gap-4'}`}>
         <Link 
           href="/" 
           className="hover:opacity-70 transition-opacity"
+          onClick={() => isMobile && setIsMobileOpen(false)}
         >
           {imageError ? (
-            <span className="text-2xl font-bold text-black">Got1</span>
-          ) : isCollapsed ? (
+            <span className="text-xl md:text-2xl font-bold text-black">Got1</span>
+          ) : isMobile || !isCollapsed ? (
+            <Image
+              src="/logos/got1-full-logo.png"
+              alt="Got1"
+              width={isMobile ? 100 : 120}
+              height={isMobile ? 32 : 40}
+              className="object-contain"
+              onError={() => setImageError(true)}
+            />
+          ) : (
             <Image
               src="/logos/got1-icon.png"
               alt="Got1"
@@ -55,23 +98,34 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
               className="object-contain"
               onError={() => setImageError(true)}
             />
-          ) : (
-            <Image
-              src="/logos/got1-full-logo.png"
-              alt="Got1"
-              width={120}
-              height={40}
-              className="object-contain"
-              onError={() => setImageError(true)}
-            />
           )}
         </Link>
         <button
-          onClick={toggleSidebar}
+          onClick={() => {
+            if (isMobile) {
+              setIsMobileOpen(false)
+            } else {
+              toggleSidebar()
+            }
+          }}
           className="p-2 hover:bg-gray-100 rounded transition-colors"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={isMobile ? 'Close menu' : isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {isCollapsed ? (
+          {isMobile ? (
+            <svg
+              className="w-6 h-6 text-black"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          ) : isCollapsed ? (
             <svg
               className="w-5 h-5 text-black"
               fill="none"
@@ -104,18 +158,19 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
       </div>
       
       <div className="mb-6">
-        {!isCollapsed && (
+        {(isMobile || !isCollapsed) && (
           <h2 className="text-sm font-semibold text-black mb-4">Discover</h2>
         )}
         <nav className="space-y-2">
           <Link
             href="/browse"
+            onClick={() => isMobile && setIsMobileOpen(false)}
             className={`flex items-center gap-3 px-3 py-2 rounded ${
               activePage === 'browse'
                 ? 'bg-gray-100 text-black'
                 : 'text-black hover:bg-gray-50'
-            } ${isCollapsed ? 'justify-center' : ''}`}
-            title={isCollapsed ? 'Browse' : undefined}
+            } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
+            title={(isMobile || !isCollapsed) ? undefined : 'Browse'}
           >
             <svg
               className="w-5 h-5 flex-shrink-0"
@@ -130,16 +185,17 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            {!isCollapsed && <span>Browse</span>}
+            {(isMobile || !isCollapsed) && <span>Browse</span>}
           </Link>
           <Link
             href="/my-evals"
+            onClick={() => isMobile && setIsMobileOpen(false)}
             className={`flex items-center gap-3 px-3 py-2 rounded ${
               activePage === 'my-evals'
                 ? 'bg-gray-100 text-black'
                 : 'text-black hover:bg-gray-50'
-            } ${isCollapsed ? 'justify-center' : ''}`}
-            title={isCollapsed ? 'My Evals' : undefined}
+            } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
+            title={(isMobile || !isCollapsed) ? undefined : 'My Evals'}
           >
             <svg
               className="w-5 h-5 flex-shrink-0"
@@ -154,11 +210,35 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
                 d="M13 10V3L4 14h7v7l9-11h-7z"
               />
             </svg>
-            {!isCollapsed && <span>My Evals</span>}
+            {(isMobile || !isCollapsed) && <span>My Evals</span>}
           </Link>
         </nav>
       </div>
     </aside>
+    
+    {/* Mobile hamburger button */}
+    {isMobile && !isMobileOpen && (
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className="fixed top-4 left-4 z-50 p-2 bg-white border border-gray-200 rounded-lg shadow-md md:hidden"
+        aria-label="Open menu"
+      >
+        <svg
+          className="w-6 h-6 text-black"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6h16M4 12h16M4 18h16"
+          />
+        </svg>
+      </button>
+    )}
+    </>
   )
 }
 

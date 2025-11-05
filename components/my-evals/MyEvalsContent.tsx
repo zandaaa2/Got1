@@ -150,11 +150,11 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="flex gap-4 border-b border-gray-200">
+      <div className="mb-4 md:mb-6">
+        <div className="flex gap-2 md:gap-4 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('in_progress')}
-            className={`px-4 py-2 font-medium ${
+            className={`px-3 md:px-4 py-2 font-medium text-sm md:text-base ${
               activeTab === 'in_progress'
                 ? 'bg-gray-100 border-b-2 border-black text-black'
                 : 'text-black hover:bg-gray-50'
@@ -164,7 +164,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`px-4 py-2 font-medium ${
+            className={`px-3 md:px-4 py-2 font-medium text-sm md:text-base ${
               activeTab === 'completed'
                 ? 'bg-gray-100 border-b-2 border-black text-black'
                 : 'text-black hover:bg-gray-50'
@@ -182,17 +182,17 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           No {activeTab === 'in_progress' ? 'in progress' : 'completed'} evaluations yet.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {evaluations.map((evaluation) => (
             <Link
               key={evaluation.id}
               href={`/evaluations/${evaluation.id}`}
-              className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-lg transition-colors"
+              className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
             >
               {role === 'scout' ? (
                 // Scout view: Show player being evaluated
                 <>
-                  <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                     {evaluation.player?.avatar_url ? (
                       <Image
                         src={evaluation.player.avatar_url}
@@ -209,11 +209,11 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-black text-lg mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
                       {evaluation.player?.full_name || 'Unknown Player'}
                     </h3>
-                    <p className="text-black text-sm">
+                    <p className="text-black text-xs md:text-sm truncate">
                       {evaluation.player?.school || 'Unknown School'}
                       {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
                       {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
@@ -223,7 +223,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
               ) : (
                 // Player view: Show scout evaluating them
                 <>
-                  <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                     {evaluation.scout?.avatar_url ? (
                       <Image
                         src={evaluation.scout.avatar_url}
@@ -240,12 +240,12 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-black text-lg mb-1 flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-black text-base md:text-lg mb-1 flex items-center gap-2 truncate">
                       {evaluation.scout?.full_name || 'Unknown Scout'}
                       <VerificationBadge />
                     </h3>
-                    <p className="text-black text-sm">
+                    <p className="text-black text-xs md:text-sm truncate">
                       {evaluation.scout?.position && evaluation.scout?.organization
                         ? `${evaluation.scout.position} at ${evaluation.scout.organization}`
                         : evaluation.scout?.position

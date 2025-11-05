@@ -293,7 +293,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-black mb-6">Edit Profile</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">Edit Profile</h1>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -301,13 +301,13 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
         {/* Profile Picture Section */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
             Profile Picture
           </label>
-          <div className="flex gap-4 items-start">
+          <div className="flex flex-col md:flex-row gap-4 items-start">
             <div className="flex-1">
               <label
                 htmlFor="avatar_upload"
@@ -642,11 +642,11 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
           </>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+            className="w-full sm:w-auto px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 text-sm md:text-base"
           >
             {loading ? 'Saving...' : 'Save Changes'}
           </button>

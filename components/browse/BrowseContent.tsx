@@ -111,11 +111,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-4xl font-bold text-black">Browse</h1>
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-black">Browse</h1>
       </div>
       
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <div className="relative">
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none z-10" style={{ width: '20px', height: '20px', overflow: 'hidden' }}>
             <svg
@@ -139,7 +139,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             placeholder="Search people, teams, schools..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-gray-300"
+            className="w-full pl-10 pr-4 py-2 md:py-3 bg-gray-100 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm md:text-base"
           />
         </div>
       </div>
@@ -152,9 +152,9 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             <Link
               key={profile.id}
               href={`/profile/${profile.id}`}
-              className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-lg transition-colors"
+              className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
             >
-              <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                 {profile.avatar_url ? (
                   <Image
                     src={profile.avatar_url}
@@ -171,12 +171,12 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   </div>
                 )}
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-black text-lg flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 truncate">
                   {profile.full_name || 'Unknown'}
                   {profile.role === 'scout' && <VerificationBadge />}
                 </h3>
-                <p className="text-black text-sm">
+                <p className="text-black text-xs md:text-sm truncate">
                   {profile.role === 'scout' ? (
                     profile.position && profile.organization
                       ? `${profile.position} at ${profile.organization}`

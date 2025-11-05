@@ -92,11 +92,11 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-4xl font-bold text-black mb-8">Profile</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
 
       {/* Profile Card */}
-      <div className="flex items-start gap-6 mb-8 p-6 bg-white border border-gray-200 rounded-lg">
-        <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+      <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6 bg-white border border-gray-200 rounded-lg">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
           {profile.avatar_url ? (
             <Image
               src={profile.avatar_url}

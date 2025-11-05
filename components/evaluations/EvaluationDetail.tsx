@@ -114,10 +114,10 @@ export default function EvaluationDetail({
       <div className="max-w-4xl mx-auto">
         <button
           onClick={() => router.back()}
-          className="mb-6 flex items-center gap-2 text-black hover:opacity-70"
+          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
-            className="w-6 h-6"
+            className="w-5 h-5 md:w-6 md:h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -129,12 +129,13 @@ export default function EvaluationDetail({
               d="M15 19l-7-7 7-7"
             />
           </svg>
+          <span className="md:hidden">Back</span>
         </button>
 
         {evaluation.status === 'pending' || evaluation.status === 'in_progress' ? (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-black mb-4">Evaluation Pending</h2>
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Evaluation Pending</h2>
+            <div className="p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-black">
                 Your evaluation is {evaluation.status === 'pending' ? 'pending' : 'in progress'}. 
                 The scout will complete it soon.
@@ -146,9 +147,9 @@ export default function EvaluationDetail({
             <div className="border-b border-gray-200 pb-6 mb-6">
               <Link
                 href={`/profile/${scout?.id || ''}`}
-                className="flex items-start gap-4 mb-4 hover:opacity-90 transition-opacity"
+                className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity"
               >
-                <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                   {scout?.avatar_url ? (
                     <Image
                       src={scout.avatar_url}
@@ -165,11 +166,11 @@ export default function EvaluationDetail({
                     </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-black text-lg mb-1">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
                     {scout?.full_name || 'Unknown Scout'}
                   </h3>
-                  <p className="text-black text-sm mb-1">
+                  <p className="text-black text-xs md:text-sm mb-1 truncate">
                     {scout?.position && scout?.organization
                       ? `${scout.position} at ${scout.organization}`
                       : scout?.position
@@ -178,14 +179,14 @@ export default function EvaluationDetail({
                       ? scout.organization
                       : 'Scout'}
                   </p>
-                  <p className="text-black text-sm text-gray-600">
+                  <p className="text-black text-xs md:text-sm text-gray-600">
                     {formatDate(evaluation.created_at)}
                   </p>
                 </div>
               </Link>
               {evaluation.notes && (
-                <div className="pl-20">
-                  <p className="text-black leading-relaxed whitespace-pre-wrap">
+                <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                  <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                     {evaluation.notes}
                   </p>
                 </div>
@@ -207,10 +208,10 @@ export default function EvaluationDetail({
       <div className="max-w-4xl mx-auto">
         <button
           onClick={() => router.back()}
-          className="mb-6 flex items-center gap-2 text-black hover:opacity-70"
+          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
-            className="w-6 h-6"
+            className="w-5 h-5 md:w-6 md:h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -222,14 +223,15 @@ export default function EvaluationDetail({
               d="M15 19l-7-7 7-7"
             />
           </svg>
+          <span className="md:hidden">Back</span>
         </button>
 
         {/* Scout Profile Section - matches ProfileView exactly */}
         <Link 
           href={`/profile/${scout?.id || ''}`}
-          className="flex items-start gap-6 mb-8 hover:opacity-90 transition-opacity"
+          className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8 hover:opacity-90 transition-opacity"
         >
-          <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
             {scout?.avatar_url ? (
               <Image
                 src={scout.avatar_url}
@@ -246,8 +248,8 @@ export default function EvaluationDetail({
               </div>
             )}
           </div>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-black mb-2">
+          <div className="flex-1 w-full text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
               {scout?.full_name || 'Unknown Scout'}
             </h1>
             {(scout?.position || scout?.organization) && (
@@ -280,13 +282,13 @@ export default function EvaluationDetail({
         </Link>
 
         {/* Evaluation Section - matches ProfileView format (showing player info) */}
-        <div className="mb-8">
-          <div className="border-b border-gray-200 pb-6 mb-6">
+        <div className="mb-6 md:mb-8">
+          <div className="border-b border-gray-200 pb-4 md:pb-6 mb-4 md:mb-6">
             <Link
               href={`/profile/${player?.id || ''}`}
-              className="flex items-start gap-4 mb-4 hover:opacity-90 transition-opacity"
+              className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity"
             >
-              <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                 {player?.avatar_url ? (
                   <Image
                     src={player.avatar_url}
@@ -303,23 +305,23 @@ export default function EvaluationDetail({
                   </div>
                 )}
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-black text-lg mb-1">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
                   {player?.full_name || 'Unknown Player'}
                 </h3>
-                <p className="text-black text-sm mb-1">
+                <p className="text-black text-xs md:text-sm mb-1 truncate">
                   {player?.school || 'Unknown School'}
                   {player?.school && player?.graduation_year && ', '}
                   {player?.graduation_year && `${player.graduation_year}`}
                 </p>
-                <p className="text-black text-sm text-gray-600">
+                <p className="text-black text-xs md:text-sm text-gray-600">
                   {formatDate(evaluation.created_at)}
                 </p>
               </div>
             </Link>
             {evaluation.notes && (
-              <div className="pl-20">
-                <p className="text-black leading-relaxed whitespace-pre-wrap">
+              <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                   {evaluation.notes}
                 </p>
               </div>
@@ -335,10 +337,10 @@ export default function EvaluationDetail({
     <div className="max-w-4xl mx-auto">
       <button
         onClick={() => router.back()}
-        className="mb-6 flex items-center gap-2 text-black hover:opacity-70"
+        className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
       >
         <svg
-          className="w-6 h-6"
+          className="w-5 h-5 md:w-6 md:h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -350,11 +352,12 @@ export default function EvaluationDetail({
             d="M15 19l-7-7 7-7"
           />
         </svg>
+        <span className="md:hidden">Back</span>
       </button>
 
       {/* Player Profile Section */}
-      <div className="flex items-start gap-6 mb-8">
-        <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+      <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
           {player?.avatar_url ? (
             <Image
               src={player.avatar_url}
@@ -371,8 +374,8 @@ export default function EvaluationDetail({
             </div>
           )}
         </div>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-black mb-2">
+        <div className="flex-1 w-full text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
             {player?.full_name || 'Unknown Player'}
           </h1>
           {(player?.position || player?.school) && (
@@ -422,9 +425,9 @@ export default function EvaluationDetail({
 
       {/* Evaluate Section */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-black">Evaluate</h2>
-          <div className="text-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 mb-3 md:mb-4">
+          <h2 className="text-xl md:text-2xl font-bold text-black">Evaluate</h2>
+          <div className="text-xs md:text-sm">
             <span className={isValid ? 'text-green-600' : 'text-gray-600'}>
               {trimmedCount.toLocaleString()} / {MIN_CHARACTERS.toLocaleString()} characters
             </span>
@@ -439,12 +442,12 @@ export default function EvaluationDetail({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder={`Begin typing... (minimum ${MIN_CHARACTERS.toLocaleString()} characters required)`}
-          className="w-full min-h-[500px] p-4 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black text-lg leading-relaxed resize-none"
+          className="w-full min-h-[300px] md:min-h-[500px] p-3 md:p-4 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black text-sm md:text-lg leading-relaxed resize-none"
           style={{
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
           }}
         />
-        <div className="mt-2 text-sm text-gray-600">
+        <div className="mt-2 text-xs md:text-sm text-gray-600">
           <p>Note: Trailing spaces are not counted toward the character minimum.</p>
         </div>
       </div>
@@ -453,7 +456,7 @@ export default function EvaluationDetail({
       <button
         onClick={handleSubmitEvaluation}
         disabled={submitting || !isValid}
-        className="w-full mt-8 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg transition-colors"
+        className="w-full mt-6 md:mt-8 px-4 md:px-6 py-3 md:py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm md:text-lg transition-colors"
       >
         {submitting ? 'Submitting...' : isValid ? 'Submit my evaluation' : `Write ${MIN_CHARACTERS - trimmedCount} more characters to submit`}
       </button>

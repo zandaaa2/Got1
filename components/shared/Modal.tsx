@@ -45,17 +45,17 @@ export default function Modal({ isOpen, onClose, children, title }: ModalProps) 
       
       {/* Modal */}
       <div
-        className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 md:mx-0 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-3 right-3 md:top-4 md:right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
           aria-label="Close"
         >
           <svg
-            className="w-6 h-6"
+            className="w-5 h-5 md:w-6 md:h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -70,7 +70,7 @@ export default function Modal({ isOpen, onClose, children, title }: ModalProps) 
         </button>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-4 md:p-8">
           {title && (
             <h2 className="text-3xl font-bold text-black mb-8">{title}</h2>
           )}

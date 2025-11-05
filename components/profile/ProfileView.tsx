@@ -17,11 +17,13 @@ interface Evaluation {
   notes: string | null
   created_at: string
   scout?: {
+    id: string
     full_name: string | null
     avatar_url: string | null
     organization: string | null
   } | null
   player?: {
+    id: string
     full_name: string | null
     avatar_url: string | null
     school: string | null
@@ -84,7 +86,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       // Fetch profiles for those user IDs
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url, organization, school, graduation_year')
+        .select('id, user_id, full_name, avatar_url, organization, school, graduation_year')
         .in('user_id', Array.from(userIds))
 
       if (profilesError) throw profilesError
@@ -99,11 +101,13 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           notes: evaluation.notes,
           created_at: evaluation.created_at,
           scout: scoutProfile ? {
+            id: scoutProfile.id,
             full_name: scoutProfile.full_name,
             avatar_url: scoutProfile.avatar_url,
             organization: scoutProfile.organization,
           } : null,
           player: playerProfile ? {
+            id: playerProfile.id,
             full_name: playerProfile.full_name,
             avatar_url: playerProfile.avatar_url,
             school: playerProfile.school,
@@ -148,10 +152,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       <div className="max-w-4xl mx-auto">
         <button
           onClick={() => router.back()}
-          className="mb-6 flex items-center gap-2 text-black hover:opacity-70"
+          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
-            className="w-6 h-6"
+            className="w-5 h-5 md:w-6 md:h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -163,11 +167,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               d="M15 19l-7-7 7-7"
             />
           </svg>
+          <span className="md:hidden">Back</span>
         </button>
 
         {/* Player Profile Section */}
-        <div className="flex items-start gap-6 mb-8">
-          <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+        <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
             {profile.avatar_url && !imageErrors.has(`profile-${profile.id}`) ? (
               <Image
                 src={profile.avatar_url}
@@ -188,8 +193,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </div>
             )}
           </div>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-black mb-2">
+          <div className="flex-1 w-full text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
               {profile.full_name || 'Unknown Player'}
             </h1>
             {(profile.position || profile.school) && (
@@ -233,8 +238,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </div>
 
         {/* Evaluations Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-black mb-6">
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
             Evaluations ({evaluations.length})
           </h2>
           {loading ? (
@@ -246,9 +251,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           ) : (
             <div className="space-y-6">
               {evaluations.map((evaluation) => (
-                <div key={evaluation.id} className="border-b border-gray-200 pb-6 last:border-0">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                  <Link 
+                    href={evaluation.scout?.id ? `/profile/${evaluation.scout.id}` : '#'}
+                    className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity cursor-pointer"
+                  >
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                       {evaluation.scout?.avatar_url && !imageErrors.has(`scout-${evaluation.id}`) ? (
                         <Image
                           src={evaluation.scout.avatar_url}
@@ -269,21 +277,21 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                         </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-black text-lg mb-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
                         {evaluation.scout?.full_name || 'Unknown Scout'}
                       </h3>
-                      <p className="text-black text-sm mb-1">
+                      <p className="text-black text-xs md:text-sm mb-1 truncate">
                         {evaluation.scout?.organization || 'Scout'}
                       </p>
-                      <p className="text-black text-sm text-gray-600">
+                      <p className="text-black text-xs md:text-sm text-gray-600">
                         {formatDate(evaluation.created_at)}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                   {evaluation.notes && (
-                    <div className="pl-20">
-                      <p className="text-black leading-relaxed whitespace-pre-wrap">
+                    <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                      <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                         {evaluation.notes}
                       </p>
                     </div>
@@ -302,10 +310,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     <div className="max-w-4xl mx-auto">
       <button
         onClick={() => router.back()}
-        className="mb-6 flex items-center gap-2 text-black hover:opacity-70"
+        className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
       >
         <svg
-          className="w-6 h-6"
+          className="w-5 h-5 md:w-6 md:h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -317,11 +325,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             d="M15 19l-7-7 7-7"
           />
         </svg>
+        <span className="md:hidden">Back</span>
       </button>
 
       {/* Scout Profile Section */}
-      <div className="flex items-start gap-6 mb-8">
-        <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+      <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
           {profile.avatar_url && !imageErrors.has(`profile-${profile.id}`) ? (
             <Image
               src={profile.avatar_url}
@@ -342,9 +351,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </div>
           )}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-black flex items-center gap-2">
+        <div className="flex-1 w-full text-center md:text-left">
+          <div className="flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-3 mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-black flex items-center gap-2">
               {profile.full_name || 'Unknown Scout'}
             </h1>
             <span className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded flex items-center gap-1.5">
@@ -377,27 +386,27 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       </div>
 
       {/* Pricing & Purchase Section - Show for all scout profiles */}
-      <div className="mb-8 p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="mb-6 md:mb-8 p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Price</p>
-            <p className="text-2xl font-bold text-black">${profile.price_per_eval || '99'}</p>
+            <p className="text-xs md:text-sm text-gray-600 mb-1">Price</p>
+            <p className="text-xl md:text-2xl font-bold text-black">${profile.price_per_eval || '99'}</p>
           </div>
-          <div className="text-center border-l border-r border-gray-300">
-            <p className="text-sm text-gray-600 mb-1">Turnaround</p>
-            <p className="text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+          <div className="text-center border-t md:border-t-0 md:border-l md:border-r border-gray-300 pt-4 md:pt-0">
+            <p className="text-xs md:text-sm text-gray-600 mb-1">Turnaround</p>
+            <p className="text-xl md:text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
           </div>
-          <div className="text-center">
+          <div className="text-center border-t md:border-t-0 pt-4 md:pt-0">
             {!isOwnProfile ? (
               <button
                 onClick={handleRequestEvaluation}
                 disabled={requesting}
-                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-lg transition-colors"
+                className="w-full px-4 md:px-6 py-2.5 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm md:text-lg transition-colors"
               >
                 {requesting ? 'Processing...' : 'Purchase Evaluation'}
               </button>
             ) : (
-              <div className="w-full px-6 py-3 bg-gray-200 text-gray-500 rounded-lg font-medium text-lg cursor-not-allowed">
+              <div className="w-full px-4 md:px-6 py-2.5 md:py-3 bg-gray-200 text-gray-500 rounded-lg font-medium text-sm md:text-lg cursor-not-allowed">
                 Your Profile
               </div>
             )}
@@ -415,10 +424,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
       {/* Edit Profile Button - Only for own profile */}
       {isOwnProfile && (
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <a
             href="/profile/edit"
-            className="block w-full px-6 py-3 border border-black text-black rounded-lg hover:bg-gray-50 text-center font-medium"
+            className="block w-full px-4 md:px-6 py-2.5 md:py-3 border border-black text-black rounded-lg hover:bg-gray-50 text-center font-medium text-sm md:text-base"
           >
             Edit Profile
           </a>
@@ -520,8 +529,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       )}
 
       {/* Evaluations Contributed Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-black mb-6">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
           Evaluations Contributed ({evaluations.length})
         </h2>
         {loading ? (
@@ -533,9 +542,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         ) : (
           <div className="space-y-6">
             {evaluations.map((evaluation) => (
-              <div key={evaluation.id} className="border-b border-gray-200 pb-6 last:border-0">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+              <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                <Link 
+                  href={evaluation.player?.id ? `/profile/${evaluation.player.id}` : '#'}
+                  className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                     {evaluation.player?.avatar_url && !imageErrors.has(`player-${evaluation.id}`) ? (
                       <Image
                         src={evaluation.player.avatar_url}
@@ -556,23 +568,23 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-black text-lg mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
                       {evaluation.player?.full_name || 'Unknown Player'}
                     </h3>
-                    <p className="text-black text-sm mb-1">
+                    <p className="text-black text-xs md:text-sm mb-1 truncate">
                       {evaluation.player?.school || 'Unknown School'}
                       {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
                       {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
                     </p>
-                    <p className="text-black text-sm text-gray-600">
+                    <p className="text-black text-xs md:text-sm text-gray-600">
                       {formatDate(evaluation.created_at)}
                     </p>
                   </div>
-                </div>
+                </Link>
                 {evaluation.notes && (
-                  <div className="pl-20">
-                    <p className="text-black leading-relaxed whitespace-pre-wrap">
+                  <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                    <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                       {evaluation.notes}
                     </p>
                   </div>

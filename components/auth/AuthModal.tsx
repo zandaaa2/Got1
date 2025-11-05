@@ -152,9 +152,9 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Title */}
-        <h1 className="text-2xl font-bold text-black">Got1</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-black">Got1</h1>
 
         {/* Main Instruction - only show for signin */}
         {mainInstruction && (
@@ -179,14 +179,14 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
             )}
 
             {/* Email Form */}
-            <form onSubmit={handleEmailAuth} className="space-y-4">
+            <form onSubmit={handleEmailAuth} className="space-y-3 md:space-y-4">
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@domain.com"
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm md:text-base"
               />
               <div className="relative">
                 <input
@@ -196,7 +196,7 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
                   placeholder={mode === 'signup' ? 'Create a password' : 'Enter your password'}
                   required
                   minLength={mode === 'signup' ? 6 : undefined}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 pr-10 md:pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm md:text-base"
                 />
                 <button
                   type="button"
@@ -239,7 +239,7 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-black text-white font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full py-2.5 md:py-3 px-4 bg-black text-white font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
               >
                 {loading ? 'Processing...' : buttonText}
               </button>
@@ -259,7 +259,7 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
             <button
               onClick={handleGoogleAuth}
               disabled={loading}
-              className="w-full flex justify-center items-center gap-3 py-3 px-4 border border-gray-300 rounded-lg bg-white text-black hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex justify-center items-center gap-2 md:gap-3 py-2.5 md:py-3 px-4 border border-gray-300 rounded-lg bg-white text-black hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
