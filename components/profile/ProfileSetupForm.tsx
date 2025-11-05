@@ -8,6 +8,11 @@ import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 
+interface HudlLink {
+  link: string
+  sport: string
+}
+
 interface ProfileSetupFormProps {
   userEmail: string
   userName: string
@@ -118,8 +123,8 @@ export default function ProfileSetupForm({
       } else {
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
-          .filter(hl => hl.link && hl.link.trim() !== '')
-          .map(hl => ({ link: hl.link.trim(), sport: hl.sport || null }))
+          .filter((hl: HudlLink) => hl.link && hl.link.trim() !== '')
+          .map((hl: HudlLink) => ({ link: hl.link.trim(), sport: hl.sport || null }))
         profileData.hudl_links = validHudlLinks.length > 0 ? validHudlLinks : null
         // Keep old hudl_link for backward compatibility (use first link if exists)
         profileData.hudl_link = validHudlLinks.length > 0 ? validHudlLinks[0].link : null
