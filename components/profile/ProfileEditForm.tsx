@@ -67,7 +67,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     parent_name: profile.parent_name || '',
     sport: profile.sport || '',
     // Scout fields
-    sports: profile.sports || [],
+    sports: (Array.isArray(profile.sports) ? profile.sports : []) as string[],
   })
 
   /**

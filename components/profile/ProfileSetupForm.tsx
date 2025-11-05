@@ -49,7 +49,7 @@ export default function ProfileSetupForm({
     parent_name: '',
     sport: '',
     // Scout fields
-    sports: [],
+    sports: [] as string[],
   })
 
   /**
