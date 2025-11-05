@@ -108,6 +108,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
 
         return {
           id: evaluation.id,
+          scout_id: evaluation.scout_id,
+          player_id: evaluation.player_id,
           status: evaluation.status,
           price: evaluation.price,
           notes: evaluation.notes,
@@ -127,7 +129,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
         }
       })
 
-      setEvaluations(evaluationsWithProfiles as Evaluation[])
+      setEvaluations(evaluationsWithProfiles)
     } catch (error) {
       console.error('Error loading evaluations:', error)
       setEvaluations([])
