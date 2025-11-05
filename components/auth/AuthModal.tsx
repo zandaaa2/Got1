@@ -67,9 +67,21 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
           password,
         })
         if (error) throw error
-        // Success - redirect will happen automatically
+        
+        // Wait for session cookies to be set
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // Verify session is accessible
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          // Wait a bit more and try again
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+        
         setLoading(false)
         onClose() // Close modal on successful signin
+        
+        // Use window.location for full page reload to ensure server-side session check works
         window.location.href = '/' // Refresh to show logged-in state
       }
     } catch (error: any) {
