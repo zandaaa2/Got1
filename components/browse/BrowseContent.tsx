@@ -41,7 +41,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Note: suspended_until may not exist yet if migration hasn't been run
       let query = supabase
         .from('profiles')
-        .select('id, full_name, organization, position, school, graduation_year, avatar_url, role')
+        .select('id, full_name, organization, position, school, graduation_year, avatar_url, role, suspended_until')
       
       // Apply ordering
       query = query.order('full_name', { ascending: true })
@@ -66,8 +66,9 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       const activeProfiles = (data || []).filter(p => {
         // If it's a scout and suspended, exclude it
         if (p.role === 'scout') {
-          if (!('suspended_until' in p) || !p.suspended_until) return true
-          return new Date(p.suspended_until) <= now
+          const suspendedUntil = p.suspended_until
+          if (!suspendedUntil || typeof suspendedUntil !== 'string') return true
+          return new Date(suspendedUntil) <= now
         }
         // Players are always included
         return true
