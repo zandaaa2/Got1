@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import BrowseContent from '@/components/browse/BrowseContent'
 import Sidebar from '@/components/layout/Sidebar'
 import ShareButton from '@/components/shared/ShareButton'
+import FeatureRequest from '@/components/shared/FeatureRequest'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import Link from 'next/link'
@@ -28,6 +29,7 @@ export default async function BrowsePage() {
 
   const headerContent = session ? (
     <>
+      <FeatureRequest />
       <ShareButton url="/browse" title="Browse Scouts on Got1" />
       {profile ? (
         <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">

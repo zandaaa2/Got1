@@ -19,6 +19,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('📧 Creating Stripe account link...')
+    
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient(() => cookieStore)
     
@@ -28,24 +30,37 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getSession()
 
     if (!session) {
+      console.error('❌ No session found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('📧 User ID:', session.user.id)
+
     // Get scout's profile to check for Stripe account
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('stripe_account_id, role')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    if (!profile) {
+    if (profileError) {
+      console.error('❌ Error fetching profile:', profileError)
       return NextResponse.json(
-        { error: 'Profile not found' },
+        { error: 'Failed to fetch profile', details: profileError.message },
+        { status: 500 }
+      )
+    }
+
+    if (!profile) {
+      console.error('❌ Profile not found for user:', session.user.id)
+      return NextResponse.json(
+        { error: 'Profile not found. Please complete your profile setup first.' },
         { status: 404 }
       )
     }
 
     if (profile.role !== 'scout') {
+      console.error('❌ User is not a scout:', profile.role)
       return NextResponse.json(
         { error: 'Only scouts can access Stripe Connect accounts' },
         { status: 403 }
@@ -53,35 +68,81 @@ export async function POST(request: NextRequest) {
     }
 
     if (!profile.stripe_account_id) {
+      console.error('❌ No Stripe account ID found')
       return NextResponse.json(
-        { error: 'No Stripe Connect account found. Please contact support.' },
+        { error: 'No Stripe Connect account found. Please create one first.' },
         { status: 404 }
       )
     }
 
+    console.log('📧 Stripe account ID:', profile.stripe_account_id)
+
     // Get the base URL for return links
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    console.log('📧 Base URL:', baseUrl)
 
-    // Create an account link for the scout
-    // This link allows them to access their Stripe Express dashboard
-    const accountLink = await stripe.accountLinks.create({
-      account: profile.stripe_account_id,
-      refresh_url: `${baseUrl}/profile?stripe=refresh`,
-      return_url: `${baseUrl}/profile?stripe=success`,
-      type: 'account_onboarding', // For first-time onboarding
-    })
+    // Check account status to determine if we need onboarding or dashboard link
+    let accountLink
+    let loginLink
+    let needsOnboarding = false
+    let chargesEnabled = false
+    let onboardingComplete = false
 
-    // Also create a login link for accessing the dashboard after onboarding
-    const loginLink = await stripe.accounts.createLoginLink(profile.stripe_account_id)
+    try {
+      const account = await stripe.accounts.retrieve(profile.stripe_account_id)
+      chargesEnabled = account.charges_enabled === true
+      const detailsSubmitted = account.details_submitted === true
+      // Onboarding is complete if charges enabled OR details submitted
+      onboardingComplete = chargesEnabled || detailsSubmitted
+      needsOnboarding = !onboardingComplete
+      console.log('📧 Account charges enabled:', chargesEnabled)
+      console.log('📧 Account details submitted:', detailsSubmitted)
+      console.log('📧 Onboarding complete:', onboardingComplete)
+      console.log('📧 Needs onboarding:', needsOnboarding)
+    } catch (stripeError: any) {
+      console.error('❌ Error retrieving account:', stripeError)
+      // Assume onboarding is needed if we can't retrieve account
+      needsOnboarding = true
+      onboardingComplete = false
+    }
+
+    // Create an account link for onboarding (if needed)
+    if (needsOnboarding) {
+      console.log('📧 Creating onboarding link...')
+      accountLink = await stripe.accountLinks.create({
+        account: profile.stripe_account_id,
+        refresh_url: `${baseUrl}/profile?stripe=refresh`,
+        return_url: `${baseUrl}/profile?stripe=success`,
+        type: 'account_onboarding',
+      })
+      console.log('✅ Onboarding link created:', accountLink.url)
+    }
+
+    // Only create a login link if onboarding is complete (charges enabled OR details submitted)
+    if (onboardingComplete) {
+      console.log('📧 Creating login link (onboarding complete)...')
+      try {
+        loginLink = await stripe.accounts.createLoginLink(profile.stripe_account_id)
+        console.log('✅ Login link created:', loginLink.url)
+      } catch (loginError: any) {
+        console.error('❌ Error creating login link:', loginError)
+        // If login link fails but onboarding is complete, still return onboarding URL as fallback
+        if (accountLink) {
+          console.log('⚠️ Using onboarding link as fallback')
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      onboardingUrl: accountLink.url, // Use this for first-time onboarding
-      dashboardUrl: loginLink.url,    // Use this to access dashboard after onboarding
+      onboardingUrl: accountLink?.url || null, // Use this for first-time onboarding
+      dashboardUrl: loginLink?.url || null,    // Use this to access dashboard after onboarding
       accountId: profile.stripe_account_id,
+      onboardingComplete: chargesEnabled,
     })
   } catch (error: any) {
-    console.error('Error creating Stripe account link:', error)
+    console.error('❌ Error creating Stripe account link:', error)
+    console.error('❌ Error stack:', error.stack)
     return NextResponse.json(
       { error: error.message || 'Failed to create account link' },
       { status: 500 }
@@ -131,8 +192,17 @@ export async function GET(request: NextRequest) {
     try {
       const account = await stripe.accounts.retrieve(profile.stripe_account_id)
       
-      // Express accounts are considered onboarded if they have charges enabled
-      const onboardingComplete = account.charges_enabled === true
+      console.log('📧 Account status:', {
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
+        requirements: account.requirements,
+      })
+      
+      // Express accounts are considered onboarded if:
+      // 1. Charges are enabled, OR
+      // 2. Details are submitted (even if charges not yet enabled)
+      const onboardingComplete = account.charges_enabled === true || account.details_submitted === true
 
       return NextResponse.json({
         hasAccount: true,
@@ -143,7 +213,7 @@ export async function GET(request: NextRequest) {
         detailsSubmitted: account.details_submitted,
       })
     } catch (stripeError: any) {
-      console.error('Error retrieving Stripe account:', stripeError)
+      console.error('❌ Error retrieving Stripe account:', stripeError)
       return NextResponse.json({
         hasAccount: true,
         onboardingComplete: false,

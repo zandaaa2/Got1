@@ -27,15 +27,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Get scout profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('stripe_account_id, email, role, full_name')
+      .select('stripe_account_id, role, full_name, user_id')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    if (!profile) {
+    if (profileError) {
+      console.error('Error fetching profile:', profileError)
       return NextResponse.json(
-        { error: 'Profile not found' },
+        { error: 'Failed to fetch profile', details: profileError.message },
+        { status: 500 }
+      )
+    }
+
+    if (!profile) {
+      console.error('Profile not found for user:', session.user.id)
+      return NextResponse.json(
+        { error: 'Profile not found. Please complete your profile setup first.' },
         { status: 404 }
       )
     }
@@ -57,11 +66,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Get user email from auth
+    const { data: { user } } = await supabase.auth.getUser()
+    const userEmail = user?.email || undefined
+
     // Create Stripe Connect Express account
     const account = await stripe.accounts.create({
       type: 'express',
       country: 'US',
-      email: profile.email || undefined,
+      email: userEmail,
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },

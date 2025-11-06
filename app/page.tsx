@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import BrowseContent from '@/components/browse/BrowseContent'
 import Sidebar from '@/components/layout/Sidebar'
 import ShareButton from '@/components/shared/ShareButton'
+import FeatureRequest from '@/components/shared/FeatureRequest'
 import PageContent from '@/components/layout/PageContent'
 import AuthButtons from '@/components/auth/AuthButtons'
 import Link from 'next/link'
@@ -50,6 +51,7 @@ export default async function Home() {
 
   const headerContent = session ? (
     <>
+      <FeatureRequest />
       <ShareButton url="/" title="Browse Scouts on Got1" />
       {profile ? (
         <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">

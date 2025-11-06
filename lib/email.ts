@@ -49,11 +49,17 @@ async function sendEmail(to: string, subject: string, html: string): Promise<str
       console.log(`   Subject: ${subject}`)
       console.log(`   HTML length: ${html.length} characters`)
       
+      const replyTo = process.env.RESEND_REPLY_TO || 'zander@got1.app'
+      
       const result = await resend.emails.send({
         from: fromEmail,
+        replyTo: replyTo,
         to,
         subject,
         html,
+        headers: {
+          'X-Entity-Ref-ID': `got1-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        },
       })
       
       console.log(`✅ Resend API call successful`)
@@ -397,26 +403,8 @@ export async function sendApplicationEmail(
   application: any,
   applicantEmail: string | null
 ): Promise<void> {
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL
+  const adminEmail = 'zander@got1.app'
   const applicationUrl = `${getBaseUrl()}/admin/scout-applications/${application.id}`
-
-  // If no admin email configured, just log to console
-  if (!adminEmail) {
-    console.log('=== NEW SCOUT APPLICATION ===')
-    console.log('To: No admin email configured')
-    console.log('Subject: New Scout Application from', profile.full_name)
-    console.log('Application URL:', applicationUrl)
-    console.log('Application Details:', {
-      name: profile.full_name,
-      applicantEmail: applicantEmail || 'Not available',
-      current_workplace: application.current_workplace,
-      current_position: application.current_position,
-      work_history: application.work_history,
-    })
-    console.log('==============================')
-    console.log('⚠️  To receive email notifications, set ADMIN_EMAIL in your .env.local file')
-    return
-  }
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

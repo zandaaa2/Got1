@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import MyEvalsContent from '@/components/my-evals/MyEvalsContent'
 import Sidebar from '@/components/layout/Sidebar'
 import ShareButton from '@/components/shared/ShareButton'
+import FeatureRequest from '@/components/shared/FeatureRequest'
 import PageContent from '@/components/layout/PageContent'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
@@ -55,6 +56,7 @@ export default async function MyEvalsPage() {
 
   const headerContent = (
     <>
+      <FeatureRequest />
       <ShareButton url="/my-evals" title="My Evaluations on Got1" />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {profile.avatar_url ? (
