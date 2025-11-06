@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 interface SidebarProps {
-  activePage?: 'whats-this' | 'browse' | 'my-evals'
+  activePage?: 'whats-this' | 'browse' | 'my-evals' | 'profile'
   onToggle?: (isCollapsed: boolean) => void
 }
 
