@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     
     const { data, error } = await resend.emails.send({
       from: fromEmail,
-      replyTo: replyTo,
+      reply_to: replyTo,
       to: 'zander@got1.app',
       subject: 'Feature Request from Got1',
       headers: {

@@ -53,7 +53,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<str
       
       const result = await resend.emails.send({
         from: fromEmail,
-        replyTo: replyTo,
+        reply_to: replyTo,
         to,
         subject,
         html,
