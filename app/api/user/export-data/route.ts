@@ -156,17 +156,17 @@ function generatePDF(userData: any): Promise<NextResponse> {
         doc.moveDown(0.5)
         doc.fontSize(11)
         
-        userData.evaluations.forEach((eval: any, index: number) => {
+        userData.evaluations.forEach((evaluation: any, index: number) => {
           if (index > 0) doc.moveDown()
           doc.text(`Evaluation ${index + 1}:`, { underline: true })
-          doc.text(`  Status: ${eval.status || 'N/A'}`)
-          doc.text(`  Price: $${eval.price || '0.00'}`)
-          doc.text(`  Created: ${eval.created_at ? new Date(eval.created_at).toLocaleString() : 'N/A'}`)
-          if (eval.completed_at) doc.text(`  Completed: ${new Date(eval.completed_at).toLocaleString()}`)
-          if (eval.notes) {
+          doc.text(`  Status: ${evaluation.status || 'N/A'}`)
+          doc.text(`  Price: $${evaluation.price || '0.00'}`)
+          doc.text(`  Created: ${evaluation.created_at ? new Date(evaluation.created_at).toLocaleString() : 'N/A'}`)
+          if (evaluation.completed_at) doc.text(`  Completed: ${new Date(evaluation.completed_at).toLocaleString()}`)
+          if (evaluation.notes) {
             doc.moveDown(0.3)
             doc.text(`  Notes:`, { underline: true })
-            doc.text(eval.notes, {
+            doc.text(evaluation.notes, {
               indent: 20,
               width: 480,
               ellipsis: true
