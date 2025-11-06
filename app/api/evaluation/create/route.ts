@@ -5,8 +5,9 @@ import { sendEvaluationRequestEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
 
 /**
- * Creates a new evaluation without payment processing.
- * This is a simplified version for testing before Stripe integration.
+ * Creates a new evaluation request (no payment yet).
+ * Player requests evaluation from scout, waits for scout to confirm/deny.
+ * Payment will be charged when scout confirms.
  * 
  * @param request - Next.js request object containing scoutId and price
  * @returns Evaluation ID or error response
@@ -66,30 +67,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid player' }, { status: 400 })
     }
 
-    // Check if evaluation already exists
+    // Check if evaluation already exists in requested/confirmed/in_progress state
     const { data: existingEvaluation } = await supabase
       .from('evaluations')
-      .select('id')
+      .select('id, status')
       .eq('scout_id', scout.user_id)
       .eq('player_id', player.user_id)
-      .eq('status', 'pending')
+      .in('status', ['requested', 'confirmed', 'in_progress'])
       .maybeSingle()
 
     if (existingEvaluation) {
       return NextResponse.json(
-        { error: 'Evaluation already pending', evaluationId: existingEvaluation.id },
+        { 
+          error: 'Evaluation already requested or in progress', 
+          evaluationId: existingEvaluation.id,
+          status: existingEvaluation.status
+        },
         { status: 400 }
       )
     }
 
-    // Create evaluation record (status: 'pending' - waiting for scout to complete)
+    // Create evaluation record (status: 'requested' - waiting for scout to confirm/deny)
     const { data: evaluation, error: evalError } = await supabase
       .from('evaluations')
       .insert({
         scout_id: scout.user_id,
         player_id: player.user_id,
-        status: 'pending',
+        status: 'requested',
         price: typeof price === 'string' ? parseFloat(price) : price,
+        payment_status: 'pending', // Payment hasn't been charged yet
       })
       .select()
       .maybeSingle()

@@ -54,6 +54,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid player' }, { status: 400 })
     }
 
+    // Check for existing pending evaluation
+    const { data: existingEvaluation } = await supabase
+      .from('evaluations')
+      .select('id')
+      .eq('scout_id', scout.user_id)
+      .eq('player_id', player.user_id)
+      .in('status', ['pending', 'in_progress'])
+      .maybeSingle()
+
+    if (existingEvaluation) {
+      return NextResponse.json(
+        { 
+          error: 'You already have a pending evaluation with this scout',
+          evaluationId: existingEvaluation.id 
+        },
+        { status: 400 }
+      )
+    }
+
     // Create evaluation record (pending payment)
     const { data: evaluation, error: evalError } = await supabase
       .from('evaluations')
@@ -67,8 +86,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (evalError || !evaluation) {
+      console.error('Error creating evaluation:', evalError)
       return NextResponse.json(
-        { error: 'Failed to create evaluation' },
+        { error: 'Failed to create evaluation', details: evalError?.message },
         { status: 500 }
       )
     }

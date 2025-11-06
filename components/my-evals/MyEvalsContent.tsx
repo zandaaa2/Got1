@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
+import HeaderMenu from '@/components/shared/HeaderMenu'
 
 interface MyEvalsContentProps {
   role: 'player' | 'scout'
@@ -43,11 +44,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
   const [activeTab, setActiveTab] = useState<'in_progress' | 'completed'>('in_progress')
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
   const supabase = createClient()
-
-  useEffect(() => {
-    loadEvaluations()
-  }, [activeTab, role, userId])
 
   /**
    * Loads evaluations and manually joins profile data.
@@ -70,7 +68,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
 
       // Filter by status
       if (activeTab === 'in_progress') {
-        query = query.in('status', ['pending', 'in_progress'])
+        // Include all non-completed statuses: requested, confirmed, in_progress
+        query = query.in('status', ['requested', 'confirmed', 'in_progress'])
       } else {
         query = query.eq('status', 'completed')
       }
@@ -148,6 +147,11 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
     }
   }
 
+  useEffect(() => {
+    loadEvaluations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, role, userId, refreshKey])
+
   return (
     <div>
       <div className="mb-4 md:mb-6">
@@ -184,80 +188,146 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
       ) : (
         <div className="space-y-3 md:space-y-4">
           {evaluations.map((evaluation) => (
-            <Link
+            <div
               key={evaluation.id}
-              href={`/evaluations/${evaluation.id}`}
               className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
             >
-              {role === 'scout' ? (
-                // Scout view: Show player being evaluated
-                <>
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                    {evaluation.player?.avatar_url ? (
-                      <Image
-                        src={evaluation.player.avatar_url}
-                        alt={evaluation.player.full_name || 'Player'}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-gray-600 text-xl font-semibold">
-                          {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+              <Link
+                href={`/evaluations/${evaluation.id}`}
+                className="flex items-center gap-3 md:gap-4 flex-1 min-w-0"
+              >
+                {role === 'scout' ? (
+                  // Scout view: Show player being evaluated
+                  <>
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                      {evaluation.player?.avatar_url ? (
+                        <Image
+                          src={evaluation.player.avatar_url}
+                          alt={evaluation.player.full_name || 'Player'}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                          <span className="text-gray-600 text-xl font-semibold">
+                            {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                        {evaluation.player?.full_name || 'Unknown Player'}
+                      </h3>
+                      <p className="text-black text-xs md:text-sm truncate">
+                        {evaluation.player?.school || 'Unknown School'}
+                        {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
+                        {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
+                      </p>
+                      {/* Status badge */}
+                      <div className="mt-1">
+                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                          evaluation.status === 'requested' ? 'bg-blue-100 text-blue-800' :
+                          evaluation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          evaluation.status === 'denied' ? 'bg-red-100 text-red-800' :
+                          evaluation.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                          evaluation.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {evaluation.status === 'requested' ? 'Requested' :
+                           evaluation.status === 'confirmed' ? 'Confirmed' :
+                           evaluation.status === 'denied' ? 'Denied' :
+                           evaluation.status === 'in_progress' ? 'In Progress' :
+                           evaluation.status === 'completed' ? 'Completed' :
+                           evaluation.status}
                         </span>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                      {evaluation.player?.full_name || 'Unknown Player'}
-                    </h3>
-                    <p className="text-black text-xs md:text-sm truncate">
-                      {evaluation.player?.school || 'Unknown School'}
-                      {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
-                      {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                // Player view: Show scout evaluating them
-                <>
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                    {evaluation.scout?.avatar_url ? (
-                      <Image
-                        src={evaluation.scout.avatar_url}
-                        alt={evaluation.scout.full_name || 'Scout'}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-gray-600 text-xl font-semibold">
-                          {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                  </>
+                ) : (
+                  // Player view: Show scout evaluating them
+                  <>
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                      {evaluation.scout?.avatar_url ? (
+                        <Image
+                          src={evaluation.scout.avatar_url}
+                          alt={evaluation.scout.full_name || 'Scout'}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                          <span className="text-gray-600 text-xl font-semibold">
+                            {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-black text-base md:text-lg mb-1 flex items-center gap-2 truncate">
+                        {evaluation.scout?.full_name || 'Unknown Scout'}
+                        <VerificationBadge />
+                      </h3>
+                      <p className="text-black text-xs md:text-sm truncate">
+                        {evaluation.scout?.position && evaluation.scout?.organization
+                          ? `${evaluation.scout.position} at ${evaluation.scout.organization}`
+                          : evaluation.scout?.position
+                          ? evaluation.scout.position
+                          : evaluation.scout?.organization
+                          ? evaluation.scout.organization
+                          : 'Scout'}
+                      </p>
+                      {/* Status badge */}
+                      <div className="mt-1">
+                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                          evaluation.status === 'requested' ? 'bg-blue-100 text-blue-800' :
+                          evaluation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          evaluation.status === 'denied' ? 'bg-red-100 text-red-800' :
+                          evaluation.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                          evaluation.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {evaluation.status === 'requested' ? 'Requested' :
+                           evaluation.status === 'confirmed' ? 'Confirmed' :
+                           evaluation.status === 'denied' ? 'Denied' :
+                           evaluation.status === 'in_progress' ? 'In Progress' :
+                           evaluation.status === 'completed' ? 'Completed' :
+                           evaluation.status}
                         </span>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-black text-base md:text-lg mb-1 flex items-center gap-2 truncate">
-                      {evaluation.scout?.full_name || 'Unknown Scout'}
-                      <VerificationBadge />
-                    </h3>
-                    <p className="text-black text-xs md:text-sm truncate">
-                      {evaluation.scout?.position && evaluation.scout?.organization
-                        ? `${evaluation.scout.position} at ${evaluation.scout.organization}`
-                        : evaluation.scout?.position
-                        ? evaluation.scout.position
-                        : evaluation.scout?.organization
-                        ? evaluation.scout.organization
-                        : 'Scout'}
-                    </p>
-                  </div>
-                </>
+                    </div>
+                  </>
+                )}
+              </Link>
+              {/* Show menu for players with pending evaluations */}
+              {role === 'player' && activeTab === 'in_progress' && (
+                <div 
+                  className="flex-shrink-0" 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                >
+                  <HeaderMenu 
+                    userId={userId} 
+                    evaluationId={evaluation.id}
+                    onCancelled={() => {
+                      console.log('🔄 onCancelled called, removing evaluation:', evaluation.id)
+                      // Optimistically remove from list
+                      setEvaluations(prev => {
+                        const filtered = prev.filter(e => e.id !== evaluation.id)
+                        console.log('📋 Updated evaluations list:', filtered.length)
+                        return filtered
+                      })
+                      // Then trigger full reload
+                      setRefreshKey(prev => prev + 1)
+                    }}
+                  />
+                </div>
               )}
-            </Link>
+            </div>
           ))}
         </div>
       )}

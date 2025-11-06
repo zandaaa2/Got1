@@ -5,12 +5,13 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import HeaderMenu from '@/components/shared/HeaderMenu'
 
 interface EvaluationDetailProps {
   evaluation: any
   isScout: boolean
   userId: string
-  scoutProfile?: any // Optional scout profile for displaying scout's own profile card
+  scoutProfile?: any // Optional scout profile for displaying scout's own profile card (includes turnaround_time)
 }
 
 export default function EvaluationDetail({
@@ -21,6 +22,9 @@ export default function EvaluationDetail({
 }: EvaluationDetailProps) {
   const [notes, setNotes] = useState(evaluation.notes || '')
   const [submitting, setSubmitting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [denying, setDenying] = useState(false)
+  const [deniedReason, setDeniedReason] = useState('')
   const router = useRouter()
   const supabase = createClient()
   
@@ -37,6 +41,96 @@ export default function EvaluationDetail({
   
   const trimmedCount = getTrimmedCharacterCount(notes)
   const isValid = trimmedCount >= MIN_CHARACTERS
+
+  /**
+   * Handles scout confirmation of evaluation request.
+   * Creates payment session for player to complete.
+   */
+  const handleConfirmRequest = async () => {
+    if (!isScout) return
+
+    try {
+      setConfirming(true)
+      
+      const response = await fetch('/api/evaluation/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          evaluationId: evaluation.id,
+          action: 'confirm',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to confirm evaluation')
+      }
+
+      // If payment URL is provided, redirect player to payment
+      // For now, we'll refresh to show updated status
+      if (data.paymentUrl) {
+        // Player will need to complete payment, but scout sees confirmation message
+        alert('Evaluation confirmed! The player will be notified to complete payment.')
+        router.refresh()
+      } else {
+        router.refresh()
+      }
+    } catch (error: any) {
+      console.error('Error confirming evaluation:', error)
+      alert(error.message || 'Failed to confirm evaluation. Please try again.')
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  /**
+   * Handles scout denial of evaluation request.
+   */
+  const handleDenyRequest = async () => {
+    if (!isScout) return
+
+    if (!deniedReason.trim()) {
+      alert('Please provide a reason for denying this evaluation request.')
+      return
+    }
+
+    if (!confirm('Are you sure you want to deny this evaluation request? The player will be notified.')) {
+      return
+    }
+
+    try {
+      setDenying(true)
+      
+      const response = await fetch('/api/evaluation/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          evaluationId: evaluation.id,
+          action: 'deny',
+          deniedReason: deniedReason.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to deny evaluation')
+      }
+
+      alert('Evaluation request denied. The player has been notified.')
+      router.push('/my-evals')
+    } catch (error: any) {
+      console.error('Error denying evaluation:', error)
+      alert(error.message || 'Failed to deny evaluation. Please try again.')
+    } finally {
+      setDenying(false)
+    }
+  }
 
   /**
    * Handles submission of the evaluation.
@@ -132,13 +226,131 @@ export default function EvaluationDetail({
           <span className="md:hidden">Back</span>
         </button>
 
-        {evaluation.status === 'pending' || evaluation.status === 'in_progress' ? (
+        {/* Scout Profile Card - Show for requested status */}
+        {evaluation.status === 'requested' && (
+          <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
+            <Link 
+              href={`/profile/${scout?.id || ''}`}
+              className="flex flex-col md:flex-row items-start gap-4 md:gap-6 flex-1 hover:opacity-90 transition-opacity"
+            >
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
+                {scout?.avatar_url ? (
+                  <Image
+                    src={scout.avatar_url}
+                    alt={scout.full_name || 'Scout'}
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                    <span className="text-gray-600 text-3xl font-semibold">
+                      {scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 w-full text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
+                  {scout?.full_name || 'Unknown Scout'}
+                </h1>
+                {(scout?.position || scout?.organization) && (
+                  <p className="text-black mb-2">
+                    {scout?.position && scout?.organization
+                      ? `${scout.position} at ${scout.organization}`
+                      : scout?.position
+                      ? scout.position
+                      : scout?.organization
+                      ? scout.organization
+                      : ''}
+                  </p>
+                )}
+                {scout?.social_link && (
+                  <a
+                    href={scout.social_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline mb-2 block"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {scout.social_link.replace(/^https?:\/\//, '')}
+                  </a>
+                )}
+                {scout?.bio && (
+                  <p className="text-black mt-4 leading-relaxed whitespace-pre-wrap">
+                    {scout.bio}
+                  </p>
+                )}
+              </div>
+            </Link>
+            {/* Three-dot menu for canceling */}
+            <div className="flex-shrink-0">
+              <HeaderMenu 
+                userId={userId} 
+                scoutId={scout?.user_id}
+                evaluationId={evaluation?.id}
+                onCancelled={() => {
+                  router.push('/my-evals')
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Status-based content */}
+        {evaluation.status === 'requested' ? (
           <div className="mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Evaluation Pending</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Evaluation Requested</h2>
+            <div className="p-4 md:p-6 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-black mb-2">
+                Your evaluation request has been sent to <strong>{scout?.full_name || 'the scout'}</strong>.
+              </p>
+              <p className="text-black text-sm">
+                The scout will review your request and either confirm or deny it. You can cancel this request at any time before the scout responds.
+              </p>
+            </div>
+          </div>
+        ) : evaluation.status === 'denied' ? (
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Evaluation Request Denied</h2>
+            <div className="p-4 md:p-6 bg-red-50 rounded-lg border border-red-200">
+              <p className="text-black mb-2">
+                <strong>{scout?.full_name || 'The scout'}</strong> has declined your evaluation request.
+              </p>
+              {evaluation.denied_reason && (
+                <p className="text-black text-sm mt-2">
+                  <strong>Reason:</strong> {evaluation.denied_reason}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : evaluation.status === 'confirmed' && evaluation.payment_status !== 'paid' ? (
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Payment Required</h2>
+            <div className="p-4 md:p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-black mb-4">
+                <strong>{scout?.full_name || 'The scout'}</strong> has confirmed your evaluation request!
+              </p>
+              <p className="text-black mb-4">
+                Please complete payment to proceed. Amount: <strong>${evaluation.price?.toFixed(2) || '0.00'}</strong>
+              </p>
+              {evaluation.payment_intent_id && (
+                <p className="text-black text-sm text-gray-600 mb-4">
+                  You should have received a payment link via email. If not, please contact support.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : evaluation.status === 'confirmed' || evaluation.status === 'in_progress' ? (
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">
+              {evaluation.status === 'confirmed' ? 'Evaluation Confirmed' : 'Evaluation In Progress'}
+            </h2>
             <div className="p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-black">
-                Your evaluation is {evaluation.status === 'pending' ? 'pending' : 'in progress'}. 
-                The scout will complete it soon.
+                {evaluation.status === 'confirmed' 
+                  ? 'Payment received. The scout is preparing your evaluation.' 
+                  : 'The scout is working on your evaluation. They will complete it soon.'}
               </p>
             </div>
           </div>
@@ -199,7 +411,157 @@ export default function EvaluationDetail({
   }
 
   // Scout view
-  // If completed, show it like ProfileView. If pending/in_progress, show form.
+  // If status is 'requested', show confirm/deny UI
+  if (isScout && evaluation.status === 'requested') {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <button
+          onClick={() => router.back()}
+          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
+        >
+          <svg
+            className="w-5 h-5 md:w-6 md:h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          <span className="md:hidden">Back</span>
+        </button>
+
+        {/* Player Profile Section */}
+        <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
+            {player?.avatar_url ? (
+              <Image
+                src={player.avatar_url}
+                alt={player.full_name || 'Player'}
+                width={96}
+                height={96}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                <span className="text-gray-600 text-3xl font-semibold">
+                  {player?.full_name?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 w-full text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
+              {player?.full_name || 'Unknown Player'}
+            </h1>
+            {(player?.position || player?.school) && (
+              <p className="text-black mb-2">
+                {player?.position && player?.school
+                  ? `${player.position} at ${player.school}`
+                  : player?.position
+                  ? player.position
+                  : player?.school
+                  ? player.school
+                  : ''}
+                {player?.school && player?.graduation_year && ` (${player.graduation_year})`}
+              </p>
+            )}
+            {player?.hudl_link && (
+              <a
+                href={player.hudl_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline mb-2 block"
+              >
+                {player.hudl_link.replace(/^https?:\/\//, '')}
+              </a>
+            )}
+            {player?.bio && (
+              <p className="text-black mt-4 leading-relaxed whitespace-pre-wrap">
+                {player.bio}
+              </p>
+            )}
+            {player?.parent_name && (
+              <p className="text-black text-sm mt-2">
+                Run by parent - {player.parent_name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Evaluation Request Section */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 md:p-8 mb-6">
+          <h2 className="text-xl md:text-2xl font-bold text-black mb-4">
+            Evaluation Request
+          </h2>
+          <div className="mb-6">
+            <p className="text-black mb-4">
+              <strong>{player?.full_name || 'This player'}</strong> has requested an evaluation from you.
+            </p>
+            <div className="bg-white border border-gray-200 rounded p-4 mb-4">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-black font-medium">Evaluation Price:</span>
+                <span className="text-black font-bold text-lg">${evaluation.price?.toFixed(2) || '0.00'}</span>
+              </div>
+              {scoutProfile?.turnaround_time && (
+                <div className="mb-3 pb-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-black font-medium">Your Turnaround Time:</span>
+                  </div>
+                  <p className="text-black font-semibold text-base mt-1 ml-7">
+                    {scoutProfile.turnaround_time}
+                  </p>
+                </div>
+              )}
+              <p className="text-sm text-gray-600 mt-2">
+                If you confirm, the player will be charged and payment will be held in escrow until you complete the evaluation.
+              </p>
+            </div>
+          </div>
+
+          {/* Confirm Button */}
+          <button
+            onClick={handleConfirmRequest}
+            disabled={confirming || denying}
+            className="w-full mb-4 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg transition-colors"
+          >
+            {confirming ? 'Confirming...' : 'Confirm & Accept Evaluation Request'}
+          </button>
+
+          {/* Deny Section */}
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h3 className="text-lg font-bold text-black mb-3">Deny Request</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              If you cannot accept this evaluation request, please provide a reason:
+            </p>
+            <textarea
+              value={deniedReason}
+              onChange={(e) => setDeniedReason(e.target.value)}
+              placeholder="Enter reason for denying this request..."
+              className="w-full min-h-[100px] p-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black text-sm resize-none mb-4"
+            />
+            <button
+              onClick={handleDenyRequest}
+              disabled={confirming || denying || !deniedReason.trim()}
+              className="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              {denying ? 'Denying...' : 'Deny Request'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Scout view
+  // If completed, show it like ProfileView. If confirmed/in_progress, show form.
   if (evaluation.status === 'completed' && evaluation.notes) {
     // Completed evaluation - show scout's own profile card and the evaluation
     const scout = scoutProfile || evaluation.scout

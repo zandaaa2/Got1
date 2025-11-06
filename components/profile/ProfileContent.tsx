@@ -11,6 +11,302 @@ interface ProfileContentProps {
   hasPendingApplication: boolean
 }
 
+// Shared account status state - lifted to parent scope so MoneyDashboard can access it
+let globalAccountStatus: {
+  hasAccount: boolean
+  onboardingComplete: boolean
+  chargesEnabled: boolean
+  payoutsEnabled: boolean
+} | null = null
+
+/**
+ * Money Dashboard Component
+ * Shows pricing info and Stripe Connect account access for scouts with completed onboarding
+ */
+function MoneyDashboard({ profile }: { profile: any }) {
+  const [accountStatus, setAccountStatus] = useState(globalAccountStatus)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    checkAccountStatus()
+  }, [])
+
+  const checkAccountStatus = async () => {
+    try {
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'GET',
+      })
+      const data = await response.json()
+      const status = {
+        hasAccount: data.hasAccount || false,
+        onboardingComplete: data.onboardingComplete || false,
+        chargesEnabled: data.chargesEnabled || false,
+        payoutsEnabled: data.payoutsEnabled || false,
+      }
+      setAccountStatus(status)
+      globalAccountStatus = status
+    } catch (error) {
+      console.error('Error checking account status:', error)
+    }
+  }
+
+  const handleGetAccountLink = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'POST',
+      })
+      const data = await response.json()
+      
+      if (data.success && data.dashboardUrl) {
+        window.open(data.dashboardUrl, '_blank')
+      }
+    } catch (error) {
+      console.error('Error getting account link:', error)
+      alert('Failed to access Stripe account. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Only show if account is complete
+  if (!accountStatus || !accountStatus.onboardingComplete) {
+    return null
+  }
+
+  return (
+    <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold text-black">Money Dashboard</h3>
+      </div>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+            <p className="text-sm text-gray-600 mb-1">Price per Evaluation</p>
+            <p className="text-2xl font-bold text-black">${profile.price_per_eval || 99}</p>
+          </div>
+          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+            <p className="text-sm text-gray-600 mb-1">Turnaround Time</p>
+            <p className="text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+          </div>
+        </div>
+        <button
+          onClick={handleGetAccountLink}
+          disabled={loading}
+          className="w-full px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Loading...' : 'View my Stripe Connect account'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Stripe Connect Section Component
+ * Allows scouts to access their Stripe Connect account for payouts
+ */
+function StripeConnectSection({ profile }: { profile: any }) {
+  const [loading, setLoading] = useState(false)
+  const [showInfoModal, setShowInfoModal] = useState(false)
+  const [accountStatus, setAccountStatus] = useState<{
+    hasAccount: boolean
+    onboardingComplete: boolean
+    chargesEnabled: boolean
+    payoutsEnabled: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    // Check account status on mount
+    checkAccountStatus()
+  }, [])
+
+  const checkAccountStatus = async () => {
+    try {
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'GET',
+      })
+      const data = await response.json()
+      const status = {
+        hasAccount: data.hasAccount || false,
+        onboardingComplete: data.onboardingComplete || false,
+        chargesEnabled: data.chargesEnabled || false,
+        payoutsEnabled: data.payoutsEnabled || false,
+      }
+      setAccountStatus(status)
+      globalAccountStatus = status // Update global state
+    } catch (error) {
+      console.error('Error checking account status:', error)
+    }
+  }
+
+  const handleGetAccountLink = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'POST',
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        // If onboarding is complete, open dashboard; otherwise open onboarding
+        if (accountStatus?.onboardingComplete && data.dashboardUrl) {
+          window.open(data.dashboardUrl, '_blank')
+        } else if (data.onboardingUrl) {
+          window.open(data.onboardingUrl, '_blank')
+        }
+      }
+    } catch (error) {
+      console.error('Error getting account link:', error)
+      alert('Failed to access Stripe account. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-xl font-bold text-black">Payment Account</h3>
+            <button
+              type="button"
+              onClick={() => setShowInfoModal(true)}
+              className="w-5 h-5 rounded-full bg-blue-400 text-white text-xs flex items-center justify-center hover:bg-blue-500 transition-colors font-bold"
+              aria-label="Information about Payment Account"
+            >
+              i
+            </button>
+          </div>
+          <p className="text-sm text-gray-600">
+            Manage your payouts and view your earnings
+          </p>
+        </div>
+      </div>
+
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowInfoModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-black">Payment Account</h3>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="text-gray-500 hover:text-black text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-4 text-sm text-gray-700">
+              <div>
+                <h4 className="font-semibold text-black mb-2">What is a Payment Account?</h4>
+                <p className="mb-3">
+                  Your Payment Account is a Stripe Connect account that allows you to receive payouts from completed evaluations.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-black mb-2">Stripe Account vs Stripe Connect Account</h4>
+                <div className="space-y-2">
+                  <div>
+                    <p className="font-medium text-black">Stripe Account (Platform Account):</p>
+                    <p className="ml-4">• The main Got1 business account</p>
+                    <p className="ml-4">• Receives payments from players (money held in escrow)</p>
+                    <p className="ml-4">• Manages the platform and takes a 10% fee</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-black">Stripe Connect Account (Your Scout Account):</p>
+                    <p className="ml-4">• Your personal account as a scout</p>
+                    <p className="ml-4">• Receives 90% of each evaluation fee when you complete an evaluation</p>
+                    <p className="ml-4">• Separate from the platform account for clear tracking</p>
+                    <p className="ml-4">• You manage your own payouts and tax information</p>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-600">
+                  <strong>Note:</strong> Even if you own the platform Stripe account, you still need a separate Stripe Connect account to receive scout payouts and track your earnings.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowInfoModal(false)}
+              className="mt-4 px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {!accountStatus ? (
+        <div className="text-sm text-gray-600">
+          <p>Checking account status...</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {accountStatus.hasAccount ? (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`w-2 h-2 rounded-full ${accountStatus.onboardingComplete ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                <span className="text-gray-700">
+                  {accountStatus.onboardingComplete 
+                    ? 'Account active - Ready to receive payouts' 
+                    : 'Onboarding required - Complete setup to receive payouts'}
+                </span>
+              </div>
+              <button
+                onClick={handleGetAccountLink}
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading 
+                  ? 'Loading...' 
+                  : accountStatus.onboardingComplete 
+                    ? 'Access Dashboard' 
+                    : 'Complete Onboarding'}
+              </button>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-sm text-gray-600">
+                <p>Create your Stripe Connect account to start making money providing evaluations.</p>
+              </div>
+              <button
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    const response = await fetch('/api/stripe/connect/create-account', {
+                      method: 'POST',
+                    })
+                    const data = await response.json()
+                    
+                    if (data.success) {
+                      alert('Stripe Connect account created! Please refresh the page.')
+                      window.location.reload()
+                    } else {
+                      alert(`Failed to create account: ${data.error || 'Unknown error'}`)
+                    }
+                  } catch (error) {
+                    console.error('Error creating account:', error)
+                    alert('Failed to create account. Please try again.')
+                  } finally {
+                    setLoading(false)
+                  }
+                }}
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating...' : 'Create Stripe Connect Account'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ProfileContent({ profile, hasPendingApplication }: ProfileContentProps) {
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
   const router = useRouter()
@@ -148,129 +444,11 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
         </Link>
       </div>
 
-      {/* Pricing Section - Only show for scouts */}
-      {profile.role === 'scout' && (
-        <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h3 className="text-xl font-bold text-black">Pricing & Turnaround</h3>
-              <span className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded">
-                Scouts Only
-              </span>
-            </div>
-            {!isEditingPricing && (
-              <button
-                onClick={() => setIsEditingPricing(true)}
-                className="px-6 py-2 bg-gray-100 text-black rounded hover:bg-gray-200 font-medium"
-              >
-                Update
-              </button>
-            )}
-          </div>
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label htmlFor="price_per_eval" className="block text-sm font-medium text-black">
-                  Price per Evaluation (USD)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setInfoModal('price')}
-                  className="w-4 h-4 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center hover:bg-gray-500 transition-colors"
-                  aria-label="Information about price per evaluation"
-                >
-                  i
-                </button>
-              </div>
-              {isEditingPricing ? (
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    id="price_per_eval"
-                    value={pricePerEval}
-                    onChange={(e) => setPricePerEval(e.target.value)}
-                    min="0"
-                    step="0.01"
-                    placeholder="99"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
-                  />
-                </div>
-              ) : (
-                <div className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-black">
-                  ${pricePerEval || '99'}
-                </div>
-              )}
-            </div>
+      {/* Stripe Connect Account Section - Only show for scouts */}
+      {profile.role === 'scout' && <StripeConnectSection profile={profile} />}
 
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label htmlFor="turnaround_time" className="block text-sm font-medium text-black">
-                  Turnaround Time
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setInfoModal('turnaround')}
-                  className="w-4 h-4 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center hover:bg-gray-500 transition-colors"
-                  aria-label="Information about turnaround time"
-                >
-                  i
-                </button>
-              </div>
-              {isEditingPricing ? (
-                <>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      id="turnaround_time"
-                      value={turnaroundTime.replace(/[^0-9]/g, '') || ''}
-                      onChange={(e) => {
-                        const numericValue = e.target.value.replace(/[^0-9]/g, '')
-                        setTurnaroundTime(numericValue ? `${numericValue} hrs` : '')
-                      }}
-                      placeholder="24"
-                      min="0"
-                      className="w-full pl-4 pr-16 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white mb-3"
-                    />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
-                      hrs
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={handleSavePricing}
-                      disabled={saving}
-                      className="px-6 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50 font-medium"
-                    >
-                      {saving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEditingPricing(false)
-                        setPricePerEval(profile.price_per_eval?.toString() || '99')
-                        setTurnaroundTime(profile.turnaround_time || '72 hrs')
-                        setSaveMessage(null)
-                      }}
-                      className="px-6 py-2 border border-gray-300 text-black rounded hover:bg-gray-50 font-medium"
-                    >
-                      Cancel
-                    </button>
-                    {saveMessage && (
-                      <p className={`text-sm ${saveMessage.includes('Failed') ? 'text-red-600' : 'text-green-600'}`}>
-                        {saveMessage}
-                      </p>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-black">
-                  {turnaroundTime || '72 hrs'}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
+      {profile.role === 'scout' && <MoneyDashboard profile={profile} />}
 
       {/* Scout Status Section - Only show if user is not a scout */}
       {profile.role !== 'scout' && (

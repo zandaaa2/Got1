@@ -5,15 +5,28 @@ import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
+import { loadStripe } from '@stripe/stripe-js'
 
 interface PurchaseEvaluationProps {
   scout: any
   player: any
 }
 
+// Initialize Stripe - only if key exists
+const getStripeKey = () => {
+  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  if (!key) {
+    console.error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set')
+    return null
+  }
+  return key
+}
+
+const stripePromise = getStripeKey() ? loadStripe(getStripeKey()!) : null
+
 /**
  * Component for purchasing an evaluation from a scout.
- * Currently implements a simplified flow without payment processing.
+ * Uses Stripe Checkout for payment processing.
  * 
  * @param scout - The scout profile to purchase from
  * @param player - The player profile making the purchase
@@ -23,16 +36,19 @@ export default function PurchaseEvaluation({
   player,
 }: PurchaseEvaluationProps) {
   const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
   /**
-   * Handles the purchase of an evaluation.
-   * Creates an evaluation record with 'pending' status.
+   * Handles the request for an evaluation (no payment yet).
+   * Creates an evaluation request, waits for scout to confirm/deny.
+   * Payment will be charged when scout confirms.
    */
   const handlePurchase = async () => {
     try {
       setProcessing(true)
+      setError(null)
 
       // Get the scout's current price from database
       const { data: currentScout } = await supabase
@@ -43,7 +59,7 @@ export default function PurchaseEvaluation({
 
       const price = currentScout?.price_per_eval || scout.price_per_eval || 99
 
-      // Create evaluation (without payment processing for now)
+      // Create evaluation request (no payment yet)
       const response = await fetch('/api/evaluation/create', {
         method: 'POST',
         headers: {
@@ -57,29 +73,27 @@ export default function PurchaseEvaluation({
 
       const data = await response.json()
 
+      console.log('Evaluation request response:', { ok: response.ok, data })
+
       if (!response.ok) {
         // If evaluation already exists, redirect to it
         if (data.evaluationId) {
           router.push(`/evaluations/${data.evaluationId}`)
           return
         }
-        // Show detailed error message
-        const errorMsg = data.error || 'Failed to create evaluation'
-        const details = data.details ? ` (${data.details})` : ''
-        const hint = data.hint ? `\n\nHint: ${data.hint}` : ''
-        const code = data.code ? `\nCode: ${data.code}` : ''
-        throw new Error(errorMsg + details + code + hint)
+        throw new Error(data.error || 'Failed to create evaluation request')
       }
 
-      if (data.success && data.evaluationId) {
-        // Redirect to the evaluation page
-        router.push(`/evaluations/${data.evaluationId}`)
-      } else {
-        throw new Error('Failed to create evaluation')
+      if (!data.evaluationId) {
+        console.error('No evaluationId in response:', data)
+        throw new Error('No evaluation ID returned. Please check the server logs.')
       }
+
+      // Redirect to evaluation page to see status
+      router.push(`/evaluations/${data.evaluationId}`)
     } catch (error: any) {
-      console.error('Error purchasing evaluation:', error)
-      alert(error.message || 'Failed to purchase evaluation. Please try again.')
+      console.error('Error requesting evaluation:', error)
+      setError(error.message || 'Failed to request evaluation. Please try again.')
       setProcessing(false)
     }
   }
@@ -151,13 +165,22 @@ export default function PurchaseEvaluation({
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+        
         <button
           onClick={handlePurchase}
           disabled={processing}
           className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
         >
-          {processing ? 'Processing...' : 'Request Evaluation'}
+          {processing ? 'Requesting...' : `Request Evaluation`}
         </button>
+        <p className="text-sm text-gray-600 mt-2 text-center">
+          No payment required yet. Payment will be charged when the scout confirms your request.
+        </p>
       </div>
     </div>
   )

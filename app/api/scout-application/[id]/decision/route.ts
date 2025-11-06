@@ -5,6 +5,11 @@ import type { NextRequest } from 'next/server'
 import { isAdmin } from '@/lib/admin'
 import { sendApplicationApprovedEmail, sendApplicationDeniedEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2023-10-16',
+})
 
 export async function POST(
   request: NextRequest,
@@ -122,6 +127,53 @@ export async function POST(
       } else {
         console.log('✅ Profile updated to scout successfully')
         console.log('Updated profile:', updatedProfile)
+      }
+
+      // Create Stripe Connect account for the scout
+      try {
+        // Get scout profile to check if they already have a Stripe account
+        const { data: scoutProfile } = await supabase
+          .from('profiles')
+          .select('stripe_account_id, email')
+          .eq('user_id', application.user_id)
+          .maybeSingle()
+
+        if (!scoutProfile?.stripe_account_id) {
+          // Create Stripe Connect Express account
+          const account = await stripe.accounts.create({
+            type: 'express',
+            country: 'US', // Update this based on your needs
+            email: scoutProfile?.email || undefined,
+            capabilities: {
+              card_payments: { requested: true },
+              transfers: { requested: true },
+            },
+            metadata: {
+              scout_user_id: application.user_id,
+              scout_name: updatedProfile?.full_name || 'Scout',
+            },
+          })
+
+          // Save Stripe account ID to scout's profile
+          const { error: stripeUpdateError } = await supabase
+            .from('profiles')
+            .update({
+              stripe_account_id: account.id,
+            })
+            .eq('user_id', application.user_id)
+
+          if (stripeUpdateError) {
+            console.error('Error updating profile with Stripe account ID:', stripeUpdateError)
+          } else {
+            console.log(`✅ Created Stripe Connect account ${account.id} for scout ${application.user_id}`)
+          }
+        } else {
+          console.log(`ℹ️ Scout already has Stripe Connect account: ${scoutProfile.stripe_account_id}`)
+        }
+      } catch (stripeError: any) {
+        console.error('Error creating Stripe Connect account:', stripeError)
+        // Don't fail the request if Stripe account creation fails
+        // The scout can still be approved, and we can create the account later
       }
 
       // Send approval email to user

@@ -37,27 +37,57 @@ function getBaseUrl(): string {
  * @param html - Email HTML content
  * @returns Promise that resolves when email is sent or logged
  */
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+async function sendEmail(to: string, subject: string, html: string): Promise<string | null> {
   const resend = getResendClient()
   const fromEmail = getFromEmail()
 
   if (resend) {
     try {
-      await resend.emails.send({
+      console.log(`📧 Preparing to send email via Resend:`)
+      console.log(`   To: ${to}`)
+      console.log(`   From: ${fromEmail}`)
+      console.log(`   Subject: ${subject}`)
+      console.log(`   HTML length: ${html.length} characters`)
+      
+      const result = await resend.emails.send({
         from: fromEmail,
         to,
         subject,
         html,
       })
-      console.log(`✅ Email sent successfully to ${to}`)
-    } catch (error) {
-      console.error(`❌ Failed to send email to ${to}:`, error)
+      
+      console.log(`✅ Resend API call successful`)
+      console.log(`📧 Full response:`, JSON.stringify(result, null, 2))
+      console.log(`📧 Resend Email ID: ${result.data?.id || 'No ID returned'}`)
+      console.log(`📧 Response error:`, result.error || 'none')
+      
+      if (result.data?.id) {
+        console.log(`📧 Check delivery status at: https://resend.com/emails/${result.data.id}`)
+      } else {
+        console.warn(`⚠️ No email ID returned from Resend - email may not have been queued`)
+      }
+      
+      if (result.error) {
+        console.error(`❌ Resend returned an error:`, result.error)
+        throw new Error(`Resend error: ${JSON.stringify(result.error)}`)
+      }
+      
+      return result.data?.id || null
+    } catch (error: any) {
+      console.error(`❌ Failed to send email to ${to}`)
+      console.error(`❌ Error type:`, error?.constructor?.name)
+      console.error(`❌ Error message:`, error?.message)
+      console.error(`❌ Error details:`, JSON.stringify(error, null, 2))
+      if (error?.response) {
+        console.error(`❌ HTTP Response:`, JSON.stringify(error.response, null, 2))
+      }
       // Fallback to console log
       console.log('=== EMAIL (Failed to send, logged to console) ===')
       console.log(`To: ${to}`)
       console.log(`Subject: ${subject}`)
       console.log('HTML:', html.substring(0, 200) + '...')
       console.log('==============================================')
+      throw error
     }
   } else {
     // No email service configured, just log
@@ -67,6 +97,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
     console.log('HTML:', html.substring(0, 200) + '...')
     console.log('⚠️  Note: RESEND_API_KEY not configured. Configure Resend to receive email notifications.')
     console.log('=====================================')
+    return null
   }
 }
 
@@ -147,6 +178,102 @@ export async function sendEvaluationRequestEmail(
   `
 
   await sendEmail(scoutEmail, `New Evaluation Request from ${playerName}`, html)
+}
+
+/**
+ * Sends an email notification to a player when their evaluation request is denied by a scout.
+ * 
+ * @param playerEmail - The player's email address
+ * @param playerName - The player's name
+ * @param scoutName - The scout's name
+ * @param deniedReason - The reason provided by the scout for denying the request
+ */
+export async function sendEvaluationDeniedEmail(
+  playerEmail: string,
+  playerName: string,
+  scoutName: string,
+  deniedReason: string
+): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #000; margin-bottom: 20px;">Evaluation Request Update</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${playerName || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        We wanted to let you know that <strong>${scoutName}</strong> has declined your evaluation request.
+      </p>
+      ${deniedReason ? `
+      <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0 0 10px 0; color: #856404; font-weight: bold;">Reason:</p>
+        <p style="margin: 0; color: #856404; white-space: pre-wrap;">${deniedReason}</p>
+      </div>
+      ` : ''}
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Don't worry - you can still request evaluations from other scouts on the platform. Browse available scouts to find the right match for you.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${getBaseUrl()}/browse" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Browse Scouts</a>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Thank you for using Got1!
+      </p>
+    </div>
+  `
+
+  await sendEmail(playerEmail, `Your Evaluation Request Was Declined by ${scoutName}`, html)
+}
+
+/**
+ * Sends an email notification to a player when a scout confirms their evaluation request.
+ * Includes a payment link for the player to complete payment.
+ * 
+ * @param playerEmail - The player's email address
+ * @param playerName - The player's name
+ * @param scoutName - The scout's name
+ * @param evaluationId - The evaluation ID
+ * @param paymentUrl - The Stripe Checkout URL for payment
+ * @param price - The price of the evaluation
+ */
+export async function sendEvaluationConfirmedEmail(
+  playerEmail: string,
+  playerName: string,
+  scoutName: string,
+  evaluationId: string,
+  paymentUrl: string,
+  price: number
+): Promise<void> {
+  const evaluationUrl = `${getBaseUrl()}/evaluations/${evaluationId}`
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #000; margin-bottom: 20px;">Evaluation Request Confirmed!</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${playerName || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Great news! <strong>${scoutName}</strong> has confirmed your evaluation request.
+      </p>
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 10px 0;"><strong>Scout:</strong> ${scoutName}</p>
+        <p style="margin: 10px 0;"><strong>Price:</strong> $${price.toFixed(2)}</p>
+      </div>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        To proceed, please complete your payment. The evaluation will begin once payment is confirmed.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${paymentUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Complete Payment</a>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 20px;">
+        Or view your evaluation: <a href="${evaluationUrl}" style="color: #000;">${evaluationUrl}</a>
+      </p>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Thank you for using Got1!
+      </p>
+    </div>
+  `
+
+  await sendEmail(playerEmail, `Your Evaluation Request Has Been Confirmed by ${scoutName}`, html)
 }
 
 /**

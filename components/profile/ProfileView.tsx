@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VerificationBadge from '@/components/shared/VerificationBadge'
+import HeaderMenu from '@/components/shared/HeaderMenu'
 
 interface ProfileViewProps {
   profile: any
@@ -37,8 +38,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [loading, setLoading] = useState(true)
   const [showMoreInfo, setShowMoreInfo] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setCurrentUserId(session.user.id)
+      }
+    }
+    getCurrentUser()
+  }, [])
 
   useEffect(() => {
     loadEvaluations()
@@ -383,6 +396,19 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </a>
           )}
         </div>
+                {!isOwnProfile && profile.role === 'scout' && currentUserId && (
+                  <div className="flex-shrink-0">
+                    <HeaderMenu 
+                      userId={currentUserId} 
+                      scoutId={profile.user_id}
+                      onCancelled={() => {
+                        router.refresh()
+                        // Also reload evaluations to update the UI
+                        loadEvaluations()
+                      }}
+                    />
+                  </div>
+                )}
       </div>
 
       {/* Pricing & Purchase Section - Show for all scout profiles */}
