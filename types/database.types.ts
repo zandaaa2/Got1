@@ -33,12 +33,21 @@ export interface Evaluation {
   id: string
   scout_id: string
   player_id: string
-  status: 'pending' | 'in_progress' | 'completed'
+  status: 'requested' | 'confirmed' | 'denied' | 'in_progress' | 'completed'
   price: number
   notes: string | null
   created_at: string
   updated_at: string
   completed_at: string | null
+  payment_status?: 'pending' | 'paid' | 'refunded' | null
+  payment_intent_id?: string | null
+  stripe_account_id?: string | null
+  transfer_id?: string | null
+  platform_fee?: number | null
+  scout_payout?: number | null
+  confirmed_at?: string | null
+  denied_at?: string | null
+  denied_reason?: string | null
 }
 
 export interface ScoutApplication {

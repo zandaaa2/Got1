@@ -1,5 +1,6 @@
 'use client'
 
+// Status comparison fix: Using === for proper type checking
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
@@ -16,7 +17,7 @@ interface Evaluation {
   id: string
   scout_id: string
   player_id: string
-  status: 'pending' | 'in_progress' | 'completed'
+  status: 'requested' | 'confirmed' | 'denied' | 'in_progress' | 'completed'
   price: number
   created_at: string
   scout?: {
