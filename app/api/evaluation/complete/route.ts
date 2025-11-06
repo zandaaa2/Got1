@@ -103,9 +103,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Retrieve the payment intent to get the charge ID
-        const paymentIntent = await stripe.paymentIntents.retrieve(evaluation.payment_intent_id, {
-          expand: ['charges']
-        })
+        const paymentIntent = await stripe.paymentIntents.retrieve(evaluation.payment_intent_id)
         
         // Get the charge ID from the payment intent
         let chargeId: string | null = null
@@ -114,9 +112,15 @@ export async function POST(request: NextRequest) {
           chargeId = typeof paymentIntent.latest_charge === 'string' 
             ? paymentIntent.latest_charge 
             : paymentIntent.latest_charge.id
-        } else if (paymentIntent.charges && paymentIntent.charges.data && paymentIntent.charges.data.length > 0) {
-          // Fallback: get first charge
-          chargeId = paymentIntent.charges.data[0].id
+        } else {
+          // Fallback: list charges for this payment intent
+          const charges = await stripe.charges.list({
+            payment_intent: evaluation.payment_intent_id,
+            limit: 1
+          })
+          if (charges.data && charges.data.length > 0) {
+            chargeId = charges.data[0].id
+          }
         }
 
         if (!chargeId) {
