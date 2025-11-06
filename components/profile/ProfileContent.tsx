@@ -533,6 +533,9 @@ function StripeConnectSection({ profile }: { profile: any }) {
                     : 'Onboarding required - Complete setup to receive payouts'}
                 </span>
               </div>
+              {!accountStatus.onboardingComplete && (
+                <p className="text-xs text-gray-500">Expected setup time: 3-5 minutes</p>
+              )}
               <button
                 onClick={handleGetAccountLink}
                 disabled={loading}
