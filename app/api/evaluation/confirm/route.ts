@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
             hasEmail: !!playerEmail,
             hasProfile: !!playerProfile,
             playerEmail,
-            playerProfile: playerProfile ? { id: playerProfile.id, name: playerProfile.full_name } : null
+            playerProfile: playerProfile ? { name: playerProfile.full_name } : null
           })
         }
       } catch (emailError: any) {
