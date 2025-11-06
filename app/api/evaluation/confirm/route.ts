@@ -186,9 +186,11 @@ export async function POST(request: NextRequest) {
 
       // Create Stripe Checkout Session for player payment
       // Player will need to complete this payment to move status to 'confirmed'
+      const playerEmail = await getUserEmail(evaluation.player_id)
+      
       const checkoutSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        customer_email: await getUserEmail(evaluation.player_id), // Pre-fill player email
+        customer_email: playerEmail || undefined, // Convert null to undefined
         line_items: [
           {
             price_data: {
