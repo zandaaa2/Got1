@@ -2,6 +2,8 @@
 
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import Link from 'next/link'
+import Image from 'next/image'
+import { colleges, getCollegeLogo } from '@/lib/colleges'
 
 interface WhatsThisContentProps {
   organizations: string[]
@@ -25,6 +27,25 @@ const SPORTS = [
 
 export default function WhatsThisContent({ organizations, hasSession }: WhatsThisContentProps) {
   const { openSignIn, openSignUp } = useAuthModal()
+  
+  // Match organizations to colleges from our list
+  const collegeLogos = organizations
+    .map(orgName => {
+      // Try to find exact match or partial match
+      return colleges.find(college => 
+        orgName.toLowerCase().includes(college.name.toLowerCase()) ||
+        college.name.toLowerCase().includes(orgName.toLowerCase())
+      )
+    })
+    .filter((college): college is NonNullable<typeof college> => college !== undefined)
+    // Only show teams that will have good logo coverage (colleges, NFL, NBA)
+    .filter(college => 
+      college.conference !== 'MLB' && college.conference !== 'NHL'
+    )
+    // Remove duplicates by name
+    .filter((college, index, self) => 
+      index === self.findIndex(c => c.name === college.name)
+    )
 
   return (
     <div className="w-full">
@@ -171,6 +192,37 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
         </div>
       </div>
 
+      {/* Teams/Colleges Section - Circular logo grid */}
+      {collegeLogos.length > 0 && (
+        <div className="w-full px-4 sm:px-6 md:px-8 mb-8 sm:mb-12 md:mb-16">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-center text-lg sm:text-xl md:text-2xl font-bold text-black mb-6 sm:mb-8">
+              Teams on the Platform
+            </h2>
+            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10">
+              {collegeLogos.map((college) => (
+                <div
+                  key={college.domain}
+                  className="group flex flex-col items-center gap-2 transition-transform hover:scale-110 cursor-pointer"
+                  title={college.name}
+                >
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center bg-white rounded-full shadow-md border-2 border-gray-200 group-hover:border-blue-600 group-hover:shadow-lg transition-all p-3 sm:p-4">
+                    <Image
+                      src={getCollegeLogo(college.domain, 96, college.name)}
+                      alt={college.name}
+                      width={96}
+                      height={96}
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* How It Works */}
       <div className="w-full px-4 sm:px-6 md:px-8 mb-8 sm:mb-12 md:mb-16">
         <div className="max-w-6xl mx-auto">
@@ -208,27 +260,6 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
           </div>
         </div>
       </div>
-
-      {/* Teams Section */}
-      {organizations.length > 0 && (
-        <div className="w-full px-4 sm:px-6 md:px-8 mb-8 sm:mb-12 md:mb-16">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-black text-center mb-6 sm:mb-8 md:mb-12">
-              Teams on the Platform
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-              {organizations.map((org, index) => (
-                <div
-                  key={index}
-                  className="bg-white border-2 border-gray-200 rounded-lg p-3 sm:p-4 md:p-6 text-center hover:border-gray-300 transition-colors"
-                >
-                  <p className="text-sm sm:text-base md:text-lg font-medium text-black break-words">{org}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Call to Action */}
       <div className="w-full px-4 sm:px-6 md:px-8">

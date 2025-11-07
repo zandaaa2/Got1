@@ -298,15 +298,32 @@ export default function EvaluationDetail({
         )}
 
         {/* Status-based content */}
-        {evaluation.status === 'requested' ? (
+        {evaluation.status === 'requested' && evaluation.payment_status === 'paid' ? (
           <div className="mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Evaluation Requested</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Awaiting Scout Response</h2>
             <div className="p-4 md:p-6 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-black mb-2">
-                Your evaluation request has been sent to <strong>{scout?.full_name || 'the scout'}</strong>.
+                Your payment of <strong>${evaluation.price}</strong> has been received and is held securely in escrow.
+              </p>
+              <p className="text-black text-sm mb-3">
+                <strong>{scout?.full_name || 'The scout'}</strong> will review your request and either confirm or deny it.
+              </p>
+              <div className="text-sm text-gray-700 space-y-1">
+                <p>💰 Payment secured in escrow</p>
+                <p>✅ Automatic full refund if scout denies</p>
+                <p>⏳ Scout will respond soon</p>
+              </div>
+            </div>
+          </div>
+        ) : evaluation.status === 'requested' && evaluation.payment_status === 'pending' ? (
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Complete Payment</h2>
+            <div className="p-4 md:p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-black mb-2">
+                Please complete your payment to finalize the evaluation request.
               </p>
               <p className="text-black text-sm">
-                The scout will review your request and either confirm or deny it. You can cancel this request at any time before the scout responds.
+                Your payment will be held in escrow until the scout responds.
               </p>
             </div>
           </div>
@@ -318,25 +335,13 @@ export default function EvaluationDetail({
                 <strong>{scout?.full_name || 'The scout'}</strong> has declined your evaluation request.
               </p>
               {evaluation.denied_reason && (
-                <p className="text-black text-sm mt-2">
+                <p className="text-black text-sm mt-2 mb-2">
                   <strong>Reason:</strong> {evaluation.denied_reason}
                 </p>
               )}
-            </div>
-          </div>
-        ) : evaluation.status === 'confirmed' && evaluation.payment_status !== 'paid' ? (
-          <div className="mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Payment Required</h2>
-            <div className="p-4 md:p-6 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p className="text-black mb-4">
-                <strong>{scout?.full_name || 'The scout'}</strong> has confirmed your evaluation request!
-              </p>
-              <p className="text-black mb-4">
-                Please complete payment to proceed. Amount: <strong>${evaluation.price?.toFixed(2) || '0.00'}</strong>
-              </p>
-              {evaluation.payment_intent_id && (
-                <p className="text-black text-sm text-gray-600 mb-4">
-                  You should have received a payment link via email. If not, please contact support.
+              {evaluation.payment_status === 'refunded' && (
+                <p className="text-sm text-green-700 mt-2">
+                  ✅ A full refund has been issued and will appear in your account within 5-10 business days.
                 </p>
               )}
             </div>

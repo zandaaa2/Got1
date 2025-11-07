@@ -7,6 +7,7 @@ import Image from 'next/image'
 import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
+import CollegeSelector from '@/components/profile/CollegeSelector'
 
 interface HudlLink {
   link: string
@@ -279,38 +280,6 @@ export default function ProfileSetupForm({
         {/* Scout-specific fields */}
         {role === 'scout' && (
           <>
-            <div className="mb-6">
-              <MultiSportSelector
-                selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
-                onToggle={(sport) => {
-                  const currentSports = Array.isArray(formData.sports) ? formData.sports : []
-                  const newSports = currentSports.includes(sport)
-                    ? currentSports.filter(s => s !== sport)
-                    : [...currentSports, sport]
-                  setFormData((prev) => ({ ...prev, sports: newSports }))
-                }}
-                label="Sports You Evaluate For"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="organization"
-                className="block text-sm font-medium text-black mb-2"
-              >
-                Organization
-              </label>
-              <input
-                type="text"
-                id="organization"
-                name="organization"
-                value={formData.organization}
-                onChange={handleChange}
-                placeholder="e.g., Auburn University Player Personnel"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
             <div>
               <label
                 htmlFor="price_per_eval"
@@ -342,6 +311,24 @@ export default function ProfileSetupForm({
 
             <div>
               <label
+                htmlFor="turnaround_time"
+                className="block text-sm font-medium text-black mb-2"
+              >
+                Turnaround Time
+              </label>
+              <input
+                type="text"
+                id="turnaround_time"
+                name="turnaround_time"
+                value={formData.turnaround_time}
+                onChange={handleChange}
+                placeholder="e.g., 72 hrs"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <div>
+              <label
                 htmlFor="social_link"
                 className="block text-sm font-medium text-black mb-2"
               >
@@ -358,22 +345,52 @@ export default function ProfileSetupForm({
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="turnaround_time"
-                className="block text-sm font-medium text-black mb-2"
-              >
-                Turnaround Time
-              </label>
-              <input
-                type="text"
-                id="turnaround_time"
-                name="turnaround_time"
-                value={formData.turnaround_time}
-                onChange={handleChange}
-                placeholder="e.g., 24hr turnaround"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
+            {/* Scout Info Section */}
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <h2 className="text-xl font-bold text-black mb-4">Scout Info</h2>
+
+              <div className="space-y-6">
+                <div>
+                  <CollegeSelector
+                    value={formData.organization}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, organization: value }))}
+                    label="Organization"
+                    placeholder="Search or type college name..."
+                  />
+                  <p className="mt-1 text-sm text-gray-600">
+                    Select from major colleges or type a custom organization (e.g., "Dallas Cowboys", "Auburn Player Personnel")
+                  </p>
+                </div>
+
+                <div>
+                  <MultiSportSelector
+                    selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
+                    onToggle={(sport) => {
+                      const currentSports = Array.isArray(formData.sports) ? formData.sports : []
+                      const newSports = currentSports.includes(sport)
+                        ? currentSports.filter(s => s !== sport)
+                        : [...currentSports, sport]
+                      setFormData((prev) => ({ ...prev, sports: newSports }))
+                    }}
+                    label="Sports You Evaluate For"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
+                    Position
+                  </label>
+                  <input
+                    type="text"
+                    id="position"
+                    name="position"
+                    value={formData.position}
+                    onChange={handleChange}
+                    placeholder="e.g., Player Personnel Assistant, Director of Recruiting"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              </div>
             </div>
           </>
         )}

@@ -50,6 +50,13 @@ export default function PurchaseEvaluation({
       setProcessing(true)
       setError(null)
 
+      // Load Stripe
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+      
+      if (!stripe) {
+        throw new Error('Failed to load Stripe. Please refresh and try again.')
+      }
+
       // Get the scout's current price from database
       const { data: currentScout } = await supabase
         .from('profiles')
@@ -59,7 +66,9 @@ export default function PurchaseEvaluation({
 
       const price = currentScout?.price_per_eval || scout.price_per_eval || 99
 
-      // Create evaluation request (no payment yet)
+      console.log('Creating evaluation with upfront payment...')
+      
+      // Create evaluation request WITH Stripe checkout
       const response = await fetch('/api/evaluation/create', {
         method: 'POST',
         headers: {
@@ -73,7 +82,7 @@ export default function PurchaseEvaluation({
 
       const data = await response.json()
 
-      console.log('Evaluation request response:', { ok: response.ok, data })
+      console.log('Evaluation create response:', { ok: response.ok, data })
 
       if (!response.ok) {
         // If evaluation already exists, redirect to it
@@ -84,13 +93,21 @@ export default function PurchaseEvaluation({
         throw new Error(data.error || 'Failed to create evaluation request')
       }
 
-      if (!data.evaluationId) {
-        console.error('No evaluationId in response:', data)
-        throw new Error('No evaluation ID returned. Please check the server logs.')
+      if (!data.sessionId) {
+        console.error('No sessionId in response:', data)
+        throw new Error('No Stripe session returned. Please check the server logs.')
       }
 
-      // Redirect to evaluation page to see status
-      router.push(`/evaluations/${data.evaluationId}`)
+      console.log('Redirecting to Stripe checkout...', data.sessionId)
+      
+      // Redirect to Stripe Checkout
+      const result = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message)
+      }
     } catch (error: any) {
       console.error('Error requesting evaluation:', error)
       setError(error.message || 'Failed to request evaluation. Please try again.')
@@ -176,10 +193,10 @@ export default function PurchaseEvaluation({
           disabled={processing}
           className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
         >
-          {processing ? 'Requesting...' : `Request Evaluation`}
+          {processing ? 'Processing...' : `Request Evaluation - $${scout.price_per_eval || 99}`}
         </button>
         <p className="text-sm text-gray-600 mt-2 text-center">
-          No payment required yet. Payment will be charged when the scout confirms your request.
+          Payment is charged immediately and held in escrow. Full refund if scout denies.
         </p>
       </div>
     </div>

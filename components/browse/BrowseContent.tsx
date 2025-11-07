@@ -19,6 +19,7 @@ interface Profile {
   graduation_year: number | null
   avatar_url: string | null
   role: string
+  price_per_eval: number | null
   suspended_until?: string | null // Optional - may not exist until migration is run
 }
 
@@ -33,7 +34,16 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
   const supabase = createClient()
+  
+  // Test accounts that should show the badge
+  const testAccountNames = ['zander huff', 'russell westbrooks', 'ray lewois', 'ella k']
+  
+  const isTestAccount = (fullName: string | null) => {
+    if (!fullName) return false
+    return testAccountNames.includes(fullName.toLowerCase())
+  }
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -41,7 +51,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Note: suspended_until may not exist yet if migration hasn't been run
       let query = supabase
         .from('profiles')
-        .select('id, full_name, organization, position, school, graduation_year, avatar_url, role, suspended_until')
+        .select('id, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until')
       
       // Apply ordering
       query = query.order('full_name', { ascending: true })
@@ -100,13 +110,19 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }, [loadProfiles])
 
   const filteredProfiles = profiles.filter((profile) => {
+    // Search query filter
     const query = searchQuery.toLowerCase()
-    return (
+    const matchesSearch = (
       profile.full_name?.toLowerCase().includes(query) ||
       profile.organization?.toLowerCase().includes(query) ||
       profile.school?.toLowerCase().includes(query) ||
       profile.position?.toLowerCase().includes(query)
     )
+    
+    // Role filter
+    const matchesRole = roleFilter === 'all' || profile.role === roleFilter
+    
+    return matchesSearch && matchesRole
   })
 
   return (
@@ -142,6 +158,40 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             className="w-full pl-10 pr-4 py-2 md:py-3 bg-gray-100 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm md:text-base"
           />
         </div>
+        
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <button
+            onClick={() => setRoleFilter(roleFilter === 'scout' ? 'all' : 'scout')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              roleFilter === 'scout'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Scouts
+          </button>
+          <button
+            onClick={() => setRoleFilter(roleFilter === 'player' ? 'all' : 'player')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              roleFilter === 'player'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Players
+          </button>
+          
+          {/* Clear filters button - only show when filters are active */}
+          {roleFilter !== 'all' && (
+            <button
+              onClick={() => setRoleFilter('all')}
+              className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -175,6 +225,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                 <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 truncate">
                   {profile.full_name || 'Unknown'}
                   {profile.role === 'scout' && <VerificationBadge />}
+                  {isTestAccount(profile.full_name) && (
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+                      test account
+                    </span>
+                  )}
                 </h3>
                 <p className="text-black text-xs md:text-sm truncate">
                   {profile.role === 'scout' ? (
@@ -198,6 +253,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   )}
                 </p>
               </div>
+              {profile.role === 'scout' && profile.price_per_eval && (
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-sm md:text-base text-blue-600">
+                    ${profile.price_per_eval}
+                  </p>
+                </div>
+              )}
             </Link>
           ))}
           

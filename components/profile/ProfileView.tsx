@@ -37,11 +37,33 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
   const [showMoreInfo, setShowMoreInfo] = useState(false)
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isSignedIn, setIsSignedIn] = useState(false)
+  const [minimizedEvals, setMinimizedEvals] = useState<Set<string>>(new Set())
   const router = useRouter()
   const supabase = createClient()
+  
+  const toggleEvalMinimize = (evalId: string) => {
+    setMinimizedEvals(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(evalId)) {
+        newSet.delete(evalId)
+      } else {
+        newSet.add(evalId)
+      }
+      return newSet
+    })
+  }
+  
+  // Test accounts that should show the badge
+  const testAccountNames = ['zander huff', 'russell westbrooks', 'ray lewois', 'ella k']
+  
+  const isTestAccount = (fullName: string | null) => {
+    if (!fullName) return false
+    return testAccountNames.includes(fullName.toLowerCase())
+  }
 
   // Get current user ID
   useEffect(() => {
@@ -211,8 +233,13 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             )}
           </div>
           <div className="flex-1 w-full text-center md:text-left">
-            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 flex items-center justify-center md:justify-start gap-2">
               {profile.full_name || 'Unknown Player'}
+              {isTestAccount(profile.full_name) && (
+                <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+                  test account
+                </span>
+              )}
             </h1>
             {(profile.position || profile.school) && (
               <p className="text-black mb-2">
@@ -257,7 +284,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         {/* Evaluations Section */}
         <div className="mb-6 md:mb-8 relative">
           <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
-            Evaluations ({!isSignedIn ? '•' : evaluations.length})
+            Evaluations ({evaluations.length})
           </h2>
           {loading ? (
             <div className="text-center py-12 text-gray-500">Loading...</div>
@@ -270,44 +297,67 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
                 {isSignedIn ? evaluations.map((evaluation) => (
                 <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                  <Link 
-                    href={evaluation.scout?.id ? `/profile/${evaluation.scout.id}` : '#'}
-                    className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity cursor-pointer"
-                  >
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                      {evaluation.scout?.avatar_url && !imageErrors.has(`scout-${evaluation.id}`) ? (
-                        <Image
-                          src={evaluation.scout.avatar_url}
-                          alt={evaluation.scout.full_name || 'Scout'}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                          onError={() => {
-                            setImageErrors((prev) => new Set(prev).add(`scout-${evaluation.id}`))
-                          }}
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-gray-600 text-xl font-semibold">
-                            {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                        {evaluation.scout?.full_name || 'Unknown Scout'}
-                      </h3>
-                      <p className="text-black text-xs md:text-sm mb-1 truncate">
-                        {evaluation.scout?.organization || 'Scout'}
-                      </p>
-                      <p className="text-black text-xs md:text-sm text-gray-600">
-                        {formatDate(evaluation.created_at)}
-                      </p>
-                    </div>
-                  </Link>
-                  {evaluation.notes && (
+                  <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                    <Link 
+                      href={evaluation.scout?.id ? `/profile/${evaluation.scout.id}` : '#'}
+                      className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
+                    >
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                        {evaluation.scout?.avatar_url && !imageErrors.has(`scout-${evaluation.id}`) ? (
+                          <Image
+                            src={evaluation.scout.avatar_url}
+                            alt={evaluation.scout.full_name || 'Scout'}
+                            width={64}
+                            height={64}
+                            className="w-full h-full object-cover"
+                            onError={() => {
+                              setImageErrors((prev) => new Set(prev).add(`scout-${evaluation.id}`))
+                            }}
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                            <span className="text-gray-600 text-xl font-semibold">
+                              {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                          {evaluation.scout?.full_name || 'Unknown Scout'}
+                        </h3>
+                        <p className="text-black text-xs md:text-sm mb-1 truncate">
+                          {evaluation.scout?.organization || 'Scout'}
+                        </p>
+                        <p className="text-black text-xs md:text-sm text-gray-600">
+                          {formatDate(evaluation.created_at)}
+                        </p>
+                      </div>
+                    </Link>
+                    {evaluation.notes && (
+                      <button
+                        onClick={() => toggleEvalMinimize(evaluation.id)}
+                        className="flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
+                        title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
+                      >
+                        <svg
+                          className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
                     <div className="pl-0 md:pl-20 mt-4 md:mt-0">
                       <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                         {evaluation.notes}
@@ -340,7 +390,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               {/* Sign in/Sign up overlay for non-signed-in users */}
               {!isSignedIn && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
-                  <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-md mx-4 text-center">
+                  <div className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 md:p-8 max-w-md mx-4 text-center">
                     <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
                       Sign in to view evaluations
                     </h3>
@@ -426,6 +476,11 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               <VerificationBadge className="w-3.5 h-3.5" />
               Scout
             </span>
+            {isTestAccount(profile.full_name) && (
+              <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+                test account
+              </span>
+            )}
           </div>
           {(profile.position || profile.organization) && (
             <p className="text-black mb-2">
@@ -438,16 +493,26 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 : ''}
             </p>
           )}
-          {profile.social_link && (
-            <a
-              href={profile.social_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline mb-4 block"
-            >
-              {profile.social_link.replace(/^https?:\/\//, '')}
-            </a>
-          )}
+          <div className="flex items-center gap-3">
+            {profile.social_link && (
+              <a
+                href={profile.social_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline text-sm"
+              >
+                {profile.social_link.replace(/^https?:\/\//, '')}
+              </a>
+            )}
+            {!isOwnProfile && (
+              <button
+                onClick={() => setShowMoreInfo(true)}
+                className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+              >
+                Details
+              </button>
+            )}
+          </div>
         </div>
                 {!isOwnProfile && profile.role === 'scout' && currentUserId && (
                   <div className="flex-shrink-0">
@@ -465,39 +530,45 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       </div>
 
       {/* Pricing & Purchase Section - Show for all scout profiles */}
-      <div className="mb-6 md:mb-8 p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
-          <div className="text-center">
-            <p className="text-xs md:text-sm text-gray-600 mb-1">Price</p>
-            <p className="text-xl md:text-2xl font-bold text-black">${profile.price_per_eval || '99'}</p>
+      <div className="mb-6 md:mb-8 p-4 bg-white border border-gray-200 rounded-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Price and Turnaround */}
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Price</p>
+              <p className="text-lg font-bold text-blue-600">${profile.price_per_eval || '99'}</p>
+            </div>
+            <div className="h-8 w-px bg-gray-200"></div>
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Turnaround</p>
+              <p className="text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+            </div>
           </div>
-          <div className="text-center border-t md:border-t-0 md:border-l md:border-r border-gray-300 pt-4 md:pt-0">
-            <p className="text-xs md:text-sm text-gray-600 mb-1">Turnaround</p>
-            <p className="text-xl md:text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
-          </div>
-          <div className="text-center border-t md:border-t-0 pt-4 md:pt-0">
+          
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            {!isOwnProfile && (
+              <button
+                onClick={() => setShowHowItWorks(true)}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-black hover:bg-gray-50 rounded transition-colors"
+              >
+                How this works
+              </button>
+            )}
             {!isOwnProfile ? (
               <button
                 onClick={handleRequestEvaluation}
                 disabled={requesting}
-                className="w-full px-4 md:px-6 py-2.5 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm md:text-lg transition-colors"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm transition-colors"
               >
-                {requesting ? 'Processing...' : 'Purchase Evaluation'}
+                {requesting ? 'Processing...' : 'Request Evaluation'}
               </button>
             ) : (
-              <div className="w-full px-4 md:px-6 py-2.5 md:py-3 bg-gray-200 text-gray-500 rounded-lg font-medium text-sm md:text-lg cursor-not-allowed">
+              <div className="px-6 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium text-sm cursor-not-allowed">
                 Your Profile
               </div>
             )}
           </div>
-        </div>
-        <div className="text-center">
-          <button
-            onClick={() => setShowMoreInfo(true)}
-            className="text-sm text-gray-600 hover:text-black underline font-medium"
-          >
-            See more
-          </button>
         </div>
       </div>
 
@@ -607,10 +678,90 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </div>
       )}
 
+      {/* How It Works Modal */}
+      {showHowItWorks && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHowItWorks(false)}>
+          <div className="bg-white rounded-lg p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-6">
+              <h3 className="text-2xl font-bold text-black">
+                How Evaluations Work
+              </h3>
+              <button
+                onClick={() => setShowHowItWorks(false)}
+                className="text-gray-500 hover:text-black text-2xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-black mb-1">Request Evaluation</h4>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      Click "Request Evaluation" to submit your request to the scout. <strong>No payment is charged at this stage.</strong> You can cancel your request at any time before the scout responds.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-black mb-1">Scout Confirms</h4>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      The scout reviews your request and either confirms or denies it. <strong>If confirmed:</strong> you'll receive a payment link via email. Complete the payment and the money is held in escrow. <strong>If denied:</strong> no payment required.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-black mb-1">Scout Delivers</h4>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      The scout completes your evaluation within their turnaround time. Once submitted, the scout receives 90% of the payment and Got1 receives a 10% platform fee. You'll receive the completed evaluation via email.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="font-semibold text-black mb-2">Refund Policy</h4>
+                <ul className="text-sm text-gray-700 space-y-2">
+                  <li>✅ You can cancel for free before the scout confirms</li>
+                  <li>❌ No refunds after payment is completed (scout has committed to deliver)</li>
+                  <li>💡 Payment is held securely in escrow until evaluation is complete</li>
+                </ul>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setShowHowItWorks(false)}
+              className="w-full mt-6 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Evaluations Contributed Section */}
       <div className="mb-6 md:mb-8 relative">
         <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
-          Evaluations Contributed ({!isSignedIn ? '•' : evaluations.length})
+          Evaluations Contributed ({evaluations.length})
         </h2>
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading...</div>
@@ -623,46 +774,69 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
               {isSignedIn ? evaluations.map((evaluation) => (
               <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                <Link 
-                  href={evaluation.player?.id ? `/profile/${evaluation.player.id}` : '#'}
-                  className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity cursor-pointer"
-                >
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                    {evaluation.player?.avatar_url && !imageErrors.has(`player-${evaluation.id}`) ? (
-                      <Image
-                        src={evaluation.player.avatar_url}
-                        alt={evaluation.player.full_name || 'Player'}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
-                        onError={() => {
-                          setImageErrors((prev) => new Set(prev).add(`player-${evaluation.id}`))
-                        }}
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-gray-600 text-xl font-semibold">
-                          {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                      {evaluation.player?.full_name || 'Unknown Player'}
-                    </h3>
-                    <p className="text-black text-xs md:text-sm mb-1 truncate">
-                      {evaluation.player?.school || 'Unknown School'}
-                      {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
-                      {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
-                    </p>
-                    <p className="text-black text-xs md:text-sm text-gray-600">
-                      {formatDate(evaluation.created_at)}
-                    </p>
-                  </div>
-                </Link>
-                {evaluation.notes && (
+                <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                  <Link 
+                    href={evaluation.player?.id ? `/profile/${evaluation.player.id}` : '#'}
+                    className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
+                  >
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                      {evaluation.player?.avatar_url && !imageErrors.has(`player-${evaluation.id}`) ? (
+                        <Image
+                          src={evaluation.player.avatar_url}
+                          alt={evaluation.player.full_name || 'Player'}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                          onError={() => {
+                            setImageErrors((prev) => new Set(prev).add(`player-${evaluation.id}`))
+                          }}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                          <span className="text-gray-600 text-xl font-semibold">
+                            {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                        {evaluation.player?.full_name || 'Unknown Player'}
+                      </h3>
+                      <p className="text-black text-xs md:text-sm mb-1 truncate">
+                        {evaluation.player?.school || 'Unknown School'}
+                        {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
+                        {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
+                      </p>
+                      <p className="text-black text-xs md:text-sm text-gray-600">
+                        {formatDate(evaluation.created_at)}
+                      </p>
+                    </div>
+                  </Link>
+                  {evaluation.notes && (
+                    <button
+                      onClick={() => toggleEvalMinimize(evaluation.id)}
+                      className="flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
+                      title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
+                    >
+                      <svg
+                        className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
                   <div className="pl-0 md:pl-20 mt-4 md:mt-0">
                     <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                       {evaluation.notes}
@@ -695,7 +869,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             {/* Sign in/Sign up overlay for non-signed-in users */}
             {!isSignedIn && (
               <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
-                <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-md mx-4 text-center">
+                <div className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 md:p-8 max-w-md mx-4 text-center">
                   <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
                     Sign in to view evaluations
                   </h3>

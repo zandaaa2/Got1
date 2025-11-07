@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       }
 
       const evaluationId = session.metadata?.evaluation_id
-      const action = session.metadata?.action // 'scout_confirmed' or undefined
+      const action = session.metadata?.action // 'upfront_payment' or 'scout_confirmed'
 
       if (!evaluationId) {
         console.error('No evaluation_id in session metadata:', session.id)
@@ -69,27 +69,67 @@ export async function POST(request: NextRequest) {
       const platformFee = Math.round(evaluation.price * 0.1 * 100) / 100
       const scoutPayout = Math.round(evaluation.price * 0.9 * 100) / 100
 
-      // If scout confirmed, move to 'confirmed' status (money in escrow)
-      // Otherwise, this is the old flow (shouldn't happen anymore)
-      const newStatus = action === 'scout_confirmed' ? 'confirmed' : 'in_progress'
+      // Update evaluation with payment info
+      const updateData: any = {
+        payment_status: 'paid',
+        payment_intent_id: session.payment_intent as string,
+        platform_fee: platformFee,
+        scout_payout: scoutPayout,
+      }
 
-      // Update evaluation status and payment info
+      // If this is upfront payment, status stays 'requested' (waiting for scout to confirm/deny)
+      // If this is a scout-confirmed payment (old flow), update status to 'confirmed'
+      if (action === 'scout_confirmed') {
+        updateData.status = 'confirmed'
+        updateData.confirmed_at = new Date().toISOString()
+      }
+      // For upfront_payment, status remains 'requested' but payment_status is 'paid'
+
       const { error: updateError } = await supabase
         .from('evaluations')
-        .update({
-          status: newStatus,
-          payment_status: 'paid',
-          payment_intent_id: session.payment_intent as string || null,
-          platform_fee: platformFee,
-          scout_payout: scoutPayout,
-          confirmed_at: action === 'scout_confirmed' ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', evaluationId)
 
       if (updateError) {
         console.error('Error updating evaluation:', updateError)
-        throw updateError
+        return NextResponse.json({ error: 'Failed to update evaluation' }, { status: 500 })
+      }
+
+      // Send email notification to scout for upfront payment
+      if (action === 'upfront_payment') {
+        try {
+          const { sendEvaluationRequestEmail } = await import('@/lib/email')
+          const { getUserEmail } = await import('@/lib/supabase-admin')
+          
+          const scoutEmail = await getUserEmail(evaluation.scout_id)
+          
+          if (scoutEmail) {
+            // Get profile names
+            const { data: scoutProfile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('user_id', evaluation.scout_id)
+              .maybeSingle()
+            
+            const { data: playerProfile } = await supabase
+              .from('profiles')
+              .select('full_name, school')
+              .eq('user_id', evaluation.player_id)
+              .maybeSingle()
+            
+            await sendEvaluationRequestEmail(
+              scoutEmail,
+              scoutProfile?.full_name || 'Scout',
+              playerProfile?.full_name || 'Player',
+              playerProfile?.school || null,
+              evaluationId,
+              evaluation.price
+            )
+          }
+        } catch (emailError) {
+          console.error('Error sending email notification:', emailError)
+          // Don't fail the webhook if email fails
+        }
       }
 
       console.log(`✅ Payment successful for evaluation ${evaluationId}, session ${session.id}`)

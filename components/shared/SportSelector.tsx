@@ -8,9 +8,11 @@ interface SportOption {
 
 const SPORTS: SportOption[] = [
   { emoji: '🏈', name: 'Football', value: 'football' },
-  { emoji: '🏀', name: 'Basketball', value: 'basketball' },
+  { emoji: '🏀', name: "Men's Basketball", value: 'mens-basketball' },
+  { emoji: '🏀', name: "Women's Basketball", value: 'womens-basketball' },
   { emoji: '⚽', name: 'Soccer', value: 'soccer' },
   { emoji: '⚾', name: 'Baseball', value: 'baseball' },
+  { emoji: '🥎', name: 'Softball', value: 'softball' },
   { emoji: '🏐', name: 'Volleyball', value: 'volleyball' },
   { emoji: '🎾', name: 'Tennis', value: 'tennis' },
   { emoji: '🏌️', name: 'Golf', value: 'golf' },
@@ -71,30 +73,42 @@ export function MultiSportSelector({ selectedSports, onToggle, label = 'Sports' 
       <label className="block text-sm font-medium text-black mb-2">
         {label}
       </label>
-      <p className="text-xs text-gray-500 mb-3">Select all sports you evaluate for</p>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-        {SPORTS.map((sport) => {
-          const isSelected = selectedSports.includes(sport.value)
-          return (
-            <button
-              key={sport.value}
-              type="button"
-              onClick={() => onToggle(sport.value)}
-              className={`p-3 rounded-lg border-2 transition-all ${
-                isSelected
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-gray-300 hover:border-gray-400'
-              }`}
-              title={sport.name}
-            >
-              <span className="text-2xl">{sport.emoji}</span>
-            </button>
-          )
-        })}
-      </div>
+      <select
+        multiple
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white min-h-[200px]"
+        onChange={(e) => {
+          const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
+          // Toggle each newly selected or deselected option
+          selectedOptions.forEach(value => {
+            if (!selectedSports.includes(value)) {
+              onToggle(value)
+            }
+          })
+          // Remove deselected options
+          selectedSports.forEach(value => {
+            if (!selectedOptions.includes(value)) {
+              onToggle(value)
+            }
+          })
+        }}
+        value={selectedSports}
+      >
+        {SPORTS.map((sport) => (
+          <option 
+            key={sport.value} 
+            value={sport.value}
+            className="py-2 cursor-pointer"
+          >
+            {sport.emoji} {sport.name}
+          </option>
+        ))}
+      </select>
+      <p className="mt-2 text-xs text-gray-500">
+        Hold Cmd (Mac) or Ctrl (Windows) to select multiple sports
+      </p>
       {selectedSports.length > 0 && (
         <p className="mt-2 text-sm text-gray-600">
-          Selected: {selectedSports.map(s => SPORTS.find(sp => sp.value === s)?.emoji).join(' ')}
+          Selected: {selectedSports.map(s => SPORTS.find(sp => sp.value === s)?.name).join(', ')}
         </p>
       )}
     </div>

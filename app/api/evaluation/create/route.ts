@@ -3,14 +3,19 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { sendEvaluationRequestEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2023-10-16',
+})
 
 /**
- * Creates a new evaluation request (no payment yet).
- * Player requests evaluation from scout, waits for scout to confirm/deny.
- * Payment will be charged when scout confirms.
+ * Creates a new evaluation request WITH upfront payment.
+ * Player pays immediately, money held in escrow until scout confirms/denies.
+ * If scout denies, automatic refund is issued.
  * 
  * @param request - Next.js request object containing scoutId and price
- * @returns Evaluation ID or error response
+ * @returns Stripe checkout session ID or error response
  */
 export async function POST(request: NextRequest) {
   try {
@@ -87,7 +92,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create evaluation record (status: 'requested' - waiting for scout to confirm/deny)
+    // Create evaluation record (status: 'requested' - waiting for payment)
     const { data: evaluation, error: evalError } = await supabase
       .from('evaluations')
       .insert({
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
         player_id: player.user_id,
         status: 'requested',
         price: typeof price === 'string' ? parseFloat(price) : price,
-        payment_status: 'pending', // Payment hasn't been charged yet
+        payment_status: 'pending', // Will be updated to 'paid' by webhook
       })
       .select()
       .maybeSingle()
@@ -126,32 +131,44 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send email notification to scout
-    try {
-      const scoutEmail = await getUserEmail(scout.user_id)
-      
-      if (scoutEmail) {
-        await sendEvaluationRequestEmail(
-          scoutEmail,
-          scout.full_name || 'Scout',
-          player.full_name || 'Player',
-          player.school || null,
-          evaluation.id,
-          typeof price === 'string' ? parseFloat(price) : price
-        )
-      } else {
-        console.log('⚠️  Could not send evaluation request email - scout email not available (SUPABASE_SERVICE_ROLE_KEY may not be configured)')
-      }
-    } catch (emailError) {
-      console.error('Error sending evaluation request email:', emailError)
-      // Don't fail the request if email fails
-    }
+    // Get player email for Stripe checkout
+    const playerEmail = await getUserEmail(player.user_id)
+
+    // Create Stripe Checkout Session for immediate payment
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      customer_email: playerEmail || undefined,
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Evaluation from ${scout.full_name || 'Scout'}`,
+              description: `HUDL evaluation service`,
+            },
+            unit_amount: Math.round(evaluation.price * 100), // Convert to cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${request.nextUrl.origin}/evaluations/${evaluation.id}?payment=success`,
+      cancel_url: `${request.nextUrl.origin}/profile/${scoutId}`,
+      metadata: {
+        evaluation_id: evaluation.id,
+        scout_id: scout.user_id,
+        player_id: player.user_id,
+        action: 'upfront_payment', // Flag to indicate upfront payment flow
+      },
+    })
 
     console.log('✅ Evaluation created successfully:', evaluation.id)
+    console.log('✅ Stripe checkout session created:', checkoutSession.id)
+    
     return NextResponse.json({ 
       success: true, 
       evaluationId: evaluation.id,
-      evaluation 
+      sessionId: checkoutSession.id
     })
   } catch (error: any) {
     console.error('Error creating evaluation:', error)

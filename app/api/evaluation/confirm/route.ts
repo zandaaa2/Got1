@@ -77,6 +77,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'deny') {
+      // Check if payment was made (upfront payment flow)
+      const shouldRefund = evaluation.payment_status === 'paid' && evaluation.payment_intent_id
+      
+      if (shouldRefund) {
+        console.log('💰 Issuing refund for payment_intent:', evaluation.payment_intent_id)
+        try {
+          const refund = await stripe.refunds.create({
+            payment_intent: evaluation.payment_intent_id,
+            reason: 'requested_by_customer',
+          })
+          console.log('✅ Refund issued:', refund.id, 'Amount:', refund.amount / 100)
+        } catch (refundError: any) {
+          console.error('❌ Error issuing refund:', refundError)
+          // Continue with denial even if refund fails - can be issued manually
+        }
+      }
+      
       // Update status to denied
       const { error: updateError } = await supabase
         .from('evaluations')
@@ -84,6 +101,7 @@ export async function POST(request: NextRequest) {
           status: 'denied',
           denied_at: new Date().toISOString(),
           denied_reason: deniedReason || null,
+          payment_status: shouldRefund ? 'refunded' : evaluation.payment_status,
         })
         .eq('id', evaluationId)
 
@@ -154,7 +172,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         success: true, 
         status: 'denied',
-        message: 'Evaluation request denied'
+        refunded: shouldRefund,
+        message: 'Evaluation request denied' + (shouldRefund ? ' and payment refunded' : '')
       })
     }
 
