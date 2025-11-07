@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { sendEvaluationRequestEmail } from '@/lib/email'
-import { getUserEmail } from '@/lib/supabase-admin'
+import { getUserEmail, createAdminClient } from '@/lib/supabase-admin'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -127,8 +127,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create evaluation record (status: 'requested' - waiting for payment)
-    const { data: evaluation, error: evalError } = await supabase
+    const adminSupabase = createAdminClient()
+    if (!adminSupabase) {
+      return NextResponse.json({ error: 'Server not configured for payments' }, { status: 500 })
+    }
+
+    const { data: evaluation, error: evalError } = await adminSupabase
       .from('evaluations')
       .insert({
         scout_id: scout.user_id,
