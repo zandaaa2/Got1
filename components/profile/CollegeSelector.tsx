@@ -68,14 +68,26 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
       <div className="relative">
         {selectedCollege && (
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-white rounded-md overflow-hidden">
-            <Image
-              src={getCollegeLogo(selectedCollege.domain, 32, selectedCollege.name)}
-              alt=""
-              width={24}
-              height={24}
-              className="object-contain"
-              unoptimized
-            />
+            {(() => {
+              const logoSrc = getCollegeLogo(selectedCollege.slug)
+              if (logoSrc) {
+                return (
+                  <Image
+                    src={logoSrc}
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="object-contain"
+                    unoptimized
+                  />
+                )
+              }
+              return (
+                <span className="text-xs font-semibold text-gray-600">
+                  {selectedCollege.name.charAt(0)}
+                </span>
+              )
+            })()}
           </div>
         )}
         <input
@@ -118,14 +130,26 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
               >
                 <div className="w-8 h-8 flex items-center justify-center bg-white rounded-md overflow-hidden flex-shrink-0">
-                  <Image
-                    src={getCollegeLogo(college.domain, 32, college.name)}
-                    alt=""
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                    unoptimized
-                  />
+                  {(() => {
+                    const logoSrc = getCollegeLogo(college.slug)
+                    if (logoSrc) {
+                      return (
+                        <Image
+                          src={logoSrc}
+                          alt=""
+                          width={32}
+                          height={32}
+                          className="object-contain"
+                          unoptimized
+                        />
+                      )
+                    }
+                    return (
+                      <span className="text-sm font-semibold text-gray-600">
+                        {college.name.charAt(0)}
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-black truncate">{college.name}</p>
