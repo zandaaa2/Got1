@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { colleges, searchColleges, type College } from '@/lib/colleges'
+import { colleges, searchColleges, getCollegeLogo, type College } from '@/lib/colleges'
 import Image from 'next/image'
 
 interface CollegeSelectorProps {
