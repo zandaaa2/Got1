@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prevent a user from requesting themselves (defensive check)
+    if (scoutId === session.user.id) {
+      return NextResponse.json(
+        { error: 'You cannot request an evaluation from yourself' },
+        { status: 400 }
+      )
+    }
+
     // Get scout profile
     const { data: scout, error: scoutError } = await supabase
       .from('profiles')
@@ -72,6 +80,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid player' }, { status: 400 })
     }
 
+    // Derive price server-side to protect against client tampering
+    const scoutPrice = typeof scout.price_per_eval === 'number'
+      ? scout.price_per_eval
+      : parseFloat(String(scout.price_per_eval ?? price))
+
+    if (!scoutPrice || Number.isNaN(scoutPrice)) {
+      return NextResponse.json({ error: 'Scout price not configured' }, { status: 400 })
+    }
+
+    // Optional sanity check: block unrealistic or negative amounts
+    if (scoutPrice <= 0 || scoutPrice > 10000) {
+      console.warn('⚠️ Suspicious scout price detected', { scoutId, scoutPrice, playerId: player.user_id })
+      return NextResponse.json({ error: 'Invalid scout price' }, { status: 400 })
+    }
+
+    // Detect tampering if client-supplied price doesn't match stored price (within $0.01)
+    const clientPrice = typeof price === 'number' ? price : parseFloat(String(price))
+    if (clientPrice && Math.abs(clientPrice - scoutPrice) > 0.01) {
+      console.warn('⚠️ Price mismatch detected between client and server values', {
+        scoutId,
+        playerId: player.user_id,
+        clientPrice,
+        scoutPrice,
+      })
+      return NextResponse.json({ error: 'Invalid price provided' }, { status: 400 })
+    }
+
     // Check if evaluation already exists in requested/confirmed/in_progress state
     const { data: existingEvaluation } = await supabase
       .from('evaluations')
@@ -99,7 +134,7 @@ export async function POST(request: NextRequest) {
         scout_id: scout.user_id,
         player_id: player.user_id,
         status: 'requested',
-        price: typeof price === 'string' ? parseFloat(price) : price,
+        price: scoutPrice,
         payment_status: 'pending', // Will be updated to 'paid' by webhook
       })
       .select()
@@ -146,7 +181,7 @@ export async function POST(request: NextRequest) {
               name: `Evaluation from ${scout.full_name || 'Scout'}`,
               description: `HUDL evaluation service`,
             },
-            unit_amount: Math.round(evaluation.price * 100), // Convert to cents
+            unit_amount: Math.round(scoutPrice * 100), // Convert to cents
           },
           quantity: 1,
         },
