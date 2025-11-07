@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import FeatureRequest from '@/components/shared/FeatureRequest'
 
 interface PageContentProps {
   children: React.ReactNode
@@ -62,9 +63,10 @@ export default function PageContent({ children, header }: PageContentProps) {
         }`}
         style={isMobile ? {} : { left: `${sidebarWidth}px` }}
       >
+        <FeatureRequest />
         {header}
       </header>
-      <main className={`pt-16 md:pt-20 pb-8 ${isMobile ? 'px-4' : 'px-8'}`}>
+      <main className={`pt-16 md:pt-20 pb-8 ${isMobile ? 'px-4' : 'px-6 md:px-8'}`}>
         {children}
       </main>
     </div>

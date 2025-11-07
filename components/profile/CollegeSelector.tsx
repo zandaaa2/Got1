@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { colleges, getCollegeLogo, searchColleges, College } from '@/lib/colleges'
+import { colleges, searchColleges, type College } from '@/lib/colleges'
 import Image from 'next/image'
 
 interface CollegeSelectorProps {
@@ -27,11 +27,8 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
 
   // Handle search
   useEffect(() => {
-    if (searchQuery) {
-      setFilteredColleges(searchColleges(searchQuery).slice(0, 10)) // Limit to 10 results
-    } else {
-      setFilteredColleges(colleges.slice(0, 10)) // Show first 10 by default
-    }
+    const results = searchColleges(searchQuery || '')
+    setFilteredColleges(results.slice(0, 15))
   }, [searchQuery])
 
   // Close dropdown when clicking outside
@@ -70,7 +67,7 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
       
       <div className="relative">
         {selectedCollege && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-white rounded">
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-white rounded-md overflow-hidden">
             <Image
               src={getCollegeLogo(selectedCollege.domain, 32, selectedCollege.name)}
               alt=""
@@ -120,7 +117,7 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                 onClick={() => handleSelect(college)}
                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
               >
-                <div className="w-8 h-8 flex items-center justify-center bg-white rounded flex-shrink-0">
+                <div className="w-8 h-8 flex items-center justify-center bg-white rounded-md overflow-hidden flex-shrink-0">
                   <Image
                     src={getCollegeLogo(college.domain, 32, college.name)}
                     alt=""
@@ -132,9 +129,9 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-black truncate">{college.name}</p>
-                  {college.conference && (
-                    <p className="text-xs text-gray-500">{college.conference}</p>
-                  )}
+                  <p className="text-xs text-gray-500 truncate">
+                    {college.conference}{college.division ? ` · ${college.division}` : ''}
+                  </p>
                 </div>
               </button>
             ))

@@ -3,7 +3,6 @@ import { notFound, redirect } from 'next/navigation'
 import EvaluationDetail from '@/components/evaluations/EvaluationDetail'
 import Sidebar from '@/components/layout/Sidebar'
 import ShareButton from '@/components/shared/ShareButton'
-import FeatureRequest from '@/components/shared/FeatureRequest'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import Link from 'next/link'
 
@@ -78,7 +77,6 @@ export default async function EvaluationPage({
 
   const headerContent = (
     <>
-      <FeatureRequest />
       <ShareButton url={`/evaluations/${params.id}`} title="Evaluation on Got1" />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {profile?.avatar_url ? (

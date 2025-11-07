@@ -258,7 +258,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 href={profile.hudl_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline mb-2 block"
+                className="text-blue-600 hover:underline mb-2 block text-center md:text-left"
               >
                 {profile.hudl_link.replace(/^https?:\/\//, '')}
               </a>
@@ -268,7 +268,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 href={profile.social_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline mb-2 block"
+                className="text-blue-600 hover:underline mb-2 block text-center md:text-left"
               >
                 {profile.social_link.replace(/^https?:\/\//, '')}
               </a>
@@ -499,7 +499,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 href={profile.social_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm"
+                className="text-blue-600 hover:underline text-sm text-center md:text-left"
               >
                 {profile.social_link.replace(/^https?:\/\//, '')}
               </a>

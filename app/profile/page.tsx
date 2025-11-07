@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ProfileContent from '@/components/profile/ProfileContent'
 import ShareButton from '@/components/shared/ShareButton'
-import FeatureRequest from '@/components/shared/FeatureRequest'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import Link from 'next/link'
 
@@ -100,7 +99,6 @@ export default async function ProfilePage() {
 
   const headerContent = (
     <>
-      <FeatureRequest />
       <ShareButton url={`/profile/${profile.id}`} title={profile.full_name || 'Profile'} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {userProfile?.avatar_url ? (

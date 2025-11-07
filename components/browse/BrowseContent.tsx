@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
+import { colleges } from '@/lib/colleges'
 
 interface BrowseContentProps {
   session: any
@@ -23,6 +24,15 @@ interface Profile {
   suspended_until?: string | null // Optional - may not exist until migration is run
 }
 
+interface TeamEntry {
+  name: string
+  slug: string
+  logo?: string
+  conference?: string
+  division?: string
+  scoutCount: number
+}
+
 /**
  * Component for browsing and searching scouts and players.
  * Displays both scouts and players with search functionality.
@@ -35,6 +45,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
+  const [viewMode, setViewMode] = useState<'profiles' | 'teams'>('profiles')
   const supabase = createClient()
   
   // Test accounts that should show the badge
@@ -109,9 +120,63 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return () => window.removeEventListener('focus', handleFocus)
   }, [loadProfiles])
 
+  const normalizedColleges = useMemo(() =>
+    colleges.map((college) => ({
+      ...college,
+      normalizedName: college.name.toLowerCase(),
+      normalizedSimple: college.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+    })),
+  [])
+
+  const findCollegeMatch = useCallback((organization: string) => {
+    const normalized = organization.toLowerCase().trim()
+    const normalizedSimple = normalized.replace(/[^a-z0-9]/g, '')
+
+    return (
+      normalizedColleges.find((college) => college.normalizedName === normalized) ||
+      normalizedColleges.find((college) => normalized === college.normalizedName.replace('university of ', '') && college.division === 'FBS') ||
+      normalizedColleges.find((college) => normalized.includes(college.normalizedName)) ||
+      normalizedColleges.find((college) => college.normalizedName.includes(normalized)) ||
+      normalizedColleges.find((college) => normalizedSimple === college.normalizedSimple) ||
+      normalizedColleges.find((college) => normalizedSimple.includes(college.normalizedSimple))
+    )
+  }, [normalizedColleges])
+
+  const organizationCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    profiles.forEach((profile) => {
+      if (profile.role !== 'scout') return
+      const organization = profile.organization?.trim()
+      if (!organization) return
+
+      const match = findCollegeMatch(organization)
+      if (!match) return
+
+      counts.set(match.slug, (counts.get(match.slug) || 0) + 1)
+    })
+
+    return counts
+  }, [profiles, findCollegeMatch])
+
+  const teamEntries = useMemo<TeamEntry[]>(() => {
+    return normalizedColleges
+      .map<TeamEntry>((college) => ({
+        name: college.name,
+        slug: college.slug,
+        logo: college.logo,
+        conference: college.conference,
+        division: college.division,
+        scoutCount: organizationCounts.get(college.slug) || 0,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [normalizedColleges, organizationCounts])
+
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+
   const filteredProfiles = profiles.filter((profile) => {
     // Search query filter
-    const query = searchQuery.toLowerCase()
+    const query = trimmedQuery
     const matchesSearch = (
       profile.full_name?.toLowerCase().includes(query) ||
       profile.organization?.toLowerCase().includes(query) ||
@@ -124,6 +189,47 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     
     return matchesSearch && matchesRole
   })
+
+  const filteredTeams = teamEntries.filter((team) => {
+    const query = trimmedQuery
+    return (
+      team.name.toLowerCase().includes(query) ||
+      team.conference?.toLowerCase().includes(query || '') ||
+      team.division?.toLowerCase().includes(query || '')
+    )
+  })
+
+  const showTeamHighlights = viewMode !== 'teams' && trimmedQuery.length > 0 && filteredTeams.length > 0
+
+  const handleScoutsClick = () => {
+    if (viewMode === 'teams') {
+      setViewMode('profiles')
+      setRoleFilter('scout')
+      return
+    }
+    setRoleFilter(roleFilter === 'scout' ? 'all' : 'scout')
+  }
+
+  const handlePlayersClick = () => {
+    if (viewMode === 'teams') {
+      setViewMode('profiles')
+      setRoleFilter('player')
+      return
+    }
+    setRoleFilter(roleFilter === 'player' ? 'all' : 'player')
+  }
+
+  const handleTeamsClick = () => {
+    if (viewMode === 'teams') {
+      setViewMode('profiles')
+      setRoleFilter('all')
+      return
+    }
+    setViewMode('teams')
+    if (roleFilter !== 'all') {
+      setRoleFilter('all')
+    }
+  }
 
   return (
     <div>
@@ -162,9 +268,9 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         {/* Filter Tabs */}
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
-            onClick={() => setRoleFilter(roleFilter === 'scout' ? 'all' : 'scout')}
+            onClick={handleScoutsClick}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              roleFilter === 'scout'
+              viewMode === 'profiles' && roleFilter === 'scout'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -172,18 +278,28 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             Scouts
           </button>
           <button
-            onClick={() => setRoleFilter(roleFilter === 'player' ? 'all' : 'player')}
+            onClick={handlePlayersClick}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              roleFilter === 'player'
+              viewMode === 'profiles' && roleFilter === 'player'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Players
           </button>
+          <button
+            onClick={handleTeamsClick}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              viewMode === 'teams'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Teams
+          </button>
           
           {/* Clear filters button - only show when filters are active */}
-          {roleFilter !== 'all' && (
+          {viewMode === 'profiles' && roleFilter !== 'all' && (
             <button
               onClick={() => setRoleFilter('all')}
               className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
@@ -196,8 +312,97 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
       {loading ? (
         <div className="text-center py-12">Loading...</div>
+      ) : viewMode === 'teams' ? (
+        filteredTeams.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {filteredTeams.map((team) => (
+              <Link
+                key={team.slug}
+                href={`/teams/${team.slug}`}
+                className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-lg transition-all"
+              >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                  {team.logo ? (
+                    <Image
+                      src={team.logo}
+                      alt={team.name}
+                      width={64}
+                      height={64}
+                      className="object-contain"
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="text-lg font-semibold text-gray-600">
+                      {team.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-black text-base md:text-lg truncate">{team.name}</h3>
+                  <p className="text-xs md:text-sm text-gray-600 truncate">
+                    {team.conference ? team.conference : 'Conference not specified'}
+                    {team.division ? ` · ${team.division}` : ''}
+                  </p>
+                  <p className="text-xs md:text-sm text-gray-500">
+                    {team.scoutCount} scout{team.scoutCount === 1 ? '' : 's'} on Got1
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            No teams found matching your search.
+          </div>
+        )
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-4">
+          {showTeamHighlights && (
+            <div>
+              <div className="space-y-2">
+                {filteredTeams.slice(0, 5).map((team) => (
+                  <Link
+                    key={`highlight-${team.slug}`}
+                    href={`/teams/${team.slug}`}
+                    className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      {team.logo ? (
+                        <Image
+                          src={team.logo}
+                          alt={team.name}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-contain"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-gray-600">
+                          {team.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-black text-base md:text-lg truncate flex items-center gap-2">
+                        {team.name}
+                      </h3>
+                      <p className="text-black text-xs md:text-sm truncate">
+                        {team.conference || 'Conference not specified'}
+                        {team.division ? ` · ${team.division}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-sm md:text-base text-blue-600">
+                        {team.scoutCount} scout{team.scoutCount === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
           {filteredProfiles.map((profile) => (
             <Link
               key={profile.id}
@@ -262,12 +467,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
               )}
             </Link>
           ))}
-          
+
           {filteredProfiles.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               No profiles found matching your search.
             </div>
           )}
+          </div>
         </div>
       )}
     </div>

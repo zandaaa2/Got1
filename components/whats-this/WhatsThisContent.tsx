@@ -3,7 +3,7 @@
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import Link from 'next/link'
 import Image from 'next/image'
-import { colleges, getCollegeLogo } from '@/lib/colleges'
+import { colleges } from '@/lib/colleges'
 
 interface WhatsThisContentProps {
   organizations: string[]
@@ -202,13 +202,13 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
             <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10">
               {collegeLogos.map((college) => (
                 <div
-                  key={college.domain}
+                  key={college.slug}
                   className="group flex flex-col items-center gap-2 transition-transform hover:scale-110 cursor-pointer"
                   title={college.name}
                 >
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center bg-white rounded-full shadow-md border-2 border-gray-200 group-hover:border-blue-600 group-hover:shadow-lg transition-all p-3 sm:p-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center bg-white rounded-xl shadow-md border-2 border-gray-200 group-hover:border-blue-600 group-hover:shadow-lg transition-all p-3 sm:p-4 overflow-hidden">
                     <Image
-                      src={getCollegeLogo(college.domain, 96, college.name)}
+                      src={college.logo}
                       alt={college.name}
                       width={96}
                       height={96}

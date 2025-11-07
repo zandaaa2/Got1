@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
+import FeatureRequest from '@/components/shared/FeatureRequest'
 
 interface DynamicLayoutProps {
   children: React.ReactNode
@@ -36,9 +37,10 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
         }`}
         style={isMobile ? {} : { left: `${sidebarWidth}px` }}
       >
+        <FeatureRequest />
         {header}
       </header>
-      <main className={`pt-16 md:pt-20 pb-8 overflow-x-hidden ${isMobile ? 'px-2 sm:px-4' : 'px-4 md:px-8'}`}>
+      <main className={`pt-16 md:pt-20 pb-8 overflow-x-hidden ${isMobile ? 'px-4' : 'px-6 md:px-8'}`}>
         {children}
       </main>
     </div>

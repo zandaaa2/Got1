@@ -178,12 +178,14 @@ function MoneyDashboard({ profile }: { profile: any }) {
     return null
   }
   
-  if (!accountStatus.onboardingComplete) {
-    console.log('📧 MoneyDashboard - Onboarding not complete, showing nothing. Status:', accountStatus)
+  const isFullyEnabled = accountStatus.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
+  
+  if (!isFullyEnabled) {
+    console.log('📧 MoneyDashboard - Account not fully enabled, hiding dashboard. Status:', accountStatus)
     return null
   }
   
-  console.log('📧 MoneyDashboard - Onboarding complete! Showing dashboard. Status:', accountStatus)
+  console.log('📧 MoneyDashboard - Account fully enabled! Showing dashboard. Status:', accountStatus)
 
   return (
     <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
@@ -398,8 +400,11 @@ function StripeConnectSection({ profile }: { profile: any }) {
     }
   }
 
-  // Hide this section if onboarding is complete (Money Dashboard will show instead)
-  if (accountStatus?.onboardingComplete) {
+  const isFullyEnabled = accountStatus?.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
+  const needsUpdate = accountStatus?.onboardingComplete && !isFullyEnabled
+
+  // Hide this section if account is fully enabled (Money Dashboard will show instead)
+  if (isFullyEnabled) {
     return null
   }
 
@@ -443,7 +448,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
   }
 
   return (
-    <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+    <div className={`mb-8 p-6 border rounded-lg ${needsUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -458,7 +463,9 @@ function StripeConnectSection({ profile }: { profile: any }) {
             </button>
           </div>
           <p className="text-sm text-gray-600">
-            Manage your payouts and view your earnings
+            {needsUpdate
+              ? 'Stripe needs a quick update before payouts can resume'
+              : 'Manage your payouts and view your earnings'}
           </p>
         </div>
       </div>
@@ -526,26 +533,36 @@ function StripeConnectSection({ profile }: { profile: any }) {
           {accountStatus.hasAccount ? (
             <>
               <div className="flex items-center gap-2 text-sm">
-                <span className={`w-2 h-2 rounded-full ${accountStatus.onboardingComplete ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                <span className={`w-2 h-2 rounded-full ${needsUpdate ? 'bg-yellow-500' : accountStatus.onboardingComplete ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
                 <span className="text-gray-700">
-                  {accountStatus.onboardingComplete 
-                    ? 'Account active - Ready to receive payouts' 
-                    : 'Onboarding required - Complete setup to receive payouts'}
+                  {needsUpdate
+                    ? 'Account requires an update - Stripe needs additional information'
+                    : accountStatus.onboardingComplete
+                      ? 'Account active - Ready to receive payouts'
+                      : 'Onboarding required - Complete setup to receive payouts'}
                 </span>
               </div>
-              {!accountStatus.onboardingComplete && (
-                <p className="text-xs text-gray-500">Expected setup time: 3-5 minutes</p>
+              {needsUpdate ? (
+                <p className="text-xs text-gray-500">
+                  Log into Stripe to review the items they need. Once submitted, payouts will resume automatically.
+                </p>
+              ) : (
+                !accountStatus.onboardingComplete && (
+                  <p className="text-xs text-gray-500">Expected setup time: 3-5 minutes</p>
+                )
               )}
               <button
                 onClick={handleGetAccountLink}
                 disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-6 py-2 font-medium rounded disabled:opacity-50 disabled:cursor-not-allowed ${needsUpdate ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
-                {loading 
-                  ? 'Loading...' 
-                  : accountStatus.onboardingComplete 
-                    ? 'Access Dashboard' 
-                    : 'Complete Onboarding'}
+                {loading
+                  ? 'Loading...'
+                  : needsUpdate
+                    ? 'Review Stripe Requirements'
+                    : accountStatus.onboardingComplete
+                      ? 'Access Dashboard'
+                      : 'Complete Onboarding'}
               </button>
             </>
           ) : (
