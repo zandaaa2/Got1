@@ -50,11 +50,15 @@ export default function PurchaseEvaluation({
       setProcessing(true)
       setError(null)
 
-      // Load Stripe
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-      
+      const publishableKey = getStripeKey()
+      if (!publishableKey || !stripePromise) {
+        throw new Error('Payments are temporarily unavailable. Please contact support.')
+      }
+
+      const stripe = await stripePromise
+
       if (!stripe) {
-        throw new Error('Failed to load Stripe. Please refresh and try again.')
+        throw new Error('Failed to load Stripe.js. Please disable blockers or try again later.')
       }
 
       // Get the scout's current price from database
@@ -64,7 +68,10 @@ export default function PurchaseEvaluation({
         .eq('id', scout.id)
         .maybeSingle()
 
-      const price = currentScout?.price_per_eval || scout.price_per_eval || 99
+      const price = currentScout?.price_per_eval ?? scout.price_per_eval
+      if (!price) {
+        throw new Error('Scout price is not configured. Please ask the scout to set a price.')
+      }
 
       console.log('Creating evaluation with upfront payment...')
       
@@ -76,7 +83,7 @@ export default function PurchaseEvaluation({
         },
         body: JSON.stringify({
           scoutId: scout.id,
-          price: price,
+          price,
         }),
       })
 
