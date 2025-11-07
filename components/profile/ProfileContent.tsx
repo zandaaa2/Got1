@@ -17,6 +17,9 @@ let globalAccountStatus: {
   onboardingComplete: boolean
   chargesEnabled: boolean
   payoutsEnabled: boolean
+  requirementsDue: string[]
+  requirementsPastDue: string[]
+  requirementsReason: string | null
 } | null = null
 
 /**
@@ -31,6 +34,9 @@ function MoneyDashboard({ profile }: { profile: any }) {
     onboardingComplete: boolean
     chargesEnabled: boolean
     payoutsEnabled: boolean
+    requirementsDue: string[]
+    requirementsPastDue: string[]
+    requirementsReason: string | null
   } | null>(globalAccountStatus || null)
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
@@ -94,6 +100,9 @@ function MoneyDashboard({ profile }: { profile: any }) {
         onboardingComplete: data.onboardingComplete || false,
         chargesEnabled: data.chargesEnabled || false,
         payoutsEnabled: data.payoutsEnabled || false,
+        requirementsDue: data.requirementsDue || [],
+        requirementsPastDue: data.requirementsPastDue || [],
+        requirementsReason: data.requirementsReason || null,
       }
       console.log('📧 MoneyDashboard - Setting status:', status)
       setAccountStatus(status)
@@ -353,7 +362,11 @@ function StripeConnectSection({ profile }: { profile: any }) {
     onboardingComplete: boolean
     chargesEnabled: boolean
     payoutsEnabled: boolean
+    requirementsDue: string[]
+    requirementsPastDue: string[]
+    requirementsReason: string | null
   } | null>(null)
+  const [notificationSent, setNotificationSent] = useState(false)
 
   useEffect(() => {
     // Check account status on mount
@@ -392,6 +405,9 @@ function StripeConnectSection({ profile }: { profile: any }) {
         onboardingComplete: data.onboardingComplete || false,
         chargesEnabled: data.chargesEnabled || false,
         payoutsEnabled: data.payoutsEnabled || false,
+        requirementsDue: data.requirementsDue || [],
+        requirementsPastDue: data.requirementsPastDue || [],
+        requirementsReason: data.requirementsReason || null,
       }
       setAccountStatus(status)
       globalAccountStatus = status // Update global state
@@ -402,6 +418,34 @@ function StripeConnectSection({ profile }: { profile: any }) {
 
   const isFullyEnabled = accountStatus?.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
   const needsUpdate = accountStatus?.onboardingComplete && !isFullyEnabled
+
+  useEffect(() => {
+    const sendNotification = async () => {
+      try {
+        const response = await fetch('/api/stripe/connect/requirements-notice', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requirementsDue: accountStatus?.requirementsDue || [],
+            requirementsPastDue: accountStatus?.requirementsPastDue || [],
+          }),
+        })
+        if (response.ok) {
+          setNotificationSent(true)
+        } else {
+          console.error('Failed to send requirements email')
+        }
+      } catch (error) {
+        console.error('Error sending requirements email:', error)
+      }
+    }
+
+    if (needsUpdate && !notificationSent) {
+      sendNotification()
+    }
+  }, [needsUpdate, notificationSent, accountStatus?.requirementsDue, accountStatus?.requirementsPastDue])
 
   // Hide this section if account is fully enabled (Money Dashboard will show instead)
   if (isFullyEnabled) {
@@ -448,7 +492,27 @@ function StripeConnectSection({ profile }: { profile: any }) {
   }
 
   return (
-    <div className={`mb-8 p-6 border rounded-lg ${needsUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
+    <>
+      {needsUpdate && (
+        <div className="mb-4 p-5 border border-red-200 bg-red-50 rounded-lg">
+          <h4 className="text-red-700 font-semibold mb-2">Update needed to Stripe information to receive payments</h4>
+          <p className="text-sm text-red-700 mb-3">
+            Stripe periodically requires additional information to keep payouts flowing. Please review their request to avoid delays—this is controlled by Stripe directly, not Got1.
+          </p>
+          {accountStatus?.requirementsDue?.length ? (
+            <div className="mb-3 text-sm text-red-700">
+              <p className="font-medium">Items needed:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {accountStatus.requirementsDue.map((item) => (
+                  <li key={item}>{item.replace(/_/g, ' ')}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <p className="text-xs text-red-600 font-medium">We also emailed these instructions to you.</p>
+        </div>
+      )}
+      <div className={`mb-8 p-6 border rounded-lg ${needsUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -602,7 +666,8 @@ function StripeConnectSection({ profile }: { profile: any }) {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

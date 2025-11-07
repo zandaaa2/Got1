@@ -30,3 +30,4 @@ The key is that Supabase must redirect **directly** to `/auth/callback` (client-
 
 
 
+

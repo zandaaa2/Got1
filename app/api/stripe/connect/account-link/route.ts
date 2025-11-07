@@ -87,14 +87,22 @@ export async function POST(request: NextRequest) {
     let needsOnboarding = false
     let chargesEnabled = false
     let onboardingComplete = false
+    let payoutsEnabled = false
+    let requirementsDue: string[] = []
+    let requirementsPastDue: string[] = []
+    let requirementsReason: string | null = null
 
     try {
       const account = await stripe.accounts.retrieve(profile.stripe_account_id)
       chargesEnabled = account.charges_enabled === true
+      payoutsEnabled = account.payouts_enabled === true
       const detailsSubmitted = account.details_submitted === true
       // Onboarding is complete if charges enabled OR details submitted
       onboardingComplete = chargesEnabled || detailsSubmitted
       needsOnboarding = !onboardingComplete
+      requirementsDue = account.requirements?.currently_due || []
+      requirementsPastDue = account.requirements?.past_due || []
+      requirementsReason = account.requirements?.disabled_reason || null
       console.log('📧 Account charges enabled:', chargesEnabled)
       console.log('📧 Account details submitted:', detailsSubmitted)
       console.log('📧 Onboarding complete:', onboardingComplete)
@@ -138,7 +146,12 @@ export async function POST(request: NextRequest) {
       onboardingUrl: accountLink?.url || null, // Use this for first-time onboarding
       dashboardUrl: loginLink?.url || null,    // Use this to access dashboard after onboarding
       accountId: profile.stripe_account_id,
-      onboardingComplete: chargesEnabled,
+      onboardingComplete,
+      chargesEnabled,
+      payoutsEnabled,
+      requirementsDue,
+      requirementsPastDue,
+      requirementsReason,
     })
   } catch (error: any) {
     console.error('❌ Error creating Stripe account link:', error)
@@ -211,6 +224,9 @@ export async function GET(request: NextRequest) {
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled,
         detailsSubmitted: account.details_submitted,
+        requirementsDue: account.requirements?.currently_due || [],
+        requirementsPastDue: account.requirements?.past_due || [],
+        requirementsReason: account.requirements?.disabled_reason || null,
       })
     } catch (stripeError: any) {
       console.error('❌ Error retrieving Stripe account:', stripeError)
