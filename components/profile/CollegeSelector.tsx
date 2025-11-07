@@ -124,7 +124,7 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
           {filteredColleges.length > 0 ? (
             filteredColleges.map((college) => (
               <button
-                key={college.domain}
+                key={college.slug}
                 type="button"
                 onClick={() => handleSelect(college)}
                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
