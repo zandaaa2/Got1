@@ -390,6 +390,55 @@ export async function sendApplicationDeniedEmail(
   await sendEmail(userEmail, 'Scout Application Update', html)
 }
 
+export async function sendStripeRequirementsEmail(
+  userEmail: string,
+  userName: string,
+  requirementsDue: string[],
+  requirementsPastDue: string[]
+): Promise<void> {
+  const formattedDue = requirementsDue.map((item) => `<li>${item.replace(/_/g, ' ')}</li>`).join('')
+  const formattedPastDue = requirementsPastDue.map((item) => `<li>${item.replace(/_/g, ' ')}</li>`).join('')
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #b91c1c; margin-bottom: 20px;">Action Needed: Update Your Stripe Details</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${userName || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Stripe needs some additional information from you before payouts can continue. This is a standard security check that Stripe runs periodically and it must be completed directly in Stripe.
+      </p>
+      ${(requirementsDue.length || requirementsPastDue.length) ? `
+      <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        ${requirementsDue.length ? `
+        <p style="margin: 0 0 10px 0; color: #b91c1c; font-weight: bold;">Currently required:</p>
+        <ul style="margin: 0 0 10px 20px; color: #b91c1c;">
+          ${formattedDue}
+        </ul>
+        ` : ''}
+        ${requirementsPastDue.length ? `
+        <p style="margin: 15px 0 10px 0; color: #b91c1c; font-weight: bold;">Past due:</p>
+        <ul style="margin: 0 0 10px 20px; color: #b91c1c;">
+          ${formattedPastDue}
+        </ul>
+        ` : ''}
+      </div>
+      ` : ''}
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Please sign in to your Stripe Connect account to review and submit the requested details. Once Stripe verifies the information, payouts will resume automatically.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${getBaseUrl()}/profile" style="display: inline-block; background: #111827; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Stripe from Got1</a>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        This requirement comes directly from Stripe's compliance team. If you have questions, reply to this email and our team can help point you in the right direction.
+      </p>
+    </div>
+  `
+
+  await sendEmail(userEmail, 'Action needed: update your Stripe Connect details', html)
+}
+
 /**
  * Sends an email notification to the admin when a new scout application is submitted.
  * This is the existing function from scout-application/submit/route.ts, moved here for consistency.
