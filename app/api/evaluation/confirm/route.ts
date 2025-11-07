@@ -177,115 +177,66 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Action is 'confirm' - charge payment
-    try {
-      // Get player profile to get payment method (we'll need to collect this first)
-      // For now, we'll use Stripe Checkout to collect payment
-      // TODO: If player has saved payment method, use it. Otherwise, redirect to checkout.
-      
-      // Get player and scout profiles
-      const { data: playerProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', evaluation.player_id)
-        .maybeSingle()
-
-      const { data: scoutProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', evaluation.scout_id)
-        .maybeSingle()
-
-      if (!playerProfile || !scoutProfile) {
-        return NextResponse.json(
-          { error: 'Player or scout profile not found' },
-          { status: 404 }
-        )
-      }
-
-      // Create Stripe Checkout Session for player payment
-      // Player will need to complete this payment to move status to 'confirmed'
-      const playerEmail = await getUserEmail(evaluation.player_id)
-      
-      const checkoutSession = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        customer_email: playerEmail || undefined, // Convert null to undefined
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `Evaluation from ${scoutProfile.full_name || 'Scout'}`,
-                description: `Football player evaluation service`,
-              },
-              unit_amount: Math.round(evaluation.price * 100), // Convert to cents
-            },
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${request.nextUrl.origin}/evaluations/${evaluationId}?payment=success`,
-        cancel_url: `${request.nextUrl.origin}/evaluations/${evaluationId}?payment=cancelled`,
-        metadata: {
-          evaluation_id: evaluationId,
-          scout_id: evaluation.scout_id,
-          player_id: evaluation.player_id,
-          action: 'scout_confirmed', // Special flag to indicate scout confirmed
-        },
-      })
-
-      // Store checkout session URL for player to complete payment
-      // Status stays 'requested' until player completes payment
-      const { error: updateError } = await supabase
-        .from('evaluations')
-        .update({
-          payment_intent_id: checkoutSession.payment_intent as string || null,
-          // Store session URL or ID for player to access
-        })
-        .eq('id', evaluationId)
-
-      if (updateError) {
-        console.error('Error updating evaluation with payment intent:', updateError)
-      }
-
-      // Send email to player with payment link
-      try {
-        const playerEmail = await getUserEmail(evaluation.player_id)
-        if (playerEmail && playerProfile && checkoutSession.url) {
-          await sendEvaluationConfirmedEmail(
-            playerEmail,
-            playerProfile.full_name || 'Player',
-            scoutProfile.full_name || 'Scout',
-            evaluationId,
-            checkoutSession.url,
-            evaluation.price
-          )
-          console.log(`✅ Confirmation email sent to ${playerEmail} with payment link`)
-        } else {
-          console.warn('⚠️ Could not send confirmation email:', {
-            hasEmail: !!playerEmail,
-            hasProfile: !!playerProfile,
-            hasPaymentUrl: !!checkoutSession.url
-          })
-        }
-      } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError)
-        // Don't fail the request if email fails
-      }
-
-      return NextResponse.json({ 
-        success: true,
-        sessionId: checkoutSession.id,
-        paymentUrl: checkoutSession.url, // Player needs to visit this URL
-        message: 'Evaluation confirmed. Player will be notified to complete payment.'
-      })
-    } catch (error: any) {
-      console.error('Error creating payment session:', error)
+    // Confirm action: ensure payment already completed in upfront flow
+    if (evaluation.payment_status !== 'paid') {
       return NextResponse.json(
-        { error: error.message || 'Failed to create payment session' },
+        {
+          error: 'Payment not completed yet. Player must finish checkout before confirmation.',
+          status: evaluation.payment_status,
+        },
+        { status: 409 }
+      )
+    }
+
+    const { error: confirmError } = await supabase
+      .from('evaluations')
+      .update({
+        status: 'confirmed',
+        confirmed_at: new Date().toISOString(),
+      })
+      .eq('id', evaluationId)
+
+    if (confirmError) {
+      console.error('Error confirming evaluation:', confirmError)
+      return NextResponse.json(
+        { error: 'Failed to confirm evaluation' },
         { status: 500 }
       )
     }
+
+    try {
+      const playerEmail = await getUserEmail(evaluation.player_id)
+      if (playerEmail) {
+        const { data: scoutProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', evaluation.scout_id)
+          .maybeSingle()
+
+        const { data: playerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', evaluation.player_id)
+          .maybeSingle()
+
+        await sendEvaluationConfirmedEmail(
+          playerEmail,
+          playerProfile?.full_name || 'Player',
+          scoutProfile?.full_name || 'Scout',
+          evaluationId,
+          '',
+          evaluation.price
+        )
+      }
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError)
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: 'confirmed',
+      message: 'Evaluation confirmed. Payment already captured and held in escrow.',
+    })
   } catch (error: any) {
     console.error('Error in evaluation confirm:', error)
     return NextResponse.json(

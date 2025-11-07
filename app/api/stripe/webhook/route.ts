@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -32,8 +33,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
   }
 
-  const cookieStore = cookies()
-  const supabase = createRouteHandlerClient(() => cookieStore)
+  const adminSupabase = createAdminClient()
+  if (!adminSupabase) {
+    console.error('Admin Supabase client not configured. Check service role key.')
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+  }
 
   try {
     if (event.type === 'checkout.session.completed') {
@@ -54,7 +58,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Get current evaluation to check status
-      const { data: evaluation } = await supabase
+      const { data: evaluation } = await adminSupabase
         .from('evaluations')
         .select('*')
         .eq('id', evaluationId)
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
       // For upfront_payment, status remains 'requested' but payment_status is 'paid'
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminSupabase
         .from('evaluations')
         .update(updateData)
         .eq('id', evaluationId)
@@ -105,13 +109,13 @@ export async function POST(request: NextRequest) {
           
           if (scoutEmail) {
             // Get profile names
-            const { data: scoutProfile } = await supabase
+            const { data: scoutProfile } = await adminSupabase
               .from('profiles')
               .select('full_name')
               .eq('user_id', evaluation.scout_id)
               .maybeSingle()
             
-            const { data: playerProfile } = await supabase
+            const { data: playerProfile } = await adminSupabase
               .from('profiles')
               .select('full_name, school')
               .eq('user_id', evaluation.player_id)
