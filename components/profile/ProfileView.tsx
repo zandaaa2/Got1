@@ -39,6 +39,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [showMoreInfo, setShowMoreInfo] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isSignedIn, setIsSignedIn] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -48,6 +49,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         setCurrentUserId(session.user.id)
+        setIsSignedIn(true)
+      } else {
+        setIsSignedIn(false)
       }
     }
     getCurrentUser()
@@ -251,19 +255,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </div>
 
         {/* Evaluations Section */}
-        <div className="mb-6 md:mb-8">
+        <div className="mb-6 md:mb-8 relative">
           <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
-            Evaluations ({evaluations.length})
+            Evaluations ({!isSignedIn ? '•' : evaluations.length})
           </h2>
           {loading ? (
             <div className="text-center py-12 text-gray-500">Loading...</div>
-          ) : evaluations.length === 0 ? (
+          ) : evaluations.length === 0 && isSignedIn ? (
             <div className="text-center py-12 text-gray-500">
               No evaluations yet.
             </div>
           ) : (
-            <div className="space-y-6">
-              {evaluations.map((evaluation) => (
+            <div className="relative">
+              <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
+                {isSignedIn ? evaluations.map((evaluation) => (
                 <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
                   <Link 
                     href={evaluation.scout?.id ? `/profile/${evaluation.scout.id}` : '#'}
@@ -310,7 +315,55 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     </div>
                   )}
                 </div>
-              ))}
+              )) : (
+                // Placeholder evaluations for non-signed-in users
+                [...Array(3)].map((_, index) => (
+                  <div key={index} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                    <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-300 flex-shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="h-5 bg-gray-300 rounded mb-2 w-3/4"></div>
+                        <div className="h-4 bg-gray-300 rounded mb-1 w-1/2"></div>
+                        <div className="h-4 bg-gray-300 rounded w-1/3"></div>
+                      </div>
+                    </div>
+                    <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                      <div className="h-4 bg-gray-300 rounded mb-2 w-full"></div>
+                      <div className="h-4 bg-gray-300 rounded mb-2 w-full"></div>
+                      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                    </div>
+                  </div>
+                ))
+              )}
+              </div>
+              
+              {/* Sign in/Sign up overlay for non-signed-in users */}
+              {!isSignedIn && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
+                  <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-md mx-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
+                      Sign in to view evaluations
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      Create an account or sign in to see detailed evaluations
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Link
+                        href="/auth/signup"
+                        className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
+                      >
+                        Sign Up
+                      </Link>
+                      <Link
+                        href="/auth/signin"
+                        className="flex-1 px-6 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                      >
+                        Sign In
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -555,19 +608,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       )}
 
       {/* Evaluations Contributed Section */}
-      <div className="mb-6 md:mb-8">
+      <div className="mb-6 md:mb-8 relative">
         <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
-          Evaluations Contributed ({evaluations.length})
+          Evaluations Contributed ({!isSignedIn ? '•' : evaluations.length})
         </h2>
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading...</div>
-        ) : evaluations.length === 0 ? (
+        ) : evaluations.length === 0 && isSignedIn ? (
           <div className="text-center py-12 text-gray-500">
             No evaluations contributed yet.
           </div>
         ) : (
-          <div className="space-y-6">
-            {evaluations.map((evaluation) => (
+          <div className="relative">
+            <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
+              {isSignedIn ? evaluations.map((evaluation) => (
               <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
                 <Link 
                   href={evaluation.player?.id ? `/profile/${evaluation.player.id}` : '#'}
@@ -616,7 +670,55 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   </div>
                 )}
               </div>
-            ))}
+            )) : (
+              // Placeholder evaluations for non-signed-in users
+              [...Array(3)].map((_, index) => (
+                <div key={index} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                  <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-300 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="h-5 bg-gray-300 rounded mb-2 w-3/4"></div>
+                      <div className="h-4 bg-gray-300 rounded mb-1 w-1/2"></div>
+                      <div className="h-4 bg-gray-300 rounded w-1/3"></div>
+                    </div>
+                  </div>
+                  <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                    <div className="h-4 bg-gray-300 rounded mb-2 w-full"></div>
+                    <div className="h-4 bg-gray-300 rounded mb-2 w-full"></div>
+                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                  </div>
+                </div>
+              ))
+            )}
+            </div>
+            
+            {/* Sign in/Sign up overlay for non-signed-in users */}
+            {!isSignedIn && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
+                <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-md mx-4 text-center">
+                  <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
+                    Sign in to view evaluations
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Create an account or sign in to see detailed evaluations
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link
+                      href="/auth/signup"
+                      className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
+                    >
+                      Sign Up
+                    </Link>
+                    <Link
+                      href="/auth/signin"
+                      className="flex-1 px-6 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
