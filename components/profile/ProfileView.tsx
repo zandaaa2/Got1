@@ -263,16 +263,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 {profile.hudl_link.replace(/^https?:\/\//, '')}
               </a>
             )}
-            {profile.social_link && (
-              <a
-                href={profile.social_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline mb-2 block text-center md:text-left"
-              >
-                {profile.social_link.replace(/^https?:\/\//, '')}
-              </a>
-            )}
             {profile.bio && (
               <p className="text-black mt-4 leading-relaxed whitespace-pre-wrap">
                 {profile.bio}
@@ -446,33 +436,41 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
       {/* Scout Profile Section */}
       <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-          {profile.avatar_url && !imageErrors.has(`profile-${profile.id}`) ? (
-            <Image
-              src={profile.avatar_url}
-              alt={profile.full_name || 'Scout'}
-              width={96}
-              height={96}
-              className="w-full h-full object-cover"
-              onError={() => {
-                setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
-              }}
-              unoptimized
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-              <span className="text-gray-600 text-3xl font-semibold">
-                {profile.full_name?.charAt(0).toUpperCase() || '?'}
-              </span>
-            </div>
+        <div className="flex flex-col items-center md:items-start gap-2 flex-shrink-0 mx-auto md:mx-0">
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden">
+            {profile.avatar_url && !imageErrors.has(`profile-${profile.id}`) ? (
+              <Image
+                src={profile.avatar_url}
+                alt={profile.full_name || 'Scout'}
+                width={96}
+                height={96}
+                className="w-full h-full object-cover"
+                onError={() => {
+                  setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                }}
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                <span className="text-gray-600 text-3xl font-semibold">
+                  {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+            )}
+          </div>
+          {profile.role === 'scout' && (
+            <span className="md:hidden px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded inline-flex items-center gap-1.5">
+              <VerificationBadge className="w-3.5 h-3.5" />
+              Scout
+            </span>
           )}
         </div>
         <div className="flex-1 w-full text-center md:text-left">
           <div className="flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-3 mb-2">
-            <h1 className="text-2xl md:text-3xl font-bold text-black flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-black flex items-center gap-2 text-center md:text-left">
               {profile.full_name || 'Unknown Scout'}
             </h1>
-            <span className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded flex items-center gap-1.5">
+            <span className="hidden md:inline-flex px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded items-center gap-1.5">
               <VerificationBadge className="w-3.5 h-3.5" />
               Scout
             </span>
@@ -493,21 +491,11 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 : ''}
             </p>
           )}
-          <div className="flex items-center gap-3">
-            {profile.social_link && (
-              <a
-                href={profile.social_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm text-center md:text-left"
-              >
-                {profile.social_link.replace(/^https?:\/\//, '')}
-              </a>
-            )}
+          <div className="flex justify-center md:justify-start">
             {!isOwnProfile && (
               <button
                 onClick={() => setShowMoreInfo(true)}
-                className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                className="text-sm text-blue-600 hover:text-blue-800 underline font-medium mx-auto md:mx-0"
               >
                 Details
               </button>
@@ -531,9 +519,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
       {/* Pricing & Purchase Section - Show for all scout profiles */}
       <div className="mb-6 md:mb-8 p-4 bg-white border border-gray-200 rounded-lg">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Price and Turnaround */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center justify-between md:justify-start gap-6 w-full md:w-auto">
             <div>
               <p className="text-xs text-gray-500 mb-0.5">Price</p>
               <p className="text-lg font-bold text-blue-600">${profile.price_per_eval || '99'}</p>
@@ -546,25 +534,25 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           </div>
           
           {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            {!isOwnProfile && (
-              <button
-                onClick={() => setShowHowItWorks(true)}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-black hover:bg-gray-50 rounded transition-colors"
-              >
-                How this works
-              </button>
-            )}
+          <div className="flex flex-col items-center gap-2 w-full md:w-auto">
             {!isOwnProfile ? (
-              <button
-                onClick={handleRequestEvaluation}
-                disabled={requesting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm transition-colors"
-              >
-                {requesting ? 'Processing...' : 'Request Evaluation'}
-              </button>
+              <>
+                <button
+                  onClick={handleRequestEvaluation}
+                  disabled={requesting}
+                  className="w-full max-w-xs px-8 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm transition-colors text-center shadow-sm"
+                >
+                  {requesting ? 'Processing...' : 'Request Evaluation'}
+                </button>
+                <button
+                  onClick={() => setShowHowItWorks(true)}
+                  className="text-sm text-gray-600 hover:text-black underline font-medium"
+                >
+                  How this works
+                </button>
+              </>
             ) : (
-              <div className="px-6 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium text-sm cursor-not-allowed">
+              <div className="w-full max-w-xs px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-medium text-sm text-center cursor-not-allowed">
                 Your Profile
               </div>
             )}
@@ -635,6 +623,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
               )}
               
+              {profile.social_link && (
+                <div>
+                  <h4 className="text-lg font-semibold text-black mb-2">Social</h4>
+                  <a
+                    href={profile.social_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline break-words"
+                  >
+                    {profile.social_link.replace(/^https?:\/\//, '')}
+                  </a>
+                </div>
+              )}
+              
               {profile.price_per_eval && (
                 <div>
                   <h4 className="text-lg font-semibold text-black mb-2">Price per Evaluation</h4>
@@ -649,7 +651,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
               )}
               
-              {(!profile.work_history && !profile.additional_info && !profile.bio && !profile.price_per_eval && !profile.turnaround_time) && (
+              {(!profile.work_history && !profile.additional_info && !profile.bio && !profile.price_per_eval && !profile.turnaround_time && !profile.social_link) && (
                 <p className="text-gray-500">No additional information available.</p>
               )}
             </div>

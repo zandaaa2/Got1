@@ -39,9 +39,11 @@ export default async function ProfilePage({
     userProfile = data
   }
 
+  const sharePath = profile?.username ? `/${profile.username}` : `/profile/${params.id}`
+
   const headerContent = session ? (
     <>
-      <ShareButton url={`/profile/${params.id}`} title={profile.full_name || 'Profile'} />
+      <ShareButton url={sharePath} title={profile.full_name || 'Profile'} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {userProfile?.avatar_url ? (
           <img
