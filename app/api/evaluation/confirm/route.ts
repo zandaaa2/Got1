@@ -102,6 +102,8 @@ export async function POST(request: NextRequest) {
           denied_at: new Date().toISOString(),
           denied_reason: deniedReason || null,
           payment_status: shouldRefund ? 'refunded' : evaluation.payment_status,
+          platform_fee: shouldRefund ? 0 : evaluation.platform_fee,
+          scout_payout: shouldRefund ? 0 : evaluation.scout_payout,
         })
         .eq('id', evaluationId)
 

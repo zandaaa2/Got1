@@ -29,9 +29,26 @@ export default function HeaderMenu({ userId, scoutId, evaluationId, onCancelled 
     const checkPendingEvaluation = async () => {
       // If evaluationId is provided directly, use it (trust the caller knows status is 'requested')
       if (evaluationId) {
-        console.log('✅ Using provided evaluationId:', evaluationId)
-        setPendingEvaluationId(evaluationId)
-        setLoading(false)
+        try {
+          const { data: evaluation } = await supabase
+            .from('evaluations')
+            .select('id, status')
+            .eq('id', evaluationId)
+            .maybeSingle()
+
+          if (evaluation?.status === 'requested') {
+            console.log('✅ Evaluation eligible for cancellation:', evaluation.id)
+            setPendingEvaluationId(evaluation.id)
+          } else {
+            console.log('ℹ️ Evaluation not cancellable (status:', evaluation?.status, ')')
+            setPendingEvaluationId(null)
+          }
+        } catch (error) {
+          console.error('Error checking evaluation status:', error)
+          setPendingEvaluationId(null)
+        } finally {
+          setLoading(false)
+        }
         return
       }
 
@@ -105,45 +122,29 @@ export default function HeaderMenu({ userId, scoutId, evaluationId, onCancelled 
   const handleCancelEvaluation = async () => {
     if (!pendingEvaluationId) return
 
-    // Check evaluation status before allowing cancellation
-    const { data: evaluation } = await supabase
-      .from('evaluations')
-      .select('status, payment_status')
-      .eq('id', pendingEvaluationId)
-      .maybeSingle()
-
-    if (!evaluation) {
-      alert('Evaluation not found')
-      return
-    }
-
-    // Only allow cancellation if status is 'requested' (before scout confirms)
-    if (evaluation.status !== 'requested') {
-      alert('You can only cancel evaluation requests before the scout confirms. Once confirmed, payment has been charged and the evaluation is in progress.')
-      setIsOpen(false)
-      return
-    }
-
     if (!confirm('Are you sure you want to cancel this evaluation request? This action cannot be undone.')) {
       return
     }
 
     try {
       setIsCancelling(true)
+      const response = await fetch('/api/evaluation/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ evaluationId: pendingEvaluationId }),
+      })
 
-      // Delete the evaluation (safe since no payment has been charged yet)
-      const { error, data } = await supabase
-        .from('evaluations')
-        .delete()
-        .eq('id', pendingEvaluationId)
-        .select()
+      const result = await response.json()
 
-      if (error) {
-        console.error('Delete error:', error)
-        throw error
+      if (!response.ok) {
+        console.error('Cancel API error:', result)
+        alert(result.error || 'Failed to cancel evaluation. Please try again.')
+        return
       }
 
-      console.log('✅ Evaluation deleted:', pendingEvaluationId, data)
+      console.log('✅ Evaluation cancelled via API:', pendingEvaluationId, result)
 
       setIsOpen(false)
       setPendingEvaluationId(null)

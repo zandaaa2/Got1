@@ -14,7 +14,7 @@ WHERE status = 'pending';
 -- Step 3: Add the new constraint with updated status values
 ALTER TABLE evaluations
   ADD CONSTRAINT evaluations_status_check 
-  CHECK (status IN ('requested', 'confirmed', 'denied', 'in_progress', 'completed'));
+  CHECK (status IN ('requested', 'confirmed', 'denied', 'cancelled', 'in_progress', 'completed'));
 
 -- Add payment tracking fields
 ALTER TABLE evaluations
@@ -26,7 +26,9 @@ ALTER TABLE evaluations
   ADD COLUMN IF NOT EXISTS scout_payout NUMERIC(10, 2), -- 90% to scout
   ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS denied_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS denied_reason TEXT;
+  ADD COLUMN IF NOT EXISTS denied_reason TEXT,
+  ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS cancelled_reason TEXT;
 
 -- Add profiles field for Stripe Connect account ID
 ALTER TABLE profiles

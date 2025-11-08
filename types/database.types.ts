@@ -33,7 +33,7 @@ export interface Evaluation {
   id: string
   scout_id: string
   player_id: string
-  status: 'requested' | 'confirmed' | 'denied' | 'in_progress' | 'completed'
+  status: 'requested' | 'confirmed' | 'denied' | 'cancelled' | 'in_progress' | 'completed'
   price: number
   notes: string | null
   created_at: string
@@ -48,6 +48,8 @@ export interface Evaluation {
   confirmed_at?: string | null
   denied_at?: string | null
   denied_reason?: string | null
+  cancelled_at?: string | null
+  cancelled_reason?: string | null
 }
 
 export interface ScoutApplication {

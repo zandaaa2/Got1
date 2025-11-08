@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 })
   }
 
+  console.log('🔐 Attempting to verify with secret prefix:', webhookSecret?.slice(0, 8))
+
   let event: Stripe.Event
 
   try {
@@ -30,6 +32,8 @@ export async function POST(request: NextRequest) {
     console.error(`Webhook signature verification failed:`, err.message)
     return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
   }
+
+  console.log('🔐 Webhook secret prefix after verification:', process.env.STRIPE_WEBHOOK_SECRET?.slice(0, 8))
 
   const adminSupabase = createAdminClient()
   if (!adminSupabase) {

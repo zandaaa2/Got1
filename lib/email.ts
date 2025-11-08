@@ -230,6 +230,38 @@ export async function sendEvaluationDeniedEmail(
   await sendEmail(playerEmail, `Your Evaluation Request Was Declined by ${scoutName}`, html)
 }
 
+export async function sendEvaluationCancelledEmail(
+  scoutEmail: string,
+  evaluationId: string,
+  wasPaid: boolean
+): Promise<void> {
+  const evaluationUrl = `${getBaseUrl()}/evaluations/${evaluationId}`
+  const statusMessage = wasPaid
+    ? 'The player has been automatically refunded and the funds have been released from escrow.'
+    : 'No payment had been captured for this request, so no refund was necessary.'
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #000; margin-bottom: 20px;">Evaluation Request Cancelled</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        One of your players has cancelled their evaluation request.
+      </p>
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 10px 0;"><strong>Evaluation ID:</strong> ${evaluationId}</p>
+        <p style="margin: 10px 0;">${statusMessage}</p>
+      </div>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        You do not need to take any action. If you have questions, reply to this email and the Got1 team can help.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${evaluationUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Evaluation</a>
+      </div>
+    </div>
+  `
+
+  await sendEmail(scoutEmail, 'A Player Cancelled Their Evaluation Request', html)
+}
+
 /**
  * Sends an email notification to a player when a scout confirms their evaluation request.
  * Includes a payment link for the player to complete payment.

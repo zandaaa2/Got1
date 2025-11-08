@@ -495,7 +495,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
     <>
       {needsUpdate && (
         <div className="mb-4 p-5 border border-red-200 bg-red-50 rounded-lg">
-          <h4 className="text-red-700 font-semibold mb-2">Update needed to Stripe information to receive payments</h4>
+          <h4 className="text-red-700 font-semibold mb-2">Update needed for Stripe</h4>
           <p className="text-sm text-red-700 mb-3">
             Stripe periodically requires additional information to keep payouts flowing. Please review their request to avoid delays—this is controlled by Stripe directly, not Got1.
           </p>
