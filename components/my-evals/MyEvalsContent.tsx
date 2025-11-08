@@ -19,6 +19,8 @@ interface Evaluation {
   player_id: string
   status: 'requested' | 'confirmed' | 'denied' | 'in_progress' | 'completed'
   price: number
+  scout_payout?: number | null
+  completed_at?: string | null
   created_at: string
   scout?: {
     full_name: string | null
@@ -59,7 +61,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
       // First, get the evaluations
       let query = supabase
         .from('evaluations')
-        .select('id, status, price, notes, created_at, scout_id, player_id')
+        .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id')
 
       if (role === 'scout') {
         query = query.eq('scout_id', userId)
@@ -120,6 +122,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           player_id: evaluation.player_id,
           status: evaluation.status,
           price: evaluation.price,
+          scout_payout: evaluation.scout_payout,
+          completed_at: evaluation.completed_at,
           notes: evaluation.notes,
           created_at: evaluation.created_at,
           scout: scoutProfile ? {
@@ -188,16 +192,26 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
         </div>
       ) : (
         <div className="space-y-3 md:space-y-4">
-          {evaluations.map((evaluation) => (
-            <div
-              key={evaluation.id}
-              className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <Link
-                href={`/evaluations/${evaluation.id}`}
-                className="flex items-center gap-3 md:gap-4 flex-1 min-w-0"
+          {evaluations.map((evaluation) => {
+            const payoutAmount =
+              evaluation.scout_payout ??
+              Math.round(((evaluation.price ?? 0) * 0.9 + Number.EPSILON) * 100) / 100
+            const roundedPayout = Math.round(payoutAmount)
+            const completionDate =
+              activeTab === 'completed' && evaluation.completed_at
+                ? new Date(evaluation.completed_at)
+                : null
+
+            return (
+              <div
+                key={evaluation.id}
+                className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                {role === 'scout' ? (
+                <Link
+                  href={`/evaluations/${evaluation.id}`}
+                  className="flex items-center gap-3 md:gap-4 flex-1 min-w-0"
+                >
+                  {role === 'scout' ? (
                   // Scout view: Show player being evaluated
                   <>
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
@@ -227,8 +241,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                         {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
                       </p>
                       {/* Status badge */}
-                      <div className="mt-1">
-                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
+                        <span className={`inline-block px-2 py-0.5 font-medium rounded ${
                           evaluation.status === 'requested' ? 'bg-blue-100 text-blue-800' :
                           evaluation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                           evaluation.status === 'denied' ? 'bg-red-100 text-red-800' :
@@ -243,10 +257,19 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                            evaluation.status === 'completed' ? 'Completed' :
                            evaluation.status}
                         </span>
+                        {completionDate && (
+                          <span>
+                            {completionDate.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </>
-                ) : (
+                  ) : (
                   // Player view: Show scout evaluating them
                   <>
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
@@ -281,8 +304,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           : 'Scout'}
                       </p>
                       {/* Status badge */}
-                      <div className="mt-1">
-                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
+                        <span className={`inline-block px-2 py-0.5 font-medium rounded ${
                           evaluation.status === 'requested' ? 'bg-blue-100 text-blue-800' :
                           evaluation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                           evaluation.status === 'denied' ? 'bg-red-100 text-red-800' :
@@ -297,39 +320,57 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                            evaluation.status === 'completed' ? 'Completed' :
                            evaluation.status}
                         </span>
+                        {completionDate && (
+                          <span>
+                            {completionDate.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </>
+                  )}
+                </Link>
+                {role === 'scout' && activeTab === 'completed' && evaluation.status === 'completed' && (
+                  <div className="flex flex-col items-end text-green-600 text-sm md:text-base">
+                    <span className="font-normal">
+                      +$
+                      {roundedPayout.toLocaleString('en-US')}
+                    </span>
+                  </div>
                 )}
-              </Link>
-              {/* Show menu for players with pending evaluations */}
-              {role === 'player' && activeTab === 'in_progress' && (
-                <div 
-                  className="flex-shrink-0" 
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }}
-                >
-                  <HeaderMenu 
-                    userId={userId} 
-                    evaluationId={evaluation.id}
-                    onCancelled={() => {
-                      console.log('🔄 onCancelled called, removing evaluation:', evaluation.id)
-                      // Optimistically remove from list
-                      setEvaluations(prev => {
-                        const filtered = prev.filter(e => e.id !== evaluation.id)
-                        console.log('📋 Updated evaluations list:', filtered.length)
-                        return filtered
-                      })
-                      // Then trigger full reload
-                      setRefreshKey(prev => prev + 1)
+                {/* Show menu for players with pending evaluations */}
+                {role === 'player' && activeTab === 'in_progress' && (
+                  <div
+                    className="flex-shrink-0"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
                     }}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+                  >
+                    <HeaderMenu
+                      userId={userId}
+                      evaluationId={evaluation.id}
+                      onCancelled={() => {
+                        console.log('🔄 onCancelled called, removing evaluation:', evaluation.id)
+                        // Optimistically remove from list
+                        setEvaluations((prev) => {
+                          const filtered = prev.filter((e) => e.id !== evaluation.id)
+                          console.log('📋 Updated evaluations list:', filtered.length)
+                          return filtered
+                        })
+                        // Then trigger full reload
+                        setRefreshKey((prev) => prev + 1)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
