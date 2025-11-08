@@ -702,9 +702,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     1
                   </div>
                   <div>
-                    <h4 className="font-semibold text-black mb-1">Request Evaluation</h4>
+                    <h4 className="font-semibold text-black mb-1">Pay Upfront to Secure Your Spot</h4>
                     <p className="text-gray-700 text-sm leading-relaxed">
-                      Click "Request Evaluation" to submit your request to the scout. <strong>No payment is charged at this stage.</strong> You can cancel your request at any time before the scout responds.
+                      Tap "Request Evaluation" to go straight to our secure Stripe checkout. The full amount is charged immediately and held in Got1 escrow until the scout delivers. You can still cancel for a full refund anytime before the scout confirms.
                     </p>
                   </div>
                 </div>
@@ -718,7 +718,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <div>
                     <h4 className="font-semibold text-black mb-1">Scout Confirms</h4>
                     <p className="text-gray-700 text-sm leading-relaxed">
-                      The scout reviews your request and either confirms or denies it. <strong>If confirmed:</strong> you'll receive a payment link via email. Complete the payment and the money is held in escrow. <strong>If denied:</strong> no payment required.
+                      The scout reviews your paid request. <strong>If confirmed:</strong> they lock in the job and begin the evaluation. <strong>If denied:</strong> we automatically issue a full refund to your card immediately.
                     </p>
                   </div>
                 </div>
@@ -732,7 +732,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <div>
                     <h4 className="font-semibold text-black mb-1">Scout Delivers</h4>
                     <p className="text-gray-700 text-sm leading-relaxed">
-                      The scout completes your evaluation within their turnaround time. Once submitted, the scout receives 90% of the payment and Got1 receives a 10% platform fee. You'll receive the completed evaluation via email.
+                      The scout completes your evaluation within their turnaround time. Once submitted, the scout receives 90% of the payment and Got1 retains a 10% platform fee. You'll receive the finished evaluation by email.
                     </p>
                   </div>
                 </div>
@@ -741,9 +741,10 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <h4 className="font-semibold text-black mb-2">Refund Policy</h4>
                 <ul className="text-sm text-gray-700 space-y-2">
-                  <li>✅ You can cancel for free before the scout confirms</li>
-                  <li>❌ No refunds after payment is completed (scout has committed to deliver)</li>
-                  <li>💡 Payment is held securely in escrow until evaluation is complete</li>
+                  <li>✅ Cancel before the scout confirms for an instant full refund</li>
+                  <li>✅ If the scout denies your request, we automatically refund you in full</li>
+                  <li>🚫 Once the scout confirms, the evaluation is locked in (reach out to support for exceptional circumstances)</li>
+                  <li>💡 Your payment stays in escrow until the scout finishes the evaluation</li>
                 </ul>
               </div>
             </div>
