@@ -3,11 +3,18 @@ export interface CollegeEntry {
   name: string
   slug: string
   conference: string
-  division: "FBS" | "FCS"
+  division: "FBS" | "FCS" | "Other"
   logo: string
 }
 
 export const collegeEntries: CollegeEntry[] = [
+  {
+    name: 'Got1',
+    slug: 'got1',
+    conference: 'Independent',
+    division: 'Other',
+    logo: '/got1-logos/got1-icon.png',
+  },
   {
     name: 'East Carolina University',
     slug: 'ecu',
