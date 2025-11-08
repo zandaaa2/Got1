@@ -49,7 +49,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const supabase = createClient()
   
   // Test accounts that should show the badge
-  const testAccountNames = ['zander huff', 'russell westbrooks', 'ray lewois', 'ella k']
+  const testAccountNames = ['russell westbrooks', 'ray lewois', 'ella k']
   
   const isTestAccount = (fullName: string | null) => {
     if (!fullName) return false
