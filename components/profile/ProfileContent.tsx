@@ -472,10 +472,10 @@ function StripeConnectSection({ profile }: { profile: any }) {
         // If onboarding is complete, open dashboard; otherwise open onboarding
         if (data.onboardingComplete && data.dashboardUrl) {
           console.log('📧 Opening dashboard:', data.dashboardUrl)
-          window.open(data.dashboardUrl, '_blank')
+          window.location.href = data.dashboardUrl
         } else if (data.onboardingUrl) {
           console.log('📧 Opening onboarding:', data.onboardingUrl)
-          window.open(data.onboardingUrl, '_blank')
+          window.location.href = data.onboardingUrl
         } else {
           console.error('❌ No onboarding or dashboard URL returned')
           alert('Failed to get account link. Please try again.')
