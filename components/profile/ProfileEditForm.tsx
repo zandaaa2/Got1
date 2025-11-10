@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -13,6 +13,18 @@ interface HudlLink {
   link: string
   sport: string
 }
+
+
+const normalizeUsername = (value: string) => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+    .slice(0, 30)
+}
+
+const RESERVED_USERNAMES = new Set(["profile", "profiles", "browse", "teams", "team", "api", "terms-of-service", "privacy-policy", "login", "signup", "my-evals", "evaluations", "stripe", "auth", "admin", "settings", "money", "marketing"])
 
 interface ProfileEditFormProps {
   profile: any
@@ -49,6 +61,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   // Form state based on role
   const [formData, setFormData] = useState({
     full_name: profile.full_name || '',
+    username: profile.username || '',
     bio: profile.bio || '',
     avatar_url: profile.avatar_url || '',
     organization: profile.organization || '',
@@ -71,6 +84,15 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     sports: (Array.isArray(profile.sports) ? profile.sports : []) as string[],
   })
 
+  useEffect(() => {
+    if (!profile.username && profile.full_name && !formData.username) {
+      const suggestion = normalizeUsername(profile.full_name.replace(/\s+/g, ''))
+      if (suggestion) {
+        setFormData((prev) => ({ ...prev, username: suggestion }))
+      }
+    }
+  }, [profile.username, profile.full_name])
+
   /**
    * Handles input field changes and updates form state.
    * Prevents changes to birthday if it's already locked.
@@ -80,8 +102,13 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     
-    // Prevent changes to birthday if it's locked
     if (name === 'birthday' && isBirthdayLocked) {
+      return
+    }
+    
+    if (name === 'username') {
+      const normalized = normalizeUsername(value)
+      setFormData((prev) => ({ ...prev, username: normalized }))
       return
     }
     
@@ -216,8 +243,39 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
+      const normalizedUsername = normalizeUsername(formData.username || '')
+      if (!normalizedUsername) {
+        setError('Username is required.')
+        setLoading(false)
+        return
+      }
+      if (normalizedUsername.length < 3) {
+        setError('Username must be at least 3 characters.')
+        setLoading(false)
+        return
+      }
+      if (RESERVED_USERNAMES.has(normalizedUsername)) {
+        setError('That username is reserved. Please choose another.')
+        setLoading(false)
+        return
+      }
+
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', normalizedUsername)
+        .neq('user_id', session.user.id)
+        .maybeSingle()
+
+      if (existingUsername) {
+        setError('That username is already taken. Please choose another.')
+        setLoading(false)
+        return
+      }
+
       const updateData: any = {
         full_name: formData.full_name,
+        username: normalizedUsername,
         avatar_url: formData.avatar_url || null,
         updated_at: new Date().toISOString(),
       }
@@ -317,7 +375,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         console.log('ℹ️  Profile already exists and has been saved before, skipping welcome email')
       }
 
-      router.push(`/profile/${profile.id}`)
+      router.push(`/${normalizedUsername}`)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to update profile')
@@ -411,6 +469,26 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
               </p>
             </div>
           )}
+        </div>
+
+        <div>
+          <label htmlFor="username" className="block text-sm font-medium text-black mb-2">
+            Username *
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+            pattern="[a-z0-9_-]+"
+            minLength={3}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          />
+                    <p className="mt-1 text-sm text-gray-600">
+            This will be your public link: got1.app/<span className="font-semibold">{formData.username || 'username'}</span>. Use letters, numbers, or underscores.
+          </p>
         </div>
 
         <div>

@@ -6,6 +6,7 @@ export interface Profile {
   role: UserRole
   full_name: string | null
   avatar_url: string | null
+  username: string
   created_at: string
   updated_at: string
 }
@@ -25,6 +26,7 @@ export interface ScoutProfile extends Profile {
   credentials: string | null
   organization: string | null
   price_per_eval?: number
+  username: string
   social_link: string | null
   turnaround_time: string | null
 }

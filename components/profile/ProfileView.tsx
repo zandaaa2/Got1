@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
+import { getProfilePath } from '@/lib/profile-url'
 
 interface ProfileViewProps {
   profile: any
@@ -22,6 +23,7 @@ interface Evaluation {
     full_name: string | null
     avatar_url: string | null
     organization: string | null
+    username: string | null
   } | null
   player?: {
     id: string
@@ -29,6 +31,7 @@ interface Evaluation {
     avatar_url: string | null
     school: string | null
     graduation_year: number | null
+    username: string | null
   } | null
 }
 
@@ -125,7 +128,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       // Fetch profiles for those user IDs
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, avatar_url, organization, school, graduation_year')
+        .select('id, user_id, full_name, avatar_url, organization, school, graduation_year, username')
         .in('user_id', Array.from(userIds))
 
       if (profilesError) throw profilesError
@@ -144,6 +147,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             full_name: scoutProfile.full_name,
             avatar_url: scoutProfile.avatar_url,
             organization: scoutProfile.organization,
+            username: scoutProfile.username,
           } : null,
           player: playerProfile ? {
             id: playerProfile.id,
@@ -151,6 +155,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             avatar_url: playerProfile.avatar_url,
             school: playerProfile.school,
             graduation_year: playerProfile.graduation_year,
+            username: playerProfile.username,
           } : null,
         }
       })
@@ -289,7 +294,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
                   <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
                     <Link 
-                      href={evaluation.scout?.id ? `/profile/${evaluation.scout.id}` : '#'}
+                      href={evaluation.scout?.id ? getProfilePath(evaluation.scout.id, evaluation.scout.username) : '#'}
                       className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
                     >
                       <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
@@ -470,6 +475,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             <h1 className="text-2xl md:text-3xl font-bold text-black flex items-center gap-2 text-center md:text-left">
               {profile.full_name || 'Unknown Scout'}
             </h1>
+            {profile.username && (
+              <p className="text-sm text-gray-500">@{profile.username}</p>
+            )}
             <span className="hidden md:inline-flex px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded items-center gap-1.5">
               <VerificationBadge className="w-3.5 h-3.5" />
               Scout
@@ -490,6 +498,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 ? profile.organization
                 : ''}
             </p>
+          )}
+          {profile.username && (
+            <p className="text-sm text-gray-500 mb-2">@{profile.username}</p>
           )}
           <div className="flex justify-center md:justify-start">
             {!isOwnProfile && (
@@ -779,7 +790,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
                 <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
                   <Link 
-                    href={evaluation.player?.id ? `/profile/${evaluation.player.id}` : '#'}
+                    href={evaluation.player?.id ? getProfilePath(evaluation.player.id, evaluation.player.username) : '#'}
                     className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
                   >
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">

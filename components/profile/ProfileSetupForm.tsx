@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -13,6 +13,17 @@ interface HudlLink {
   link: string
   sport: string
 }
+
+const normalizeUsername = (value: string) => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+    .slice(0, 30)
+}
+
+const RESERVED_USERNAMES = new Set(["profile", "profiles", "browse", "teams", "team", "api", "terms-of-service", "privacy-policy", "login", "signup", "my-evals", "evaluations", "stripe", "auth", "admin", "settings", "money", "marketing"])
 
 interface ProfileSetupFormProps {
   userEmail: string
@@ -32,8 +43,10 @@ export default function ProfileSetupForm({
   const supabase = createClient()
 
   const [role, setRole] = useState<'player' | 'scout'>('player')
+  const initialUsername = normalizeUsername(userName || '')
   const [formData, setFormData] = useState({
     full_name: userName,
+    username: initialUsername,
     birthday: '', // Date in YYYY-MM-DD format
     // Scout fields
     organization: '',
@@ -52,6 +65,13 @@ export default function ProfileSetupForm({
     // Scout fields
     sports: [] as string[],
   })
+
+  useEffect(() => {
+    if (!formData.username && formData.full_name) {
+      setFormData((prev) => ({ ...prev, username: normalizeUsername(formData.full_name) }))
+    }
+  }, [formData.full_name, formData.username])
+
 
   /**
    * Calculates age from a birthday date string.
@@ -100,6 +120,35 @@ export default function ProfileSetupForm({
         return
       }
 
+      const normalizedUsername = normalizeUsername(formData.username || '')
+      if (!normalizedUsername) {
+        setError('Username is required.')
+        setLoading(false)
+        return
+      }
+      if (normalizedUsername.length < 3) {
+        setError('Username must be at least 3 characters.')
+        setLoading(false)
+        return
+      }
+      if (RESERVED_USERNAMES.has(normalizedUsername)) {
+        setError('That username is reserved. Please choose another.')
+        setLoading(false)
+        return
+      }
+
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', normalizedUsername)
+        .maybeSingle()
+
+      if (existingUsername) {
+        setError('That username is already taken. Please choose another.')
+        setLoading(false)
+        return
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
@@ -107,6 +156,7 @@ export default function ProfileSetupForm({
         user_id: session.user.id,
         role: role,
         full_name: formData.full_name || null,
+        username: normalizedUsername,
         avatar_url: userAvatar || null,
         birthday: formData.birthday || null,
         bio: formData.bio || null,
@@ -163,7 +213,7 @@ export default function ProfileSetupForm({
         // Don't block the redirect if email fails
       }
 
-      router.push('/profile')
+      router.push(`/${normalizedUsername}`)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to create profile')
@@ -175,6 +225,11 @@ export default function ProfileSetupForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target
+    if (name === 'username') {
+      const normalized = normalizeUsername(value)
+      setFormData((prev) => ({ ...prev, username: normalized }))
+      return
+    }
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -234,6 +289,26 @@ export default function ProfileSetupForm({
             required
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
           />
+        </div>
+
+        <div>
+          <label htmlFor="username" className="block text-sm font-medium text-black mb-2">
+            Username *
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+            pattern="[a-z0-9_-]+"
+            minLength={3}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          />
+          <p className="mt-1 text-xs text-gray-600">
+            This becomes your public link: got1.app/{formData.username || 'username'}
+          </p>
         </div>
 
         <div>
