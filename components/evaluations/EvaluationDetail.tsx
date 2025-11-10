@@ -207,7 +207,7 @@ export default function EvaluationDetail({
     return (
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/evaluations')}
           className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
@@ -318,13 +318,21 @@ export default function EvaluationDetail({
         ) : evaluation.status === 'requested' && evaluation.payment_status === 'pending' ? (
           <div className="mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Complete Payment</h2>
-            <div className="p-4 md:p-6 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p className="text-black mb-2">
-                Please complete your payment to finalize the evaluation request.
-              </p>
-              <p className="text-black text-sm">
-                Your payment will be held in escrow until the scout responds.
-              </p>
+            <div className="p-4 md:p-6 bg-yellow-50 rounded-lg border border-yellow-200 space-y-4">
+              <div>
+                <p className="text-black mb-2">
+                  We've received your payment and it's being held in Got1's escrow account.
+                </p>
+                <p className="text-black text-sm">
+                  Please keep an eye on your email for confirmation or denial of your application by the scout so you can proceed.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/evaluations')}
+                className="inline-flex items-center justify-center px-4 py-2 bg-black text-white rounded-md text-sm font-semibold hover:bg-gray-900 transition-colors"
+              >
+                Got it
+              </button>
             </div>
           </div>
         ) : evaluation.status === 'denied' ? (
@@ -421,7 +429,7 @@ export default function EvaluationDetail({
     return (
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/evaluations')}
           className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
@@ -574,7 +582,7 @@ export default function EvaluationDetail({
     return (
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/evaluations')}
           className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
