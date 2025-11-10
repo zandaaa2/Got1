@@ -297,10 +297,10 @@ export async function sendEvaluationConfirmedEmail(
         <p style="margin: 10px 0;"><strong>Price:</strong> $${price.toFixed(2)}</p>
       </div>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
-        To proceed, please complete your payment. The evaluation will begin once payment is confirmed.
+        It's always better to get a second opinion. Take a look at other great scouts on the platform.
       </p>
       <div style="margin-top: 30px; text-align: center;">
-        <a href="${paymentUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Complete Payment</a>
+        <a href="${getBaseUrl()}/browse?tab=scouts" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Browse Scouts</a>
       </div>
       <p style="color: #666; font-size: 14px; margin-top: 20px;">
         Or view your evaluation: <a href="${evaluationUrl}" style="color: #000;">${evaluationUrl}</a>
