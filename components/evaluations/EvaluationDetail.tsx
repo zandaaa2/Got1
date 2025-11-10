@@ -429,7 +429,7 @@ export default function EvaluationDetail({
     return (
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.push('/evaluations')}
+          onClick={() => router.push('/my-evals')}
           className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
@@ -582,7 +582,7 @@ export default function EvaluationDetail({
     return (
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.push('/evaluations')}
+          onClick={() => router.push('/my-evals')}
           className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
         >
           <svg
@@ -711,7 +711,7 @@ export default function EvaluationDetail({
   return (
     <div className="max-w-4xl mx-auto">
       <button
-        onClick={() => router.back()}
+        onClick={() => router.push('/my-evals')}
         className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
       >
         <svg
