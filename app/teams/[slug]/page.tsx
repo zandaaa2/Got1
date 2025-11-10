@@ -10,6 +10,10 @@ import AuthButtons from '@/components/auth/AuthButtons'
 import ShareButton from '@/components/shared/ShareButton'
 import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+
 
 interface ScoutProfile {
   id: string
