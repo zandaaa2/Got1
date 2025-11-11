@@ -29,6 +29,14 @@ function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
+const EMAIL_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'
+const EMAIL_LOGO = `${EMAIL_BASE_URL}/icons/icon-180x180.png`
+const EMAIL_HEADER = `
+      <div style="text-align:center;padding:24px 0;">
+        <img src="${EMAIL_LOGO}" alt="Got1" width="72" height="72" style="border-radius:16px;" />
+      </div>
+    `
+
 /**
  * Sends an email using Resend, with fallback to console logging.
  * 
@@ -116,6 +124,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<str
 export async function sendWelcomeEmail(userEmail: string, userName: string): Promise<void> {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Welcome to Got1!</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${userName || 'there'},
@@ -162,6 +171,7 @@ export async function sendEvaluationRequestEmail(
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">New Evaluation Request</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${scoutName || 'there'},
@@ -202,6 +212,7 @@ export async function sendEvaluationDeniedEmail(
 ): Promise<void> {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Evaluation Request Update</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${playerName || 'there'},
@@ -248,6 +259,7 @@ export async function sendProfileReportEmail({
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">New Profile Report</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 16px;">
         A profile has been reported on Got1. Review the details below.
@@ -284,6 +296,7 @@ export async function sendEvaluationCancelledEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Evaluation Request Cancelled</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         One of your players has cancelled their evaluation request.
@@ -327,6 +340,7 @@ export async function sendEvaluationConfirmedEmail(
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Evaluation Request Confirmed!</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${playerName || 'there'},
@@ -374,6 +388,7 @@ export async function sendEvaluationCompleteEmail(
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Your Evaluation is Ready!</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${playerName || 'there'},
@@ -410,6 +425,7 @@ export async function sendApplicationApprovedEmail(
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Scout Application Approved!</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${userName || 'there'},
@@ -444,6 +460,7 @@ export async function sendApplicationDeniedEmail(
 ): Promise<void> {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">Scout Application Update</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${userName || 'there'},
@@ -475,6 +492,7 @@ export async function sendStripeRequirementsEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #b91c1c; margin-bottom: 20px;">Action Needed: Update Your Stripe Details</h2>
       <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
         Hi ${userName || 'there'},
@@ -531,6 +549,7 @@ export async function sendApplicationEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
       <h2 style="color: #000; margin-bottom: 20px;">New Scout Application</h2>
       <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <p style="margin: 10px 0;"><strong>Name:</strong> ${profile.full_name || 'Unknown'}</p>

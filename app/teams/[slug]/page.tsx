@@ -41,12 +41,33 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   if (!team) {
     return {
       title: 'Team Not Found | Got1',
+      description: 'This Got1 team page could not be located.',
     }
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'
+  const pathName = `/teams/${team.slug}`
+  const absoluteUrl = `${baseUrl}${pathName}`
+  const description = `View verified Got1 scouts associated with ${team.name}.`
+
   return {
     title: `${team.name} | Got1 Teams`,
-    description: `View verified Got1 scouts associated with ${team.name}.`,
+    description,
+    alternates: { canonical: pathName },
+    openGraph: {
+      title: `${team.name} | Got1 Teams`,
+      description,
+      url: absoluteUrl,
+      images: [
+        { url: '/social/og-default.png', width: 1200, height: 630, alt: `${team.name} on Got1` },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${team.name} | Got1 Teams`,
+      description,
+      images: ['/social/og-default.png'],
+    },
   }
 }
 
