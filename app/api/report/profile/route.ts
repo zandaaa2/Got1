@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@/lib/supabase'
-import type { Database } from '@/types/database.types'
 import { sendProfileReportEmail } from '@/lib/email'
 
 export async function POST(req: Request) {
