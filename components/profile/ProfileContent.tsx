@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getGradientForId } from '@/lib/gradients'
 import { getProfilePath } from '@/lib/profile-url'
 import { isMeaningfulAvatar } from '@/lib/avatar'
@@ -45,6 +45,39 @@ const MoneyDashboardSkeleton = () => (
     </div>
   </div>
 )
+
+type MonetizationStep = {
+  id: string
+  title: string
+  description: string
+}
+
+const monetizationSteps: MonetizationStep[] = [
+  {
+    id: 'socials',
+    title: 'Share on social media',
+    description:
+      'Add your Got1 profile link in your Instagram, Twitter/X, TikTok, and LinkedIn bios so players can reach you in one tap.',
+  },
+  {
+    id: 'facebook',
+    title: 'Post in local Facebook groups',
+    description:
+      'Drop your link in local recruiting, booster, and community groups so parents and players see you first.',
+  },
+  {
+    id: 'coaches',
+    title: 'Send to high school coaches',
+    description:
+      'Text or email your Got1 profile to the head coach and position coaches at the schools you work with.',
+  },
+  {
+    id: 'trainers',
+    title: 'Share with private trainers',
+    description:
+      'Send your link to trainers and 7v7 organizers who work with high school athletes in your area.',
+  },
+]
 
 const StripeBannerSkeleton = () => (
   <div className="mb-6 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-5 animate-pulse">
@@ -649,12 +682,103 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const [refreshKey, setRefreshKey] = useState(0)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const checklistStorageKey = useMemo(
+    () => `money-checklist-${profile.user_id || profile.id || profile.username}`,
+    [profile.id, profile.user_id, profile.username]
+  )
+  const [moneyChecklist, setMoneyChecklist] = useState<boolean[]>(
+    () => new Array(monetizationSteps.length).fill(false)
+  )
+  const [isMoneyChecklistMinimized, setIsMoneyChecklistMinimized] = useState(false)
+  const completedSteps = moneyChecklist.filter(Boolean).length
+  const canMinimizeChecklist = completedSteps === monetizationSteps.length
+  const progressPercent = monetizationSteps.length
+    ? Math.round((completedSteps / monetizationSteps.length) * 100)
+    : 0
   const profilePath = getProfilePath(profile.id, profile.username)
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app').replace(/\/$/, '')
   const fullProfileUrl = `${appUrl}${profilePath}`
   const displayProfileUrl = `${appUrl.replace(/^https?:\/\//, '')}${profilePath}`
   const profileGradientKey =
     profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const storedChecklist = window.localStorage.getItem(checklistStorageKey)
+      if (storedChecklist) {
+        const parsed = JSON.parse(storedChecklist)
+        if (Array.isArray(parsed) && parsed.length === monetizationSteps.length) {
+          setMoneyChecklist(parsed)
+        }
+      }
+      const storedMinimized = window.localStorage.getItem(`${checklistStorageKey}-minimized`)
+      if (storedMinimized) {
+        setIsMoneyChecklistMinimized(storedMinimized === 'true')
+      }
+    } catch (error) {
+      console.error('Failed to load monetization checklist state:', error)
+    }
+  }, [checklistStorageKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(checklistStorageKey, JSON.stringify(moneyChecklist))
+    } catch (error) {
+      console.error('Failed to persist monetization checklist state:', error)
+    }
+  }, [moneyChecklist, checklistStorageKey])
+
+  useEffect(() => {
+    if (!canMinimizeChecklist && isMoneyChecklistMinimized) {
+      setIsMoneyChecklistMinimized(false)
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(`${checklistStorageKey}-minimized`, 'false')
+        } catch (error) {
+          console.error('Failed to persist monetization checklist minimized state:', error)
+        }
+      }
+      return
+    }
+
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(
+        `${checklistStorageKey}-minimized`,
+        isMoneyChecklistMinimized.toString()
+      )
+    } catch (error) {
+      console.error('Failed to persist monetization checklist minimized state:', error)
+    }
+  }, [canMinimizeChecklist, isMoneyChecklistMinimized, checklistStorageKey])
+
+  const toggleChecklistStep = (index: number) => {
+    setMoneyChecklist((prev) => {
+      const next = [...prev]
+      next[index] = !next[index]
+      return next
+    })
+  }
+
+  const handleToggleChecklistVisibility = () => {
+    if (!canMinimizeChecklist) return
+    setIsMoneyChecklistMinimized((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(
+            `${checklistStorageKey}-minimized`,
+            next.toString()
+          )
+        } catch (error) {
+          console.error('Failed to persist monetization checklist minimized state:', error)
+        }
+      }
+      return next
+    })
+  }
+
 
   // Check if returning from Stripe and force refresh
   useEffect(() => {
@@ -885,6 +1009,76 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
 
       {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
       {profile.role === 'scout' && <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />}
+
+      {profile.role === 'scout' && (
+        <div className="surface-card mb-8 p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="text-lg md:text-xl font-semibold text-black">How to make money</h3>
+              <p className="text-sm md:text-base text-gray-600">
+                Finish these quick steps to drive players to your Got1 profile.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleChecklistVisibility}
+              disabled={!canMinimizeChecklist}
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                canMinimizeChecklist
+                  ? 'interactive-press border border-gray-300 text-gray-700 hover:bg-gray-100'
+                  : 'border border-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+              aria-pressed={isMoneyChecklistMinimized}
+            >
+              {isMoneyChecklistMinimized ? 'Show steps' : 'Hide steps'}
+              {!canMinimizeChecklist && (
+                <span className="text-xs font-normal text-gray-400">(complete all to hide)</span>
+              )}
+            </button>
+          </div>
+
+          <div className="mt-5">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>
+                {completedSteps} of {monetizationSteps.length} completed
+              </span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="mt-2 h-2 rounded-full bg-gray-200 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-blue-600 transition-all duration-300 ease-out"
+                style={{ width: `${progressPercent}%` }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+
+          {!isMoneyChecklistMinimized && (
+            <ul className="mt-5 space-y-4">
+              {monetizationSteps.map((step: MonetizationStep, index: number) => (
+                <li key={step.id} className="flex items-start gap-3">
+                  <input
+                    id={`money-step-${step.id}`}
+                    type="checkbox"
+                    checked={moneyChecklist[index] || false}
+                    onChange={() => toggleChecklistStep(index)}
+                    className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div>
+                    <label
+                      htmlFor={`money-step-${step.id}`}
+                      className="block text-sm font-semibold text-black cursor-pointer"
+                    >
+                      Step {index + 1}: {step.title}
+                    </label>
+                    <p className="text-sm text-gray-600">{step.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Scout Status Section - Only show if user is not a scout */}
       {profile.role !== 'scout' && (
