@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import Link from 'next/link'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+import AuthButtons from '@/components/auth/AuthButtons'
 
 export default async function ProfileEditPage() {
   const supabase = createServerClient()
@@ -53,33 +54,16 @@ export default async function ProfileEditPage() {
     isNewProfile = timeDiff < 5000
   }
 
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('avatar_url')
-    .eq('user_id', session.user.id)
-    .single()
-
-  const headerContent = (
-    <>
-      <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-        Share
-      </button>
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {userProfile?.avatar_url ? (
-          <img
-            src={userProfile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">
-              {profile.role === 'player' ? 'P' : 'S'}
-            </span>
-          </div>
-        )}
-      </Link>
-    </>
+  const headerContent = session ? (
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={profile.avatar_url}
+      fullName={profile.full_name}
+      username={profile.username}
+      email={session.user.email}
+    />
+  ) : (
+    <AuthButtons />
   )
 
   return (
