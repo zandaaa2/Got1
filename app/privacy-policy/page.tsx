@@ -270,13 +270,13 @@ export default async function PrivacyPolicyPage() {
                 <ul className={LIST}>
                   <li>
                     <strong>Email:</strong>{' '}
-                    <a href="mailto:privacy@got1.app" className="text-blue-600 hover:underline">
-                      privacy@got1.app
+                    <a href="mailto:zander@got1.app" className="text-blue-600 hover:underline">
+                      zander@got1.app
                     </a>
                   </li>
                   <li>
-                    <strong>Mail:</strong> Got1 Privacy, 1900 Corporate Blvd NW, Suite 400W, Boca
-                    Raton, FL 33431, USA
+                    <strong>Mail:</strong> Got1 Privacy, 662 Harbor Blvd, Unit 550, Destin, FL
+                    32541, USA
                   </li>
                 </ul>
               </section>
