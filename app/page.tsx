@@ -53,7 +53,7 @@ export default async function Home() {
 
   const headerContent = session ? (
     <>
-      <ShareButton url="/" title="Browse Scouts on Got1" />
+      <ShareButton url="/" />
       {profile ? (
         <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
           {profile.avatar_url ? (

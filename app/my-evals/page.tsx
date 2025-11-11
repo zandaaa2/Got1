@@ -55,7 +55,7 @@ export default async function MyEvalsPage() {
 
   const headerContent = (
     <>
-      <ShareButton url="/my-evals" title="My Evaluations on Got1" />
+      <ShareButton url="/my-evals" />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {profile.avatar_url ? (
           <img

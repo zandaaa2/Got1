@@ -28,7 +28,7 @@ export default async function BrowsePage() {
 
   const headerContent = session ? (
     <>
-      <ShareButton url="/browse" title="Browse Scouts on Got1" />
+      <ShareButton url="/browse" />
       {profile ? (
         <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
           {profile.avatar_url ? (

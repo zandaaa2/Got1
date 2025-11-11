@@ -4,23 +4,19 @@ import { useState } from 'react'
 
 interface ShareButtonProps {
   url: string
-  title?: string
-  text?: string
 }
 
-export default function ShareButton({ url, title, text }: ShareButtonProps) {
+export default function ShareButton({ url }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = async () => {
-    const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}${url}` : url
-    const shareText = text || title || 'Check this out on Got1'
+    const fullUrl =
+      typeof window !== 'undefined' ? `${window.location.origin}${url}` : url
 
     // Try native Web Share API first (mobile)
     if (navigator.share) {
       try {
         await navigator.share({
-          title: title || 'Got1',
-          text: shareText,
           url: fullUrl,
         })
         return
@@ -50,7 +46,7 @@ export default function ShareButton({ url, title, text }: ShareButtonProps) {
       type="button"
       onClick={handleShare}
       className="interactive-press inline-flex items-center justify-center gap-2 h-10 px-4 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 transition-colors"
-      aria-label={copied ? 'Link copied to clipboard' : 'Share this page'}
+      aria-label={copied ? 'Link copied to clipboard' : 'Share profile link'}
     >
       <svg
         className="h-4 w-4"

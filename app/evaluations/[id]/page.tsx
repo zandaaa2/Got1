@@ -77,7 +77,7 @@ export default async function EvaluationPage({
 
   const headerContent = (
     <>
-      <ShareButton url={`/evaluations/${params.id}`} title="Evaluation on Got1" />
+      <ShareButton url={`/evaluations/${params.id}`} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {profile?.avatar_url ? (
           <img

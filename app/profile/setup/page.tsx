@@ -41,7 +41,7 @@ export default async function ProfileSetupPage() {
 
   const headerContent = (
     <>
-      <ShareButton url="/profile/setup" title="Complete Your Profile on Got1" />
+      <ShareButton url="/profile/setup" />
       {sanitizedAvatar ? (
         <img
           src={sanitizedAvatar}

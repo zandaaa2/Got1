@@ -99,7 +99,7 @@ export default async function ProfilePage() {
 
   const headerContent = (
     <>
-      <ShareButton url={`/profile/${profile.id}`} title={profile.full_name || 'Profile'} />
+      <ShareButton url={`/profile/${profile.id}`} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {userProfile?.avatar_url ? (
           <div className="w-10 h-10 rounded-full border-2 border-black p-0.5">

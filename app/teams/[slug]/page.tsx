@@ -148,7 +148,7 @@ export default async function TeamPage({ params }: PageParams) {
 
   const headerContent = session ? (
     <>
-      <ShareButton url={`/teams/${team.slug}`} title={`${team.name} on Got1`} />
+      <ShareButton url={`/teams/${team.slug}`} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {userProfile?.avatar_url ? (
           <Image

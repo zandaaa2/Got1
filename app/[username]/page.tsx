@@ -127,7 +127,7 @@ export default async function UsernameProfilePage({ params }: UsernamePageProps)
 
   const headerContent = session ? (
     <>
-      <ShareButton url={sharePath} title={profile.full_name || 'Profile'} />
+      <ShareButton url={sharePath} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {userProfile?.avatar_url ? (
           <img

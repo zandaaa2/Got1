@@ -43,7 +43,7 @@ export default async function WhatsThisPage() {
 
   const headerContent = session ? (
     <>
-      <ShareButton url="/whats-this" title="What's Got1?" />
+      <ShareButton url="/whats-this" />
       {profile ? (
         <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
           {profile.avatar_url ? (
