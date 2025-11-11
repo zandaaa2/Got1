@@ -230,6 +230,48 @@ export async function sendEvaluationDeniedEmail(
   await sendEmail(playerEmail, `Your Evaluation Request Was Declined by ${scoutName}`, html)
 }
 
+export async function sendProfileReportEmail({
+  reportedProfile,
+  reporterProfile,
+  reporterEmail,
+  reason,
+  profileUrl
+}: {
+  reportedProfile: { id: string; full_name: string | null; username: string | null; role: string | null };
+  reporterProfile: { id: string | null; full_name: string | null; username: string | null; role: string | null };
+  reporterEmail: string | null;
+  reason: string;
+  profileUrl: string;
+}) {
+  const reporterName = reporterProfile?.full_name || 'Unknown Reporter'
+  const reasonText = reason?.trim() ? reason.trim() : 'No additional details were provided.'
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #000; margin-bottom: 20px;">New Profile Report</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 16px;">
+        A profile has been reported on Got1. Review the details below.
+      </p>
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 8px 0;"><strong>Reported Profile:</strong> ${reportedProfile.full_name || 'Unknown'} (${reportedProfile.role || 'Unknown role'})</p>
+        <p style="margin: 8px 0;"><strong>Profile URL:</strong> <a href="${profileUrl}" style="color: #000;">${profileUrl}</a></p>
+        <p style="margin: 8px 0;"><strong>Reporter:</strong> ${reporterName}</p>
+        <p style="margin: 8px 0;"><strong>Reporter Username:</strong> ${reporterProfile?.username || 'N/A'}</p>
+        <p style="margin: 8px 0;"><strong>Reporter Email:</strong> ${reporterEmail || 'N/A'}</p>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <h3 style="color: #000; margin-bottom: 10px;">Reported Reason</h3>
+        <p style="color: #333; line-height: 1.6; white-space: pre-line;">${reasonText}</p>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Please review this profile and take any necessary action.
+      </p>
+    </div>
+  `
+
+  await sendEmail('zander@got1.app', 'New Got1 Profile Report', html)
+}
+
 export async function sendEvaluationCancelledEmail(
   scoutEmail: string,
   evaluationId: string,

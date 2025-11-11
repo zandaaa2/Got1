@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
+import ReportProfileMenu from '@/components/profile/ReportProfileMenu'
 import { getProfilePath } from '@/lib/profile-url'
 
 const GRADIENT_CLASSES = [
@@ -525,19 +526,26 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </p>
           )}
         </div>
-                {!isOwnProfile && profile.role === 'scout' && currentUserId && (
-                  <div className="flex-shrink-0">
-                    <HeaderMenu 
-                      userId={currentUserId} 
-                      scoutId={profile.user_id}
-                      onCancelled={() => {
-                        router.refresh()
-                        // Also reload evaluations to update the UI
-                        loadEvaluations()
-                      }}
-                    />
-                  </div>
-                )}
+        {!isOwnProfile && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ReportProfileMenu
+              reportedProfileId={profile.id}
+              reportedName={profile.full_name}
+              reportedRole={profile.role}
+              isSignedIn={isSignedIn}
+            />
+            {profile.role === 'scout' && currentUserId && (
+              <HeaderMenu
+                userId={currentUserId}
+                scoutId={profile.user_id}
+                onCancelled={() => {
+                  router.refresh()
+                  loadEvaluations()
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Pricing & Purchase Section - Show for all scout profiles */}
