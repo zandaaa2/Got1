@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { colleges, searchColleges, getCollegeLogo, type College } from '@/lib/colleges'
 import Image from 'next/image'
+import { getGradientForId } from '@/lib/gradients'
 
 interface CollegeSelectorProps {
   value: string
@@ -83,9 +84,9 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                 )
               }
               return (
-                <span className="text-xs font-semibold text-gray-600">
+                <div className={`w-full h-full flex items-center justify-center text-xs font-semibold text-white ${getGradientForId(selectedCollege.slug)}`}>
                   {selectedCollege.name.charAt(0)}
-                </span>
+                </div>
               )
             })()}
           </div>
@@ -145,9 +146,9 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                       )
                     }
                     return (
-                      <span className="text-sm font-semibold text-gray-600">
+                      <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(college.slug)}`}>
                         {college.name.charAt(0)}
-                      </span>
+                      </div>
                     )
                   })()}
                 </div>

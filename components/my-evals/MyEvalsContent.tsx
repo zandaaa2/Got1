@@ -7,26 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
-
-const GRADIENT_CLASSES = [
-  'bg-gradient-to-br from-indigo-500 to-blue-500',
-  'bg-gradient-to-br from-rose-500 to-pink-500',
-  'bg-gradient-to-br from-emerald-500 to-teal-500',
-  'bg-gradient-to-br from-amber-500 to-orange-500',
-  'bg-gradient-to-br from-purple-500 to-fuchsia-500',
-  'bg-gradient-to-br from-sky-500 to-cyan-500',
-]
-
-const getGradientForId = (id: string | null | undefined) => {
-  if (!id) {
-    return GRADIENT_CLASSES[0]
-  }
-  let hash = 0
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  }
-  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
-}
+import { getGradientForId } from '@/lib/gradients'
 
 interface MyEvalsContentProps {
   role: 'player' | 'scout'
@@ -302,98 +283,4 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`}>
-                          {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-black text-base md:text-lg mb-1 flex items-center gap-2 truncate">
-                        {evaluation.scout?.full_name || 'Unknown Scout'}
-                        <VerificationBadge />
-                      </h3>
-                      <p className="text-black text-xs md:text-sm truncate">
-                        {evaluation.scout?.position && evaluation.scout?.organization
-                          ? `${evaluation.scout.position} at ${evaluation.scout.organization}`
-                          : evaluation.scout?.position
-                          ? evaluation.scout.position
-                          : evaluation.scout?.organization
-                          ? evaluation.scout.organization
-                          : 'Scout'}
-                      </p>
-                      {/* Status badge */}
-                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
-                        <span className={`inline-block px-2 py-0.5 font-medium rounded ${
-                          evaluation.status === 'requested' ? 'bg-blue-100 text-blue-800' :
-                          evaluation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          evaluation.status === 'denied' ? 'bg-red-100 text-red-800' :
-                          evaluation.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                          evaluation.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {evaluation.status === 'requested' ? 'Requested' :
-                           evaluation.status === 'confirmed' ? 'Confirmed' :
-                           evaluation.status === 'denied' ? 'Denied' :
-                           evaluation.status === 'in_progress' ? 'In Progress' :
-                           evaluation.status === 'completed' ? 'Completed' :
-                           evaluation.status}
-                        </span>
-                        {completionDate && (
-                          <span>
-                            {completionDate.toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                  )}
-                </Link>
-                {role === 'scout' && activeTab === 'completed' && evaluation.status === 'completed' && (
-                  <div className="flex flex-col items-end text-green-600 text-sm md:text-base">
-                    <span className="font-normal">
-                      +$
-                      {roundedPayout.toLocaleString('en-US')}
-                    </span>
-                  </div>
-                )}
-                {/* Show menu for players with pending evaluations */}
-                {role === 'player' && activeTab === 'in_progress' && (
-                  <div
-                    className="flex-shrink-0"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
-                  >
-                    <HeaderMenu
-                      userId={userId}
-                      evaluationId={evaluation.id}
-                      onCancelled={() => {
-                        console.log('🔄 onCancelled called, removing evaluation:', evaluation.id)
-                        // Optimistically remove from list
-                        setEvaluations((prev) => {
-                          const filtered = prev.filter((e) => e.id !== evaluation.id)
-                          console.log('📋 Updated evaluations list:', filtered.length)
-                          return filtered
-                        })
-                        // Then trigger full reload
-                        setRefreshKey((prev) => prev + 1)
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
+                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`

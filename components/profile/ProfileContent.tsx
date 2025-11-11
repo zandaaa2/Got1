@@ -5,27 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import { useState, useEffect } from 'react'
-
-const GRADIENT_CLASSES = [
-  'bg-gradient-to-br from-indigo-500 to-blue-500',
-  'bg-gradient-to-br from-rose-500 to-pink-500',
-  'bg-gradient-to-br from-emerald-500 to-teal-500',
-  'bg-gradient-to-br from-amber-500 to-orange-500',
-  'bg-gradient-to-br from-purple-500 to-fuchsia-500',
-  'bg-gradient-to-br from-sky-500 to-cyan-500',
-]
-
-const getGradientForId = (id: string | null | undefined) => {
-  if (!id) {
-    return GRADIENT_CLASSES[0]
-  }
-  const str = String(id)
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) >>> 0
-  }
-  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
-}
+import { getGradientForId } from '@/lib/gradients'
 
 interface ProfileContentProps {
   profile: any
