@@ -295,6 +295,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </p>
             )}
           </div>
+          {!isOwnProfile && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <ReportProfileMenu
+                reportedProfileId={profile.id}
+                reportedName={profile.full_name}
+                reportedRole={profile.role}
+                isSignedIn={isSignedIn}
+              />
+            </div>
+          )}
         </div>
 
         {/* Evaluations Section */}
