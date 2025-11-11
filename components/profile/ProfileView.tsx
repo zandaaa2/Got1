@@ -331,7 +331,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                             unoptimized
                           />
                         ) : (
-                          <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.scout?.id || evaluation.scout_id || evaluation.id)}`}>
+                          <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.scout?.id || evaluation.scout?.username || evaluation.id)}`}>
                             <span className="text-white text-xl font-semibold">
                               {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
                             </span>
@@ -834,7 +834,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           unoptimized
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.player?.id || evaluation.player_id || evaluation.id)}`}>
+                        <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.player?.id || evaluation.player?.username || evaluation.id)}`}>
                           <span className="text-white text-xl font-semibold">
                             {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
                           </span>
