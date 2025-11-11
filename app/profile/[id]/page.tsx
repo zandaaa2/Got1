@@ -55,10 +55,6 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       description,
       images: ['/social/og-default.png'],
     },
-    other: {
-      'profile:username': profile.username || undefined,
-      'profile:label': contextLine || undefined,
-    },
   }
 }
 
