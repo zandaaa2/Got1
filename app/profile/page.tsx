@@ -103,6 +103,7 @@ export default async function ProfilePage() {
       fullName={profile.full_name}
       username={profile.username}
       email={session.user.email}
+      showBorder
     />
   )
 
