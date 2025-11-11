@@ -227,7 +227,9 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player_id || evaluation.id)}`}>
+                        <div
+                          className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player_id || evaluation.id)}`}
+                        >
                           {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
                       )}
@@ -283,4 +285,57 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`
+                        <div
+                          className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`}
+                        >
+                          {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                        {evaluation.scout?.full_name || 'Unknown Scout'}
+                      </h3>
+                      <p className="text-black text-xs md:text-sm truncate">
+                        {evaluation.scout?.organization || 'Unknown Organization'}
+                      </p>
+                      {/* Status badge */}
+                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
+                        <span className={`inline-block px-2 py-0.5 font-medium rounded ${
+                          evaluation.status === 'requested' ? 'bg-blue-100 text-blue-800' :
+                          evaluation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          evaluation.status === 'denied' ? 'bg-red-100 text-red-800' :
+                          evaluation.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                          evaluation.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {evaluation.status === 'requested' ? 'Requested' :
+                           evaluation.status === 'confirmed' ? 'Confirmed' :
+                           evaluation.status === 'denied' ? 'Denied' :
+                           evaluation.status === 'in_progress' ? 'In Progress' :
+                           evaluation.status === 'completed' ? 'Completed' :
+                           evaluation.status}
+                        </span>
+                        {completionDate && (
+                          <span>
+                            {completionDate.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                  )}
+                </Link>
+              </div>
+            )})}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
