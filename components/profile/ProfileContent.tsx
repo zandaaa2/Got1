@@ -835,8 +835,6 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
           </h2>
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
             {profile.username && <span className="text-gray-500">@{profile.username}</span>}
-            <span className="text-gray-400">•</span>
-            <button onClick={() => setShowMoreInfo(true)} className="text-blue-600 hover:text-blue-800 underline font-medium">Details</button>
           </div>
           {profile.role === 'scout' ? (
             (profile.position || profile.organization) && (
