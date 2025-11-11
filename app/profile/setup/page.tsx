@@ -4,6 +4,8 @@ import Sidebar from '@/components/layout/Sidebar'
 import ProfileSetupForm from '@/components/profile/ProfileSetupForm'
 import PageContent from '@/components/layout/PageContent'
 import ShareButton from '@/components/shared/ShareButton'
+import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 export default async function ProfileSetupPage() {
   const supabase = createServerClient()
@@ -32,20 +34,23 @@ export default async function ProfileSetupPage() {
   } = await supabase.auth.getUser()
 
   // Get user avatar for header
-  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
+  const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
+  const sanitizedAvatar = isMeaningfulAvatar(rawAvatarUrl) ? rawAvatarUrl : null
+  const gradientClass = getGradientForId(session.user.id)
+  const fallbackInitial = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'U').charAt(0).toUpperCase()
 
   const headerContent = (
     <>
       <ShareButton url="/profile/setup" title="Complete Your Profile on Got1" />
-      {avatarUrl ? (
+      {sanitizedAvatar ? (
         <img
-          src={avatarUrl}
+          src={sanitizedAvatar}
           alt="Profile"
           className="w-10 h-10 rounded-full object-cover"
         />
       ) : (
-        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-          <span className="text-gray-600 font-semibold">U</span>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${gradientClass}`}>
+          {fallbackInitial}
         </div>
       )}
     </>
@@ -58,7 +63,7 @@ export default async function ProfileSetupPage() {
         <ProfileSetupForm
           userEmail={user?.email || ''}
           userName={user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
-          userAvatar={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || ''}
+          userAvatar={sanitizedAvatar || ''}
         />
       </PageContent>
     </div>

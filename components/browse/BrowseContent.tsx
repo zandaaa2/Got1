@@ -8,6 +8,7 @@ import VerificationBadge from '@/components/shared/VerificationBadge'
 import { colleges } from '@/lib/colleges'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 interface BrowseContentProps {
   session: any
@@ -451,22 +452,34 @@ export default function BrowseContent({ session }: BrowseContentProps) {
               className="flex items-center gap-3 md:gap-4 rounded-2xl bg-white p-3 md:p-4 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden flex-shrink-0">
-                {profile.avatar_url && !imageErrors.has(profile.id) ? (
-                  <Image
-                    src={profile.avatar_url}
-                    alt={profile.full_name || 'Profile'}
-                    width={48}
-                    height={48}
-                    className="w-full h-full object-cover"
-                    onError={() => {
-                      setImageErrors((prev) => new Set(prev).add(profile.id))
-                    }}
-                  />
-                ) : (
-                  <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(profile.id)}`}>
-                    {profile.full_name?.charAt(0).toUpperCase() || '?'}
-                  </div>
-                )}
+                {(() => {
+                  const avatarUrl = isMeaningfulAvatar(profile.avatar_url)
+                    ? profile.avatar_url ?? undefined
+                    : undefined
+                  const showAvatar = Boolean(avatarUrl) && !imageErrors.has(profile.id)
+
+                  if (showAvatar) {
+                    return (
+                      <Image
+                        src={avatarUrl!}
+                        alt={profile.full_name || 'Profile'}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                          setImageErrors((prev) => new Set(prev).add(profile.id))
+                        }}
+                        unoptimized
+                      />
+                    )
+                  }
+
+                  return (
+                    <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(profile.id)}`}>
+                      {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                  )
+                })()}
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 truncate">

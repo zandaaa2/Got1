@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import HeaderMenu from '@/components/shared/HeaderMenu'
 import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 interface EvaluationDetailProps {
   evaluation: any
@@ -235,7 +236,7 @@ export default function EvaluationDetail({
               className="flex flex-col md:flex-row items-start gap-4 md:gap-6 flex-1 hover:opacity-90 transition-opacity"
             >
               <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-                {scout?.avatar_url ? (
+                {isMeaningfulAvatar(scout?.avatar_url) ? (
                   <Image
                     src={scout.avatar_url}
                     alt={scout.full_name || 'Scout'}
@@ -374,7 +375,7 @@ export default function EvaluationDetail({
                 className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity"
               >
                 <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                  {scout?.avatar_url ? (
+                  {isMeaningfulAvatar(scout?.avatar_url) ? (
                     <Image
                       src={scout.avatar_url}
                       alt={scout.full_name || 'Scout'}
@@ -450,7 +451,7 @@ export default function EvaluationDetail({
         {/* Player Profile Section */}
         <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-            {player?.avatar_url ? (
+            {isMeaningfulAvatar(player?.avatar_url) ? (
               <Image
                 src={player.avatar_url}
                 alt={player.full_name || 'Player'}
@@ -604,7 +605,7 @@ export default function EvaluationDetail({
           className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8 hover:opacity-90 transition-opacity"
         >
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-            {scout?.avatar_url ? (
+            {isMeaningfulAvatar(scout?.avatar_url) ? (
               <Image
                 src={scout.avatar_url}
                 alt={scout.full_name || 'Scout'}
@@ -659,7 +660,7 @@ export default function EvaluationDetail({
               className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity"
             >
               <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                {player?.avatar_url ? (
+                {isMeaningfulAvatar(player?.avatar_url) ? (
                   <Image
                     src={player.avatar_url}
                     alt={player.full_name || 'Player'}
@@ -728,7 +729,7 @@ export default function EvaluationDetail({
       {/* Player Profile Section */}
       <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-          {player?.avatar_url ? (
+          {isMeaningfulAvatar(player?.avatar_url) ? (
             <Image
               src={player.avatar_url}
               alt={player.full_name || 'Player'}

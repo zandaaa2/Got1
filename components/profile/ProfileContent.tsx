@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import { useState, useEffect } from 'react'
 import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 interface ProfileContentProps {
   profile: any
@@ -748,7 +749,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       {/* Profile Card */}
       <div className="surface-card flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-          {profile.avatar_url && !imageErrors.has(profile.id) ? (
+          {isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(`profile-${profile.id}`) ? (
             <Image
               src={profile.avatar_url}
               alt={profile.full_name || 'Profile'}
@@ -758,7 +759,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               onError={() => {
                 setImageErrors((prev) => {
                   const next = new Set(prev)
-                  next.add(profile.id)
+                  next.add(`profile-${profile.id}`)
                   return next
                 })
               }}

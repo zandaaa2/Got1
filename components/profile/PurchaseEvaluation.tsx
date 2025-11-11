@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import { loadStripe } from '@stripe/stripe-js'
 import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 
 interface PurchaseEvaluationProps {
@@ -153,7 +154,7 @@ export default function PurchaseEvaluation({
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-              {scout.avatar_url ? (
+              {isMeaningfulAvatar(scout.avatar_url) ? (
                 <Image
                   src={scout.avatar_url}
                   alt={scout.full_name || 'Scout'}

@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 interface HudlLink {
   link: string
@@ -44,6 +44,8 @@ export default function ProfileSetupForm({
 
   const [role, setRole] = useState<'player' | 'scout'>('player')
   const initialUsername = normalizeUsername(userName || '')
+  const sanitizedAvatar = isMeaningfulAvatar(userAvatar) ? userAvatar : null
+
   const [formData, setFormData] = useState({
     full_name: userName,
     username: initialUsername,
@@ -157,7 +159,7 @@ export default function ProfileSetupForm({
         role: role,
         full_name: formData.full_name || null,
         username: normalizedUsername,
-        avatar_url: userAvatar || null,
+        avatar_url: sanitizedAvatar,
         birthday: formData.birthday || null,
         bio: formData.bio || null,
         updated_at: new Date().toISOString(),

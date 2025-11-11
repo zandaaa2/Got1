@@ -8,6 +8,8 @@ import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
+import { isMeaningfulAvatar } from '@/lib/avatar'
+import { getGradientForId } from '@/lib/gradients'
 
 interface HudlLink {
   link: string
@@ -35,7 +37,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url || null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null)
   const [showAgeRestrictionModal, setShowAgeRestrictionModal] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -63,7 +65,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     full_name: profile.full_name || '',
     username: profile.username || '',
     bio: profile.bio || '',
-    avatar_url: profile.avatar_url || '',
+    avatar_url: isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : '',
     organization: profile.organization || '',
     price_per_eval: profile.price_per_eval?.toString() || '99',
     social_link: profile.social_link || '',
@@ -273,10 +275,12 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         return
       }
 
+      const sanitizedAvatar = isMeaningfulAvatar(formData.avatar_url) ? formData.avatar_url : null
+
       const updateData: any = {
         full_name: formData.full_name,
         username: normalizedUsername,
-        avatar_url: formData.avatar_url || null,
+        avatar_url: sanitizedAvatar,
         updated_at: new Date().toISOString(),
       }
 
@@ -429,7 +433,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
               )}
             </div>
             <div className="flex-shrink-0">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-300 bg-gray-200 flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center">
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
@@ -440,9 +444,9 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                     }}
                   />
                 ) : (
-                  <span className="text-gray-600 text-2xl font-semibold">
+                  <div className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(profile.id)}`}>
                     {formData.full_name?.charAt(0).toUpperCase() || '?'}
-                  </span>
+                  </div>
                 )}
               </div>
             </div>

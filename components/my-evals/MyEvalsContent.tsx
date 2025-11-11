@@ -8,6 +8,7 @@ import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
 import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 interface MyEvalsContentProps {
   role: 'player' | 'scout'
@@ -47,6 +48,8 @@ interface Evaluation {
 export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
   const [activeTab, setActiveTab] = useState<'in_progress' | 'completed'>('in_progress')
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+  const [playerImageErrors, setPlayerImageErrors] = useState<Set<string>>(new Set())
+  const [scoutImageErrors, setScoutImageErrors] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
   const supabase = createClient()
@@ -218,21 +221,40 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   // Scout view: Show player being evaluated
                   <>
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                      {evaluation.player?.avatar_url ? (
-                        <Image
-                          src={evaluation.player.avatar_url}
-                          alt={evaluation.player.full_name || 'Player'}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player_id || evaluation.id)}`}
-                        >
-                          {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                      )}
+                      {(() => {
+                        const avatarUrl = isMeaningfulAvatar(evaluation.player?.avatar_url)
+                          ? evaluation.player?.avatar_url ?? undefined
+                          : undefined
+                        const showAvatar = Boolean(avatarUrl) && !playerImageErrors.has(evaluation.id)
+
+                        if (showAvatar) {
+                          return (
+                            <Image
+                              src={avatarUrl!}
+                              alt={evaluation.player?.full_name || 'Player'}
+                              width={64}
+                              height={64}
+                              className="w-full h-full object-cover"
+                              onError={() => {
+                                setPlayerImageErrors((prev) => {
+                                  const next = new Set(prev)
+                                  next.add(evaluation.id)
+                                  return next
+                                })
+                              }}
+                              unoptimized
+                            />
+                          )
+                        }
+
+                        return (
+                          <div
+                            className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player_id || evaluation.id)}`}
+                          >
+                            {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
@@ -276,21 +298,40 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   // Player view: Show scout evaluating them
                   <>
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                      {evaluation.scout?.avatar_url ? (
-                        <Image
-                          src={evaluation.scout.avatar_url}
-                          alt={evaluation.scout.full_name || 'Scout'}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`}
-                        >
-                          {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                      )}
+                      {(() => {
+                        const avatarUrl = isMeaningfulAvatar(evaluation.scout?.avatar_url)
+                          ? evaluation.scout?.avatar_url ?? undefined
+                          : undefined
+                        const showAvatar = Boolean(avatarUrl) && !scoutImageErrors.has(evaluation.id)
+
+                        if (showAvatar) {
+                          return (
+                            <Image
+                              src={avatarUrl!}
+                              alt={evaluation.scout?.full_name || 'Scout'}
+                              width={64}
+                              height={64}
+                              className="w-full h-full object-cover"
+                              onError={() => {
+                                setScoutImageErrors((prev) => {
+                                  const next = new Set(prev)
+                                  next.add(evaluation.id)
+                                  return next
+                                })
+                              }}
+                              unoptimized
+                            />
+                          )
+                        }
+
+                        return (
+                          <div
+                            className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`}
+                          >
+                            {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">

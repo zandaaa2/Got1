@@ -11,6 +11,7 @@ import ReportProfileMenu from '@/components/profile/ReportProfileMenu'
 import { getProfilePath } from '@/lib/profile-url'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -115,6 +116,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [isHydrated, setIsHydrated] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
   
   const toggleEvalMinimize = (evalId: string) => {
     setMinimizedEvals(prev => {
@@ -298,9 +300,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         {/* Player Profile Section */}
         <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-            {profile.avatar_url && !imageErrors.has(`profile-${profile.id}`) ? (
+            {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
               <Image
-                src={profile.avatar_url}
+                src={profileAvatarUrl}
                 alt={profile.full_name || 'Player'}
                 width={96}
                 height={96}
@@ -407,34 +409,42 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             <div className="relative">
               <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
                 {isSignedIn ? (
-                  evaluations.map((evaluation) => (
-                    <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                      <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
-                        <Link 
-                          href={evaluation.scout?.id ? getProfilePath(evaluation.scout.id, evaluation.scout.username) : '#'}
-                          className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
-                        >
-                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                            {evaluation.scout?.avatar_url && !imageErrors.has(`scout-${evaluation.id}`) ? (
-                              <Image
-                                src={evaluation.scout.avatar_url}
-                                alt={evaluation.scout.full_name || 'Scout'}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
-                                onError={() => {
-                                  setImageErrors((prev) => new Set(prev).add(`scout-${evaluation.id}`))
-                                }}
-                               
-                              />
-                            ) : (
-                              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.scout?.id || evaluation.scout?.username || evaluation.id)}`}>
-                                <span className="text-white text-xl font-semibold">
-                                  {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                  evaluations.map((evaluation) => {
+                    const scoutAvatarUrl = isMeaningfulAvatar(evaluation.scout?.avatar_url)
+                      ? evaluation.scout?.avatar_url ?? undefined
+                      : undefined
+                    const scoutGradientKey = evaluation.scout?.id || evaluation.scout?.username || evaluation.id
+                    const showScoutAvatar =
+                      Boolean(scoutAvatarUrl) && !imageErrors.has(`scout-${evaluation.id}`)
+
+                    return (
+                      <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                        <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                          <Link 
+                            href={evaluation.scout?.id ? getProfilePath(evaluation.scout.id, evaluation.scout.username) : '#'}
+                            className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
+                          >
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                              {showScoutAvatar ? (
+                                <Image
+                                  src={scoutAvatarUrl!}
+                                  alt={evaluation.scout?.full_name || 'Scout'}
+                                  width={64}
+                                  height={64}
+                                  className="w-full h-full object-cover"
+                                  onError={() => {
+                                    setImageErrors((prev) => new Set(prev).add(`scout-${evaluation.id}`))
+                                  }}
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className={`w-full h-full flex items-center justify-center ${getGradientForId(scoutGradientKey)}`}>
+                                  <span className="text-white text-xl font-semibold">
+                                    {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
                               {evaluation.scout?.full_name || 'Unknown Scout'}
@@ -469,15 +479,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           </button>
                         )}
                       </div>
-                      {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
-                        <div className="pl-0 md:pl-20 mt-4 md:mt-0">
-                          <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
-                            {evaluation.notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
+                          <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                            <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                              {evaluation.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
                 ) : (
                   <EvaluationListSkeleton />
                 )}
@@ -543,9 +554,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
         <div className="flex flex-col items-center md:items-start gap-2 flex-shrink-0 mx-auto md:mx-0">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
-            {profile.avatar_url && !imageErrors.has(`profile-${profile.id}`) ? (
+            {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
               <Image
-                src={profile.avatar_url}
+                src={profileAvatarUrl}
                 alt={profile.full_name || 'Scout'}
                 width={96}
                 height={96}
@@ -926,79 +937,88 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           <div className="relative animate-fade-in-up">
             <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
               {isSignedIn ? (
-                evaluations.map((evaluation) => (
-                  <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                    <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
-                      <Link
-                        href={evaluation.player?.id ? getProfilePath(evaluation.player.id, evaluation.player.username) : '#'}
-                        className="interactive-press flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
-                      >
-                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                          {evaluation.player?.avatar_url && !imageErrors.has(`player-${evaluation.id}`) ? (
-                            <Image
-                              src={evaluation.player.avatar_url}
-                              alt={evaluation.player.full_name || 'Player'}
-                              width={64}
-                              height={64}
-                              className="w-full h-full object-cover"
-                              onError={() => {
-                                setImageErrors((prev) => new Set(prev).add(`player-${evaluation.id}`))
-                              }}
-                             
-                            />
-                          ) : (
-                            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.player?.id || evaluation.player?.username || evaluation.id)}`}>
-                              <span className="text-white text-xl font-semibold">
-                                {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                            {evaluation.player?.full_name || 'Unknown Player'}
-                          </h3>
-                          <p className="text-black text-xs md:text-sm mb-1 truncate">
-                            {evaluation.player?.school || 'Unknown School'}
-                            {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
-                            {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
-                          </p>
-                          <p className="text-black text-xs md:text-sm text-gray-600">
-                            {formatDate(evaluation.created_at)}
-                          </p>
-                        </div>
-                      </Link>
-                      {evaluation.notes && (
-                        <button
-                          onClick={() => toggleEvalMinimize(evaluation.id)}
-                          className="interactive-press flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
-                          title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
+                evaluations.map((evaluation) => {
+                  const playerAvatarUrl = isMeaningfulAvatar(evaluation.player?.avatar_url)
+                    ? evaluation.player?.avatar_url ?? undefined
+                    : undefined
+                  const playerGradientKey = evaluation.player?.id || evaluation.player?.username || evaluation.id
+                  const showPlayerAvatar =
+                    Boolean(playerAvatarUrl) && !imageErrors.has(`player-${evaluation.id}`)
+
+                  return (
+                    <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                      <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                        <Link
+                          href={evaluation.player?.id ? getProfilePath(evaluation.player.id, evaluation.player.username) : '#'}
+                          className="interactive-press flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
                         >
-                          <svg
-                            className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                            {showPlayerAvatar ? (
+                              <Image
+                                src={playerAvatarUrl!}
+                                alt={evaluation.player?.full_name || 'Player'}
+                                width={64}
+                                height={64}
+                                className="w-full h-full object-cover"
+                                onError={() => {
+                                  setImageErrors((prev) => new Set(prev).add(`player-${evaluation.id}`))
+                                }}
+                                unoptimized
+                              />
+                            ) : (
+                              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(playerGradientKey)}`}>
+                                <span className="text-white text-xl font-semibold">
+                                  {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                              {evaluation.player?.full_name || 'Unknown Player'}
+                            </h3>
+                            <p className="text-black text-xs md:text-sm mb-1 truncate">
+                              {evaluation.player?.school || 'Unknown School'}
+                              {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
+                              {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
+                            </p>
+                            <p className="text-black text-xs md:text-sm text-gray-600">
+                              {formatDate(evaluation.created_at)}
+                            </p>
+                          </div>
+                        </Link>
+                        {evaluation.notes && (
+                          <button
+                            onClick={() => toggleEvalMinimize(evaluation.id)}
+                            className="interactive-press flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
+                            title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </button>
+                            <svg
+                              className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
+                        <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                          <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                            {evaluation.notes}
+                          </p>
+                        </div>
                       )}
                     </div>
-                    {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
-                      <div className="pl-0 md:pl-20 mt-4 md:mt-0">
-                        <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
-                          {evaluation.notes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))
+                  )
+                })
               ) : (
                 // Placeholder evaluations for non-signed-in users
                 [...Array(3)].map((_, index) => (
