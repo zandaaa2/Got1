@@ -19,7 +19,6 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     return false
   })
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [imageError, setImageError] = useState(false)
   
   // Check if mobile viewport
   const [isMobile, setIsMobile] = useState(false)
@@ -78,27 +77,14 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
           className="hover:opacity-70 transition-opacity"
           onClick={() => isMobile && setIsMobileOpen(false)}
         >
-          {imageError ? (
-            <span className="text-xl md:text-2xl font-bold text-black">Got1</span>
-          ) : isMobile || !isCollapsed ? (
-            <Image
-              src="/logos/got1-full-logo.png"
-              alt="Got1"
-              width={isMobile ? 100 : 120}
-              height={isMobile ? 32 : 40}
-              className="object-contain"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <Image
-              src="/logos/got1-icon.png"
-              alt="Got1"
-              width={64}
-              height={64}
-              className="object-contain"
-              onError={() => setImageError(true)}
-            />
-          )}
+          <Image
+            src={(isMobile || !isCollapsed) ? '/wide.png' : '/number.png'}
+            alt="Got1"
+            width={isMobile ? 120 : isCollapsed ? 48 : 140}
+            height={isMobile ? 32 : isCollapsed ? 48 : 40}
+            className="object-contain"
+            priority
+          />
         </Link>
         <button
           onClick={() => {
