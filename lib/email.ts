@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 
+import { POLICIES_METADATA, PolicyKey, getPolicyUrl } from '@/lib/policies'
 /**
  * Email utility functions for sending notifications via Resend.
  * Falls back to console logging if email service is not configured.
@@ -576,3 +577,45 @@ ${EMAIL_HEADER}
   await sendEmail(adminEmail, `New Scout Application from ${profile.full_name}`, html)
 }
 
+export async function sendPolicyUpdateEmail(to: string, options?: { policies?: PolicyKey[]; note?: string }): Promise<void> {
+  const selectedKeys: PolicyKey[] = (options?.policies && options.policies.length)
+    ? options.policies.filter((key): key is PolicyKey => key in POLICIES_METADATA)
+    : (Object.keys(POLICIES_METADATA) as PolicyKey[])
+
+  const itemsHtml = selectedKeys
+    .map((key) => {
+      const policy = POLICIES_METADATA[key]
+      const url = getPolicyUrl(policy.path)
+      return `
+        <li style="margin-bottom: 12px;">
+          <strong>${policy.title}</strong><br/>
+          Updated ${policy.lastUpdated}.
+          <a href="${url}" style="color:#000;">Read the full ${policy.title}</a>.
+        </li>
+      `
+    })
+    .join('')
+
+  const noteHtml = options?.note
+    ? `<p style="color:#333; line-height:1.6; margin-bottom:20px;">${options.note}</p>`
+    : ''
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
+      <h2 style="color: #000; margin-bottom: 20px;">We updated our policies</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        We recently made updates to the following documents. Please review the changes to stay informed about how Got1 operates.
+      </p>
+      ${noteHtml}
+      <ul style="list-style: none; padding-left: 0; color: #333; line-height: 1.6;">
+        ${itemsHtml}
+      </ul>
+      <p style="color: #333; line-height: 1.6; margin-top: 24px;">
+        Thank you for being part of the Got1 community!
+      </p>
+    </div>
+  `
+
+  await sendEmail(to, 'We updated our policies', html)
+}

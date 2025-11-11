@@ -3,8 +3,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import AuthButtons from '@/components/auth/AuthButtons'
-
-const LAST_UPDATED = 'November 11, 2025'
+import { PRIVACY_POLICY_METADATA } from '@/lib/policies'
 
 const SECTION_HEADING = 'text-2xl font-bold text-black mb-4'
 const PARAGRAPH = 'text-black mb-4 leading-relaxed'
@@ -42,8 +41,10 @@ export default async function PrivacyPolicyPage() {
       <DynamicLayout header={headerContent}>
         <main className="pt-6 md:pt-10 pb-12">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Privacy Policy</h1>
-            <p className="text-gray-600 mb-8">Last updated: {LAST_UPDATED}</p>
+            <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">
+              {PRIVACY_POLICY_METADATA.title}
+            </h1>
+            <p className="text-gray-600 mb-8">Last updated: {PRIVACY_POLICY_METADATA.lastUpdated}</p>
 
             <div className="prose prose-lg max-w-none">
               <section className="mb-10">
