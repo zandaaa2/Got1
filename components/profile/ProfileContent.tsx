@@ -6,6 +6,27 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import { useState, useEffect } from 'react'
 
+const GRADIENT_CLASSES = [
+  'bg-gradient-to-br from-indigo-500 to-blue-500',
+  'bg-gradient-to-br from-rose-500 to-pink-500',
+  'bg-gradient-to-br from-emerald-500 to-teal-500',
+  'bg-gradient-to-br from-amber-500 to-orange-500',
+  'bg-gradient-to-br from-purple-500 to-fuchsia-500',
+  'bg-gradient-to-br from-sky-500 to-cyan-500',
+]
+
+const getGradientForId = (id: string | null | undefined) => {
+  if (!id) {
+    return GRADIENT_CLASSES[0]
+  }
+  const str = String(id)
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0
+  }
+  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
+}
+
 interface ProfileContentProps {
   profile: any
   hasPendingApplication: boolean
@@ -682,6 +703,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const [isEditingPricing, setIsEditingPricing] = useState(false)
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
   // Check if returning from Stripe and force refresh
   useEffect(() => {
@@ -782,37 +804,48 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
 
       {/* Profile Card */}
-      <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6 bg-white border border-gray-200 rounded-lg">
+      <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6 bg-white border border-gray-200 rounded-lg">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-          {profile.avatar_url ? (
+          {profile.avatar_url && !imageErrors.has(profile.id) ? (
             <Image
               src={profile.avatar_url}
               alt={profile.full_name || 'Profile'}
               width={96}
               height={96}
               className="w-full h-full object-cover"
+              onError={() => {
+                setImageErrors((prev) => {
+                  const next = new Set(prev)
+                  next.add(profile.id)
+                  return next
+                })
+              }}
             />
           ) : (
-            <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-              <span className="text-gray-600 text-3xl font-semibold">
+            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+              <span className="text-white text-3xl font-semibold">
                 {profile.full_name?.charAt(0).toUpperCase() || '?'}
               </span>
             </div>
           )}
         </div>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-black mb-2">
+        <div className="flex-1 text-left">
+          <h2 className="text-xl font-bold text-black mb-1">
             {profile.full_name || 'Unknown'}
           </h2>
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+            {profile.username && <span className="text-gray-500">@{profile.username}</span>}
+            <span className="text-gray-400">•</span>
+            <button onClick={() => setShowMoreInfo(true)} className="text-blue-600 hover:text-blue-800 underline font-medium">Details</button>
+          </div>
           {profile.role === 'scout' ? (
-            <>
-              {profile.position && (
-                <p className="text-black mb-1">{profile.position}</p>
-              )}
-              {profile.organization && (
-                <p className="text-black mb-1">{profile.organization}</p>
-              )}
-            </>
+            (profile.position || profile.organization) && (
+              <p className="text-black mb-1">
+                {profile.position && profile.organization
+                  ? `${profile.position} at ${profile.organization}`
+                  : profile.position || profile.organization}
+              </p>
+            )
           ) : (
             <>
               {profile.position && (
