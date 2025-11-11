@@ -3,7 +3,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import WhatsThisContent from '@/components/whats-this/WhatsThisContent'
-import Link from 'next/link'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -18,7 +18,7 @@ export default async function WhatsThisPage() {
   if (session) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, avatar_url')
+      .select('id, avatar_url, full_name, username')
       .eq('user_id', session.user.id)
       .maybeSingle()
     profile = data
@@ -42,23 +42,15 @@ export default async function WhatsThisPage() {
 
   const headerContent = session ? (
     profile ? (
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">U</span>
-          </div>
-        )}
-      </Link>
+      <HeaderUserAvatar
+        userId={session.user.id}
+        avatarUrl={profile.avatar_url}
+        fullName={profile.full_name}
+        username={profile.username}
+        email={session.user.email}
+      />
     ) : (
-      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-        <span className="text-gray-600 font-semibold">U</span>
-      </div>
+      <HeaderUserAvatar userId={session.user.id} email={session.user.email} />
     )
   ) : (
     <AuthButtons />

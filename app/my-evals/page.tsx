@@ -5,7 +5,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import PageContent from '@/components/layout/PageContent'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
-import Link from 'next/link'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
@@ -36,7 +36,7 @@ export default async function MyEvalsPage() {
   // Get user profile to determine role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, role, avatar_url')
+    .select('id, role, avatar_url, full_name, username')
     .eq('user_id', session.user.id)
     .maybeSingle()
 
@@ -53,21 +53,13 @@ export default async function MyEvalsPage() {
   const validRole = profile.role === 'scout' ? 'scout' : 'player'
 
   const headerContent = (
-    <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-      {profile.avatar_url ? (
-        <img
-          src={profile.avatar_url}
-          alt="Profile"
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-          <span className="text-gray-600 font-semibold">
-            {profile.role === 'player' ? 'P' : 'S'}
-          </span>
-        </div>
-      )}
-    </Link>
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={profile.avatar_url}
+      fullName={profile.full_name}
+      username={profile.username}
+      email={session.user.email}
+    />
   )
 
   return (

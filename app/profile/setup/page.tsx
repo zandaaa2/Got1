@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ProfileSetupForm from '@/components/profile/ProfileSetupForm'
 import PageContent from '@/components/layout/PageContent'
-import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function ProfileSetupPage() {
   const supabase = createServerClient()
@@ -35,19 +35,13 @@ export default async function ProfileSetupPage() {
   // Get user avatar for header
   const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
   const sanitizedAvatar = isMeaningfulAvatar(rawAvatarUrl) ? rawAvatarUrl : null
-  const gradientClass = getGradientForId(session.user.id)
-  const fallbackInitial = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'U').charAt(0).toUpperCase()
-
-  const headerContent = sanitizedAvatar ? (
-    <img
-      src={sanitizedAvatar}
-      alt="Profile"
-      className="w-10 h-10 rounded-full object-cover"
+  const headerContent = (
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={rawAvatarUrl}
+      fullName={user?.user_metadata?.full_name || user?.user_metadata?.name}
+      email={user?.email}
     />
-  ) : (
-    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${gradientClass}`}>
-      {fallbackInitial}
-    </div>
   )
 
   return (

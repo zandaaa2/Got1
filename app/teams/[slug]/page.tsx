@@ -7,6 +7,7 @@ import VerificationBadge from '@/components/shared/VerificationBadge'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
 import { getGradientForId } from '@/lib/gradients'
@@ -97,7 +98,7 @@ export default async function TeamPage({ params }: PageParams) {
   if (session?.user?.id) {
     const { data: currentUser } = await supabase
       .from('profiles')
-      .select('avatar_url')
+      .select('avatar_url, full_name, username')
       .eq('user_id', session.user.id)
       .single()
     userProfile = currentUser ?? null
@@ -171,33 +172,14 @@ export default async function TeamPage({ params }: PageParams) {
     )
   }
 
-  const headerInitialSource =
-    session?.user?.user_metadata?.full_name?.trim()?.charAt(0) ||
-    session?.user?.user_metadata?.name?.trim()?.charAt(0) ||
-    session?.user?.email?.charAt(0) ||
-    'G'
-  const headerInitial = headerInitialSource.toUpperCase()
-  const headerGradient = getGradientForId(session?.user?.id || 'guest')
-  const headerAvatarUrl = isMeaningfulAvatar(userProfile?.avatar_url) ? userProfile?.avatar_url : null
-
   const headerContent = session ? (
-    <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-      <div className="w-10 h-10 rounded-full border-2 border-black p-0.5 overflow-hidden">
-        {headerAvatarUrl ? (
-          <img
-            src={headerAvatarUrl}
-            alt="Profile"
-            className="w-full h-full rounded-full object-cover"
-          />
-        ) : (
-          <div
-            className={`w-full h-full rounded-full flex items-center justify-center text-white font-semibold ${headerGradient}`}
-          >
-            {headerInitial}
-          </div>
-        )}
-      </div>
-    </Link>
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={userProfile?.avatar_url}
+      fullName={userProfile?.full_name || session.user.user_metadata?.full_name}
+      username={userProfile?.username}
+      email={session.user.email}
+    />
   ) : (
     <AuthButtons />
   )

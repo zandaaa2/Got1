@@ -4,7 +4,7 @@ import ProfileView from '@/components/profile/ProfileView'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
-import Link from 'next/link'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import type { Metadata } from 'next'
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
@@ -83,28 +83,20 @@ export default async function ProfilePage({
   if (session) {
     const { data } = await supabase
       .from('profiles')
-      .select('avatar_url')
+      .select('avatar_url, full_name, username')
       .eq('user_id', session.user.id)
       .single()
     userProfile = data
   }
 
   const headerContent = session ? (
-    <>
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {userProfile?.avatar_url ? (
-          <img
-            src={userProfile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">U</span>
-          </div>
-        )}
-      </Link>
-    </>
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={userProfile?.avatar_url}
+      fullName={userProfile?.full_name || session.user.user_metadata?.full_name}
+      username={userProfile?.username}
+      email={session.user.email}
+    />
   ) : (
     <AuthButtons />
   )
