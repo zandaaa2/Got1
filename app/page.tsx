@@ -5,6 +5,9 @@ import ShareButton from '@/components/shared/ShareButton'
 import PageContent from '@/components/layout/PageContent'
 import AuthButtons from '@/components/auth/AuthButtons'
 import Link from 'next/link'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 
 export default async function Home() {
   const supabase = createServerClient()
