@@ -86,8 +86,11 @@ interface Evaluation {
   id: string
   notes: string | null
   created_at: string
+  scout_id?: string | null
+  player_id?: string | null
   scout?: {
     id: string
+    user_id?: string | null
     full_name: string | null
     avatar_url: string | null
     organization: string | null
@@ -95,6 +98,7 @@ interface Evaluation {
   } | null
   player?: {
     id: string
+    user_id?: string | null
     full_name: string | null
     avatar_url: string | null
     school: string | null
@@ -123,6 +127,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     (process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app').replace(/\/$/, '')
   const fullProfileUrl = `${appUrl}${profilePath}`
   const displayProfileUrl = `${appUrl.replace(/^https?:\/\//, '')}${profilePath}`
+  const profileGradientKey =
+    profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
 
   const handleCopyProfileUrl = async () => {
     try {
@@ -285,8 +291,11 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           id: evaluation.id,
           notes: evaluation.notes,
           created_at: evaluation.created_at,
+          scout_id: evaluation.scout_id,
+          player_id: evaluation.player_id,
           scout: scoutProfile ? {
             id: scoutProfile.id,
+            user_id: scoutProfile.user_id,
             full_name: scoutProfile.full_name,
             avatar_url: scoutProfile.avatar_url,
             organization: scoutProfile.organization,
@@ -294,6 +303,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           } : null,
           player: playerProfile ? {
             id: playerProfile.id,
+            user_id: playerProfile.user_id,
             full_name: playerProfile.full_name,
             avatar_url: playerProfile.avatar_url,
             school: playerProfile.school,
@@ -381,7 +391,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 priority
               />
             ) : (
-              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
                 <span className="text-white text-3xl font-semibold">
                   {profile.full_name?.charAt(0).toUpperCase() || '?'}
                 </span>
@@ -482,7 +492,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     const scoutAvatarUrl = isMeaningfulAvatar(evaluation.scout?.avatar_url)
                       ? evaluation.scout?.avatar_url ?? undefined
                       : undefined
-                    const scoutGradientKey = evaluation.scout?.id || evaluation.scout?.username || evaluation.id
+                    const scoutGradientKey =
+                      evaluation.scout?.user_id ||
+                      evaluation.scout_id ||
+                      evaluation.scout?.id ||
+                      evaluation.scout?.username ||
+                      evaluation.id
                     const showScoutAvatar =
                       Boolean(scoutAvatarUrl) && !imageErrors.has(`scout-${evaluation.id}`)
 
@@ -636,7 +651,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 priority
               />
             ) : (
-              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
                 <span className="text-white text-3xl font-semibold">
                   {profile.full_name?.charAt(0).toUpperCase() || '?'}
                 </span>
@@ -1011,7 +1026,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   const playerAvatarUrl = isMeaningfulAvatar(evaluation.player?.avatar_url)
                     ? evaluation.player?.avatar_url ?? undefined
                     : undefined
-                  const playerGradientKey = evaluation.player?.id || evaluation.player?.username || evaluation.id
+                  const playerGradientKey =
+                    evaluation.player?.user_id ||
+                    evaluation.player_id ||
+                    evaluation.player?.id ||
+                    evaluation.player?.username ||
+                    evaluation.id
                   const showPlayerAvatar =
                     Boolean(playerAvatarUrl) && !imageErrors.has(`player-${evaluation.id}`)
 

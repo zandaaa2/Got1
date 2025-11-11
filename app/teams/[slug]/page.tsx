@@ -19,6 +19,7 @@ export const revalidate = 0
 
 interface ScoutProfile {
   id: string
+  user_id: string | null
   full_name: string | null
   organization: string | null
   position: string | null
@@ -86,7 +87,7 @@ export default async function TeamPage({ params }: PageParams) {
   } = await supabase.auth.getSession()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, organization, position, avatar_url, price_per_eval, suspended_until, sports')
+    .select('id, user_id, full_name, organization, position, avatar_url, price_per_eval, suspended_until, sports')
     .eq('role', 'scout')
     .order('full_name', { ascending: true })
 
@@ -151,7 +152,9 @@ export default async function TeamPage({ params }: PageParams) {
   const getScoutInitial = (name: string | null) => name?.trim()?.charAt(0).toUpperCase() || 'S'
   const renderScoutAvatar = (scout: ScoutProfile) => {
     const avatarUrl = isMeaningfulAvatar(scout.avatar_url) ? scout.avatar_url : null
-    const gradientClass = getGradientForId(scout.id || scout.full_name || scout.organization || 'scout')
+    const gradientClass = getGradientForId(
+      scout.user_id || scout.id || scout.full_name || scout.organization || 'scout'
+    )
 
     return (
       <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0">

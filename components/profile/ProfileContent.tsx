@@ -653,6 +653,8 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app').replace(/\/$/, '')
   const fullProfileUrl = `${appUrl}${profilePath}`
   const displayProfileUrl = `${appUrl.replace(/^https?:\/\//, '')}${profilePath}`
+  const profileGradientKey =
+    profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
 
   // Check if returning from Stripe and force refresh
   useEffect(() => {
@@ -833,7 +835,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               }}
             />
           ) : (
-            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
               <span className="text-white text-3xl font-semibold">
                 {profile.full_name?.charAt(0).toUpperCase() || '?'}
               </span>

@@ -245,7 +245,11 @@ export default function EvaluationDetail({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(scout?.id || evaluation.scout_id || evaluation.id)}`}>
+                  <div
+                    className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(
+                      scout?.user_id || evaluation.scout_id || scout?.id || evaluation.id
+                    )}`}
+                  >
                     {scout?.full_name?.charAt(0).toUpperCase() || '?'}
                   </div>
                 )}
@@ -460,7 +464,11 @@ export default function EvaluationDetail({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(player?.id || evaluation.player_id || evaluation.id)}`}>
+              <div
+                className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(
+                  player?.user_id || evaluation.player_id || player?.id || evaluation.id
+                )}`}
+              >
                 {player?.full_name?.charAt(0).toUpperCase() || '?'}
               </div>
             )}
@@ -614,7 +622,11 @@ export default function EvaluationDetail({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(scout?.id || evaluation.scout_id || evaluation.id)}`}>
+            <div
+              className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(
+                scout?.user_id || evaluation.scout_id || scout?.id || evaluation.id
+              )}`}
+            >
                 {scout?.full_name?.charAt(0).toUpperCase() || '?'}
               </div>
             )}
@@ -738,7 +750,11 @@ export default function EvaluationDetail({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(player?.id || evaluation.player_id || evaluation.id)}`}>
+            <div
+              className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(
+                player?.user_id || evaluation.player_id || player?.id || evaluation.id
+              )}`}
+            >
               {player?.full_name?.charAt(0).toUpperCase() || '?'}
             </div>
           )}

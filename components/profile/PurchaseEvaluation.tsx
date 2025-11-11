@@ -163,7 +163,11 @@ export default function PurchaseEvaluation({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(scout.id)}`}>
+                <div
+                  className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(
+                    scout.user_id || scout.id || scout.username || scout.full_name || 'scout'
+                  )}`}
+                >
                   {scout.full_name?.charAt(0).toUpperCase() || '?'}
                 </div>
               )}

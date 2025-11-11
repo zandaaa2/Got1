@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import PurchaseEvaluation from '@/components/profile/PurchaseEvaluation'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import Link from 'next/link'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function PurchasePage({
   params,
@@ -42,29 +42,18 @@ export default async function PurchasePage({
 
   const { data: userProfile } = await supabase
     .from('profiles')
-    .select('avatar_url')
+    .select('avatar_url, full_name, username')
     .eq('user_id', session.user.id)
     .single()
 
   const headerContent = (
-    <>
-      <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-        Share
-      </button>
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {userProfile?.avatar_url ? (
-          <img
-            src={userProfile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">P</span>
-          </div>
-        )}
-      </Link>
-    </>
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={userProfile?.avatar_url}
+      fullName={userProfile?.full_name}
+      username={userProfile?.username}
+      email={session.user.email}
+    />
   )
 
   return (

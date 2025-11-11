@@ -444,7 +444,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                     }}
                   />
                 ) : (
-                  <div className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(profile.id)}`}>
+                  <div className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(profile.user_id || profile.id || profile.username || profile.full_name || 'profile')}`}>
                     {formData.full_name?.charAt(0).toUpperCase() || '?'}
                   </div>
                 )}

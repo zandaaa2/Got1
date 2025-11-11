@@ -16,6 +16,8 @@ interface BrowseContentProps {
 
 interface Profile {
   id: string
+  user_id?: string | null
+  username?: string | null
   full_name: string
   organization: string | null
   position: string | null
@@ -81,7 +83,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Note: suspended_until may not exist yet if migration hasn't been run
       let query = supabase
         .from('profiles')
-        .select('id, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until')
+        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until')
       
       // Apply ordering
       query = query.order('full_name', { ascending: true })
@@ -475,7 +477,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   }
 
                   return (
-                    <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(profile.id)}`}>
+                    <div
+                      className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(
+                        profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
+                      )}`}
+                    >
                       {profile.full_name?.charAt(0).toUpperCase() || '?'}
                     </div>
                   )
