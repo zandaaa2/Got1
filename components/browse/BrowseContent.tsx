@@ -33,6 +33,26 @@ interface TeamEntry {
   scoutCount: number
 }
 
+const GRADIENT_CLASSES = [
+  'bg-gradient-to-br from-indigo-500 to-blue-500',
+  'bg-gradient-to-br from-rose-500 to-pink-500',
+  'bg-gradient-to-br from-emerald-500 to-teal-500',
+  'bg-gradient-to-br from-amber-500 to-orange-500',
+  'bg-gradient-to-br from-purple-500 to-fuchsia-500',
+  'bg-gradient-to-br from-sky-500 to-cyan-500',
+]
+
+const getGradientForId = (id: string | null | undefined) => {
+  if (!id) {
+    return GRADIENT_CLASSES[0]
+  }
+  let hash = 0
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  }
+  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
+}
+
 /**
  * Component for browsing and searching scouts and players.
  * Displays both scouts and players with search functionality.
@@ -419,8 +439,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                    <span className="text-gray-600 text-lg font-semibold">
+                  <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+                    <span className="text-white text-lg font-semibold">
                       {profile.full_name?.charAt(0).toUpperCase() || '?'}
                     </span>
                   </div>
