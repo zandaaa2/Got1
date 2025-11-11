@@ -9,6 +9,8 @@ import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
+import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -145,21 +147,56 @@ export default async function TeamPage({ params }: PageParams) {
 
   const sportGroups = Array.from(sportMap.entries()).sort((a, b) => b[1].length - a[1].length)
 
+  const getScoutInitial = (name: string | null) => name?.trim()?.charAt(0).toUpperCase() || 'S'
+  const renderScoutAvatar = (scout: ScoutProfile) => {
+    const avatarUrl = isMeaningfulAvatar(scout.avatar_url) ? scout.avatar_url : null
+    const gradientClass = getGradientForId(scout.id || scout.full_name || scout.organization || 'scout')
+
+    return (
+      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={scout.full_name || 'Scout'}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className={`w-full h-full flex items-center justify-center text-lg font-semibold text-white ${gradientClass}`}
+          >
+            {getScoutInitial(scout.full_name)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const headerInitialSource =
+    session?.user?.user_metadata?.full_name?.trim()?.charAt(0) ||
+    session?.user?.user_metadata?.name?.trim()?.charAt(0) ||
+    session?.user?.email?.charAt(0) ||
+    'G'
+  const headerInitial = headerInitialSource.toUpperCase()
+  const headerGradient = getGradientForId(session?.user?.id || 'guest')
+  const headerAvatarUrl = isMeaningfulAvatar(userProfile?.avatar_url) ? userProfile?.avatar_url : null
+
   const headerContent = session ? (
     <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-      {userProfile?.avatar_url ? (
-        <Image
-          src={userProfile.avatar_url}
-          alt="Profile"
-          width={40}
-          height={40}
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-          <span className="text-gray-600 font-semibold">U</span>
-        </div>
-      )}
+      <div className="w-10 h-10 rounded-full border-2 border-black p-0.5 overflow-hidden">
+        {headerAvatarUrl ? (
+          <img
+            src={headerAvatarUrl}
+            alt="Profile"
+            className="w-full h-full rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className={`w-full h-full rounded-full flex items-center justify-center text-white font-semibold ${headerGradient}`}
+          >
+            {headerInitial}
+          </div>
+        )}
+      </div>
     </Link>
   ) : (
     <AuthButtons />
@@ -254,21 +291,7 @@ export default async function TeamPage({ params }: PageParams) {
                           href={`/profile/${scout.id}`}
                           className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
                         >
-                          <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                            {scout.avatar_url ? (
-                              <Image
-                                src={scout.avatar_url}
-                                alt={scout.full_name || 'Scout'}
-                                width={56}
-                                height={56}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-300 flex items-center justify-center text-lg font-semibold text-gray-600">
-                                {scout.full_name?.charAt(0).toUpperCase() || '?'}
-                              </div>
-                            )}
-                          </div>
+                          {renderScoutAvatar(scout)}
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-black text-base md:text-lg flex items-center gap-2 truncate">
                               {scout.full_name || 'Scout'}
@@ -309,21 +332,7 @@ export default async function TeamPage({ params }: PageParams) {
                           href={`/profile/${scout.id}`}
                           className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
                         >
-                          <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                            {scout.avatar_url ? (
-                              <Image
-                                src={scout.avatar_url}
-                                alt={scout.full_name || 'Scout'}
-                                width={56}
-                                height={56}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-300 flex items-center justify-center text-lg font-semibold text-gray-600">
-                                {scout.full_name?.charAt(0).toUpperCase() || '?'}
-                              </div>
-                            )}
-                          </div>
+                          {renderScoutAvatar(scout)}
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-black text-base md:text-lg flex items-center gap-2 truncate">
                               {scout.full_name || 'Scout'}
@@ -355,21 +364,7 @@ export default async function TeamPage({ params }: PageParams) {
                     href={`/profile/${scout.id}`}
                     className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
                   >
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                      {scout.avatar_url ? (
-                        <Image
-                          src={scout.avatar_url}
-                          alt={scout.full_name || 'Scout'}
-                          width={56}
-                          height={56}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center text-lg font-semibold text-gray-600">
-                          {scout.full_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                      )}
-                    </div>
+                    {renderScoutAvatar(scout)}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-black text-base md:text-lg flex items-center gap-2 truncate">
                         {scout.full_name || 'Scout'}
