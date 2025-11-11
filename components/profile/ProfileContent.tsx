@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import { useState, useEffect } from 'react'
 import { getGradientForId } from '@/lib/gradients'
+import { getProfilePath } from '@/lib/profile-url'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 
 interface ProfileContentProps {
@@ -647,6 +648,11 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const profilePath = getProfilePath(profile.id, profile.username)
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app').replace(/\/$/, '')
+  const fullProfileUrl = `${appUrl}${profilePath}`
+  const displayProfileUrl = `${appUrl.replace(/^https?:\/\//, '')}${profilePath}`
 
   // Check if returning from Stripe and force refresh
   useEffect(() => {
@@ -742,6 +748,68 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
     }
   }
 
+  const handleCopyProfileUrl = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullProfileUrl)
+      } else {
+        const tempInput = document.createElement('textarea')
+        tempInput.value = fullProfileUrl
+        tempInput.setAttribute('readonly', '')
+        tempInput.style.position = 'absolute'
+        tempInput.style.left = '-9999px'
+        document.body.appendChild(tempInput)
+        tempInput.select()
+        document.execCommand('copy')
+        document.body.removeChild(tempInput)
+      }
+      setCopyStatus('copied')
+      window.setTimeout(() => setCopyStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Failed to copy profile link:', error)
+      setCopyStatus('error')
+      window.setTimeout(() => setCopyStatus('idle'), 2000)
+    }
+  }
+
+  const copyButtonLabel =
+    copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Try again' : 'Copy'
+
+  const profileLinkElement = (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+      <a
+        href={fullProfileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-blue-600 hover:underline break-all"
+      >
+        {displayProfileUrl}
+      </a>
+      <button
+        type="button"
+        onClick={handleCopyProfileUrl}
+        className="interactive-press inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        aria-live="polite"
+        aria-label="Copy profile link"
+      >
+        <svg
+          className="h-3.5 w-3.5"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M7 13a3 3 0 010-6h2" />
+          <path d="M11 7a3 3 0 010 6H9" />
+          <rect x="4" y="4" width="12" height="12" rx="3" />
+        </svg>
+        <span>{copyButtonLabel}</span>
+      </button>
+    </div>
+  )
+
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
@@ -779,6 +847,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
             {profile.username && <span className="text-gray-500">@{profile.username}</span>}
           </div>
+          {profileLinkElement}
           {profile.role === 'scout' ? (
             (profile.position || profile.organization) && (
               <p className="text-black mb-1">

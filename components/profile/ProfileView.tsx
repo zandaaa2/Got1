@@ -114,9 +114,77 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [isSignedIn, setIsSignedIn] = useState(false)
   const [minimizedEvals, setMinimizedEvals] = useState<Set<string>>(new Set())
   const [isHydrated, setIsHydrated] = useState(false)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const router = useRouter()
   const supabase = createClient()
   const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
+  const profilePath = getProfilePath(profile.id, profile.username)
+  const appUrl =
+    (process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app').replace(/\/$/, '')
+  const fullProfileUrl = `${appUrl}${profilePath}`
+  const displayProfileUrl = `${appUrl.replace(/^https?:\/\//, '')}${profilePath}`
+
+  const handleCopyProfileUrl = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullProfileUrl)
+      } else {
+        const tempInput = document.createElement('textarea')
+        tempInput.value = fullProfileUrl
+        tempInput.setAttribute('readonly', '')
+        tempInput.style.position = 'absolute'
+        tempInput.style.left = '-9999px'
+        document.body.appendChild(tempInput)
+        tempInput.select()
+        document.execCommand('copy')
+        document.body.removeChild(tempInput)
+      }
+      setCopyStatus('copied')
+      window.setTimeout(() => setCopyStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Failed to copy profile link:', error)
+      setCopyStatus('error')
+      window.setTimeout(() => setCopyStatus('idle'), 2000)
+    }
+  }
+
+  const copyButtonLabel =
+    copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Try again' : 'Copy'
+
+  const profileLinkElement = (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+      <a
+        href={fullProfileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-blue-600 hover:underline break-all"
+      >
+        {displayProfileUrl}
+      </a>
+      <button
+        type="button"
+        onClick={handleCopyProfileUrl}
+        className="interactive-press inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        aria-live="polite"
+        aria-label="Copy profile link"
+      >
+        <svg
+          className="h-3.5 w-3.5"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M7 13a3 3 0 010-6h2" />
+          <path d="M11 7a3 3 0 010 6H9" />
+          <rect x="4" y="4" width="12" height="12" rx="3" />
+        </svg>
+        <span>{copyButtonLabel}</span>
+      </button>
+    </div>
+  )
   
   const toggleEvalMinimize = (evalId: string) => {
     setMinimizedEvals(prev => {
@@ -329,6 +397,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </span>
               )}
             </h1>
+            {profileLinkElement}
             {(profile.position || profile.school) && (
               <p className="text-black mb-1">
                 {profile.position && profile.school
@@ -604,6 +673,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </button>
             )}
           </div>
+          {profileLinkElement}
           {(profile.position || profile.organization) && (
             <p className="text-black mb-2">
               {profile.position && profile.organization

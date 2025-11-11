@@ -2,7 +2,6 @@ import { createServerClient } from '@/lib/supabase'
 import { notFound, redirect } from 'next/navigation'
 import EvaluationDetail from '@/components/evaluations/EvaluationDetail'
 import Sidebar from '@/components/layout/Sidebar'
-import ShareButton from '@/components/shared/ShareButton'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import Link from 'next/link'
 
@@ -76,24 +75,21 @@ export default async function EvaluationPage({
     .maybeSingle()
 
   const headerContent = (
-    <>
-      <ShareButton url={`/evaluations/${params.id}`} />
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {profile?.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">
-              {isScout ? 'S' : 'P'}
-            </span>
-          </div>
-        )}
-      </Link>
-    </>
+    <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
+      {profile?.avatar_url ? (
+        <img
+          src={profile.avatar_url}
+          alt="Profile"
+          className="w-10 h-10 rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+          <span className="text-gray-600 font-semibold">
+            {isScout ? 'S' : 'P'}
+          </span>
+        </div>
+      )}
+    </Link>
   )
 
   return (

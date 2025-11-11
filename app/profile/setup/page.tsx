@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ProfileSetupForm from '@/components/profile/ProfileSetupForm'
 import PageContent from '@/components/layout/PageContent'
-import ShareButton from '@/components/shared/ShareButton'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 
@@ -39,21 +38,16 @@ export default async function ProfileSetupPage() {
   const gradientClass = getGradientForId(session.user.id)
   const fallbackInitial = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'U').charAt(0).toUpperCase()
 
-  const headerContent = (
-    <>
-      <ShareButton url="/profile/setup" />
-      {sanitizedAvatar ? (
-        <img
-          src={sanitizedAvatar}
-          alt="Profile"
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      ) : (
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${gradientClass}`}>
-          {fallbackInitial}
-        </div>
-      )}
-    </>
+  const headerContent = sanitizedAvatar ? (
+    <img
+      src={sanitizedAvatar}
+      alt="Profile"
+      className="w-10 h-10 rounded-full object-cover"
+    />
+  ) : (
+    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${gradientClass}`}>
+      {fallbackInitial}
+    </div>
   )
 
   return (

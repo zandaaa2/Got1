@@ -2,7 +2,6 @@ import { createServerClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import ProfileView from '@/components/profile/ProfileView'
 import Sidebar from '@/components/layout/Sidebar'
-import ShareButton from '@/components/shared/ShareButton'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import Link from 'next/link'
@@ -90,11 +89,8 @@ export default async function ProfilePage({
     userProfile = data
   }
 
-  const sharePath = profile?.username ? `/${profile.username}` : `/profile/${params.id}`
-
   const headerContent = session ? (
     <>
-      <ShareButton url={sharePath} />
       <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
         {userProfile?.avatar_url ? (
           <img

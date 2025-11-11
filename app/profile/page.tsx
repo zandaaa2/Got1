@@ -2,7 +2,6 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ProfileContent from '@/components/profile/ProfileContent'
-import ShareButton from '@/components/shared/ShareButton'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import Link from 'next/link'
 
@@ -98,26 +97,23 @@ export default async function ProfilePage() {
     .single()
 
   const headerContent = (
-    <>
-      <ShareButton url={`/profile/${profile.id}`} />
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {userProfile?.avatar_url ? (
-          <div className="w-10 h-10 rounded-full border-2 border-black p-0.5">
-            <img
-              src={userProfile.avatar_url}
-              alt="Profile"
-              className="w-full h-full rounded-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="w-10 h-10 rounded-full border-2 border-black p-0.5 bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">
-              {profile.role === 'player' ? 'P' : 'S'}
-            </span>
-          </div>
-        )}
-      </Link>
-    </>
+    <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
+      {userProfile?.avatar_url ? (
+        <div className="w-10 h-10 rounded-full border-2 border-black p-0.5">
+          <img
+            src={userProfile.avatar_url}
+            alt="Profile"
+            className="w-full h-full rounded-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded-full border-2 border-black p-0.5 bg-gray-300 flex items-center justify-center">
+          <span className="text-gray-600 font-semibold">
+            {profile.role === 'player' ? 'P' : 'S'}
+          </span>
+        </div>
+      )}
+    </Link>
   )
 
   return (

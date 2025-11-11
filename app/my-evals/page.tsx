@@ -2,7 +2,6 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import MyEvalsContent from '@/components/my-evals/MyEvalsContent'
 import Sidebar from '@/components/layout/Sidebar'
-import ShareButton from '@/components/shared/ShareButton'
 import PageContent from '@/components/layout/PageContent'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
@@ -54,24 +53,21 @@ export default async function MyEvalsPage() {
   const validRole = profile.role === 'scout' ? 'scout' : 'player'
 
   const headerContent = (
-    <>
-      <ShareButton url="/my-evals" />
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">
-              {profile.role === 'player' ? 'P' : 'S'}
-            </span>
-          </div>
-        )}
-      </Link>
-    </>
+    <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
+      {profile.avatar_url ? (
+        <img
+          src={profile.avatar_url}
+          alt="Profile"
+          className="w-10 h-10 rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+          <span className="text-gray-600 font-semibold">
+            {profile.role === 'player' ? 'P' : 'S'}
+          </span>
+        </div>
+      )}
+    </Link>
   )
 
   return (

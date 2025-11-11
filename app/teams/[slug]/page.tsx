@@ -7,7 +7,6 @@ import VerificationBadge from '@/components/shared/VerificationBadge'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
-import ShareButton from '@/components/shared/ShareButton'
 import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
@@ -147,24 +146,21 @@ export default async function TeamPage({ params }: PageParams) {
   const sportGroups = Array.from(sportMap.entries()).sort((a, b) => b[1].length - a[1].length)
 
   const headerContent = session ? (
-    <>
-      <ShareButton url={`/teams/${team.slug}`} />
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {userProfile?.avatar_url ? (
-          <Image
-            src={userProfile.avatar_url}
-            alt="Profile"
-            width={40}
-            height={40}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">U</span>
-          </div>
-        )}
-      </Link>
-    </>
+    <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
+      {userProfile?.avatar_url ? (
+        <Image
+          src={userProfile.avatar_url}
+          alt="Profile"
+          width={40}
+          height={40}
+          className="w-10 h-10 rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+          <span className="text-gray-600 font-semibold">U</span>
+        </div>
+      )}
+    </Link>
   ) : (
     <AuthButtons />
   )
