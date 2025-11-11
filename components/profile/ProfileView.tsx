@@ -9,6 +9,26 @@ import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
 import { getProfilePath } from '@/lib/profile-url'
 
+const GRADIENT_CLASSES = [
+  'bg-gradient-to-br from-indigo-500 to-blue-500',
+  'bg-gradient-to-br from-rose-500 to-pink-500',
+  'bg-gradient-to-br from-emerald-500 to-teal-500',
+  'bg-gradient-to-br from-amber-500 to-orange-500',
+  'bg-gradient-to-br from-purple-500 to-fuchsia-500',
+  'bg-gradient-to-br from-sky-500 to-cyan-500',
+]
+
+const getGradientForId = (id: string | null | undefined) => {
+  if (!id) {
+    return GRADIENT_CLASSES[0]
+  }
+  let hash = 0
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  }
+  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
+}
+
 interface ProfileViewProps {
   profile: any
   isOwnProfile: boolean
@@ -230,8 +250,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 unoptimized
               />
             ) : (
-              <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                <span className="text-gray-600 text-3xl font-semibold">
+              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+                <span className="text-white text-3xl font-semibold">
                   {profile.full_name?.charAt(0).toUpperCase() || '?'}
                 </span>
               </div>
@@ -311,8 +331,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                             unoptimized
                           />
                         ) : (
-                          <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-gray-600 text-xl font-semibold">
+                          <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.scout?.id || evaluation.scout_id || evaluation.id)}`}>
+                            <span className="text-white text-xl font-semibold">
                               {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
                             </span>
                           </div>
@@ -456,8 +476,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 unoptimized
               />
             ) : (
-              <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                <span className="text-gray-600 text-3xl font-semibold">
+              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
+                <span className="text-white text-3xl font-semibold">
                   {profile.full_name?.charAt(0).toUpperCase() || '?'}
                 </span>
               </div>
@@ -814,8 +834,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           unoptimized
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-gray-600 text-xl font-semibold">
+                        <div className={`w-full h-full flex items-center justify-center ${getGradientForId(evaluation.player?.id || evaluation.player_id || evaluation.id)}`}>
+                          <span className="text-white text-xl font-semibold">
                             {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
                           </span>
                         </div>
