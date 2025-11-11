@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase'
 import type { Database } from '@/types/database.types'
 import { sendProfileReportEmail } from '@/lib/email'
 
@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing profileId' }, { status: 400 })
     }
 
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient(() => cookieStore)
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
