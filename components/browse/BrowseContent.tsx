@@ -66,6 +66,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
   const [viewMode, setViewMode] = useState<'profiles' | 'teams'>('profiles')
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const supabase = createClient()
   
   // Test accounts that should show the badge
@@ -430,13 +431,20 @@ export default function BrowseContent({ session }: BrowseContentProps) {
               className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
             >
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                {profile.avatar_url ? (
+                {profile.avatar_url && !imageErrors.has(profile.id) ? (
                   <Image
                     src={profile.avatar_url}
                     alt={profile.full_name || 'Profile'}
                     width={48}
                     height={48}
                     className="w-full h-full object-cover"
+                    onError={() => {
+                      setImageErrors((prev) => {
+                        const next = new Set(prev)
+                        next.add(profile.id)
+                        return next
+                      })
+                    }}
                   />
                 ) : (
                   <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
