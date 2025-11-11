@@ -94,7 +94,7 @@ export default async function TeamPage({ params }: PageParams) {
     console.error('Error loading scouts for team page:', error)
   }
 
-  let userProfile: { avatar_url: string | null } | null = null
+  let userProfile: { avatar_url: string | null; full_name?: string | null; username?: string | null } | null = null
   if (session?.user?.id) {
     const { data: currentUser } = await supabase
       .from('profiles')
