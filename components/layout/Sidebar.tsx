@@ -49,6 +49,9 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     setIsCollapsed(!isCollapsed)
   }
 
+  const PRIMARY_LOGO_SRC = '/got1-logos/wide.png'
+  const COMPACT_LOGO_SRC = '/got1-logos/number.png'
+
   return (
     <>
       {/* Mobile overlay */}
@@ -78,7 +81,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
           onClick={() => isMobile && setIsMobileOpen(false)}
         >
           <Image
-            src={(isMobile || !isCollapsed) ? '/wide.png' : '/number.png'}
+            src={(isMobile || !isCollapsed) ? PRIMARY_LOGO_SRC : COMPACT_LOGO_SRC}
             alt="Got1"
             width={isMobile ? 120 : isCollapsed ? 48 : 140}
             height={isMobile ? 32 : isCollapsed ? 48 : 40}
