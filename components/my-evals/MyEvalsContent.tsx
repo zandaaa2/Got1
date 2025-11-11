@@ -246,7 +246,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player?.id || evaluation.id)}`}>
+                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player_id || evaluation.id)}`}>
                           {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
                       )}
@@ -302,7 +302,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout?.id || evaluation.id)}`}>
+                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout_id || evaluation.id)}`}>
                           {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
                       )}
