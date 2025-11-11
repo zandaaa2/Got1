@@ -488,16 +488,42 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                 })()}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 truncate">
-                  {profile.full_name || 'Unknown'}
-                  {profile.role === 'scout' && <VerificationBadge />}
+                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2">
+                  <span
+                    className="truncate flex-1 min-w-0"
+                    title={profile.full_name || undefined}
+                  >
+                    {profile.full_name || 'Unknown'}
+                  </span>
+                  {profile.role === 'scout' && <VerificationBadge className="flex-shrink-0" />}
                   {isTestAccount(profile.full_name) && (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0">
                       test account
                     </span>
                   )}
                 </h3>
-                <p className="text-black text-xs md:text-sm truncate">
+                <p
+                  className="text-black text-xs md:text-sm truncate"
+                  title={
+                    profile.role === 'scout'
+                      ? profile.position && profile.organization
+                        ? `${profile.position} at ${profile.organization}`
+                        : profile.position
+                        ? profile.position
+                        : profile.organization
+                        ? profile.organization
+                        : 'Scout'
+                      : profile.position && profile.school
+                      ? `${profile.position} at ${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
+                      : profile.position
+                      ? profile.position
+                      : profile.school
+                      ? `${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
+                      : profile.graduation_year
+                      ? `Class of ${profile.graduation_year}`
+                      : 'Player'
+                  }
+                >
                   {profile.role === 'scout' ? (
                     profile.position && profile.organization
                       ? `${profile.position} at ${profile.organization}`
