@@ -4,7 +4,7 @@ import './globals.css'
 import AuthModalProvider from '@/components/providers/AuthModalProvider'
 import { Analytics } from '@vercel/analytics/react'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'),

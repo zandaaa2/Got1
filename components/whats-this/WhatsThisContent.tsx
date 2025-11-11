@@ -213,7 +213,7 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
                       width={96}
                       height={96}
                       className="object-contain"
-                      unoptimized
+                     
                     />
                   </div>
                 </div>

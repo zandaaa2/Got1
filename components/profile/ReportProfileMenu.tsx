@@ -64,7 +64,7 @@ export default function ReportProfileMenu({
     <>
       <button
         onClick={handleOpen}
-        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        className="interactive-press p-2 hover:bg-gray-100 rounded-full transition-colors"
         aria-label="Report profile"
       >
         <svg
@@ -90,7 +90,7 @@ export default function ReportProfileMenu({
             </p>
             <button
               onClick={handleClose}
-              className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+              className="interactive-press w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
             >
               Close
             </button>
@@ -115,7 +115,7 @@ export default function ReportProfileMenu({
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-60"
+              className="interactive-press w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:active:scale-100"
             >
               {isSubmitting ? 'Sending...' : 'Send Report'}
             </button>

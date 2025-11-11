@@ -78,7 +78,7 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                     width={24}
                     height={24}
                     className="object-contain"
-                    unoptimized
+                   
                   />
                 )
               }
@@ -140,7 +140,7 @@ export default function CollegeSelector({ value, onChange, label, placeholder }:
                           width={32}
                           height={32}
                           className="object-contain"
-                          unoptimized
+                         
                         />
                       )
                     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 
@@ -21,8 +21,11 @@ export default function HeaderMenu({ userId, scoutId, evaluationId, onCancelled 
   const [pendingEvaluationId, setPendingEvaluationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuPanelRef = useRef<HTMLDivElement>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const router = useRouter()
   const supabase = createClient()
+  const menuId = useId()
 
   // Check for pending evaluations
   useEffect(() => {
@@ -119,6 +122,12 @@ export default function HeaderMenu({ userId, scoutId, evaluationId, onCancelled 
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (isOpen && cancelButtonRef.current) {
+      cancelButtonRef.current.focus()
+    }
+  }, [isOpen])
+
   const handleCancelEvaluation = async () => {
     if (!pendingEvaluationId) return
 
@@ -204,6 +213,9 @@ export default function HeaderMenu({ userId, scoutId, evaluationId, onCancelled 
         }}
         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
         aria-label="Menu"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? menuId : undefined}
       >
         <svg
           className="w-5 h-5 text-black"
@@ -221,13 +233,22 @@ export default function HeaderMenu({ userId, scoutId, evaluationId, onCancelled 
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" style={{ zIndex: 9999 }}>
+        <div
+          ref={menuPanelRef}
+          id={menuId}
+          role="menu"
+          aria-label="Evaluation actions"
+          className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+          style={{ zIndex: 9999 }}
+        >
           <button
             onClick={(e) => {
               e.stopPropagation()
               handleCancelEvaluation()
             }}
             disabled={isCancelling}
+            ref={cancelButtonRef}
+            role="menuitem"
             className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
           >
             {isCancelling ? 'Cancelling...' : 'Cancel evaluation request'}

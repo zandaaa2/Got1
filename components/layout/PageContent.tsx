@@ -53,23 +53,31 @@ export default function PageContent({ children, header }: PageContentProps) {
   }, [])
 
   return (
-    <div 
-      className="flex-1 transition-all duration-300" 
-      style={{ marginLeft: isMobile ? '0px' : `${sidebarWidth}px` }}
-    >
-      <header
-        className={`fixed top-0 right-0 bg-white flex justify-end items-center gap-2 md:gap-4 z-10 transition-all duration-300 ${
+     <div 
+       className="flex-1 transition-all duration-300" 
+       style={{ marginLeft: isMobile ? '0px' : `${sidebarWidth}px` }}
+     >
+       <header
+        className={`fixed top-0 right-0 z-20 bg-white/90 backdrop-blur-sm transition-all duration-300 ${
           isMobile ? 'left-0 px-4 py-3' : 'px-8 py-4'
         }`}
         style={isMobile ? {} : { left: `${sidebarWidth}px` }}
-      >
-        <FeatureRequest />
-        {header}
-      </header>
-      <main className={`pt-16 md:pt-20 pb-8 ${isMobile ? 'px-4' : 'px-6 md:px-8'}`}>
-        {children}
-      </main>
-    </div>
+       >
+        <div className="flex w-full items-center justify-end gap-3">
+          <FeatureRequest />
+          {header ? (
+            <div className="flex items-center gap-2 md:gap-3">
+              {header}
+            </div>
+          ) : null}
+        </div>
+       </header>
+       <main className={`pt-16 md:pt-20 pb-8 ${isMobile ? 'px-4' : 'px-6 md:px-8'}`}>
+         <div className="mx-auto w-full max-w-5xl">
+           {children}
+         </div>
+       </main>
+     </div>
   )
 }
 

@@ -8,6 +8,26 @@ import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
 
+const GRADIENT_CLASSES = [
+  'bg-gradient-to-br from-indigo-500 to-blue-500',
+  'bg-gradient-to-br from-rose-500 to-pink-500',
+  'bg-gradient-to-br from-emerald-500 to-teal-500',
+  'bg-gradient-to-br from-amber-500 to-orange-500',
+  'bg-gradient-to-br from-purple-500 to-fuchsia-500',
+  'bg-gradient-to-br from-sky-500 to-cyan-500',
+]
+
+const getGradientForId = (id: string | null | undefined) => {
+  if (!id) {
+    return GRADIENT_CLASSES[0]
+  }
+  let hash = 0
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  }
+  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
+}
+
 interface MyEvalsContentProps {
   role: 'player' | 'scout'
   userId: string
@@ -158,12 +178,12 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
   }, [activeTab, role, userId, refreshKey])
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-5xl">
       <div className="mb-4 md:mb-6">
         <div className="flex gap-2 md:gap-4 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('in_progress')}
-            className={`px-3 md:px-4 py-2 font-medium text-sm md:text-base ${
+            className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
               activeTab === 'in_progress'
                 ? 'bg-gray-100 border-b-2 border-black text-black'
                 : 'text-black hover:bg-gray-50'
@@ -173,7 +193,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`px-3 md:px-4 py-2 font-medium text-sm md:text-base ${
+            className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
               activeTab === 'completed'
                 ? 'bg-gray-100 border-b-2 border-black text-black'
                 : 'text-black hover:bg-gray-50'
@@ -185,13 +205,15 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
       </div>
 
       {loading ? (
-        <div className="text-center py-12">Loading...</div>
-      ) : evaluations.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          No {activeTab === 'in_progress' ? 'in progress' : 'completed'} evaluations yet.
-        </div>
+        <div className="text-center py-12 text-gray-500 animate-fade-in">Loading...</div>
       ) : (
-        <div className="space-y-3 md:space-y-4">
+        <div key={activeTab} className="animate-fade-in-up">
+          {evaluations.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              No {activeTab === 'in_progress' ? 'in progress' : 'completed'} evaluations yet.
+            </div>
+          ) : (
+            <div className="space-y-3 md:space-y-4">
           {evaluations.map((evaluation) => {
             const payoutAmount =
               evaluation.scout_payout ??
@@ -209,12 +231,12 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
               >
                 <Link
                   href={`/evaluations/${evaluation.id}`}
-                  className="flex items-center gap-3 md:gap-4 flex-1 min-w-0"
+                  className="interactive-press flex items-center gap-3 md:gap-4 flex-1 min-w-0"
                 >
                   {role === 'scout' ? (
                   // Scout view: Show player being evaluated
                   <>
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
                       {evaluation.player?.avatar_url ? (
                         <Image
                           src={evaluation.player.avatar_url}
@@ -224,10 +246,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-gray-600 text-xl font-semibold">
-                            {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
-                          </span>
+                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.player?.id || evaluation.id)}`}>
+                          {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
@@ -272,7 +292,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   ) : (
                   // Player view: Show scout evaluating them
                   <>
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
                       {evaluation.scout?.avatar_url ? (
                         <Image
                           src={evaluation.scout.avatar_url}
@@ -282,10 +302,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-gray-600 text-xl font-semibold">
-                            {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                          </span>
+                        <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(evaluation.scout?.id || evaluation.id)}`}>
+                          {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
@@ -371,6 +389,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
               </div>
             )
           })}
+            </div>
+          )}
         </div>
       )}
     </div>

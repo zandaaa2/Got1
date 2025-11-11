@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import { colleges } from '@/lib/colleges'
+import { EmptyState } from '@/components/shared/EmptyState'
 
 interface BrowseContentProps {
   session: any
@@ -52,6 +53,21 @@ const getGradientForId = (id: string | null | undefined) => {
   }
   return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length]
 }
+
+const emptyTeamsIcon = (
+  <svg
+    className="h-8 w-8"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 21s-6-5.373-6-9a6 6 0 1112 0c0 3.627-6 9-6 9z" />
+    <circle cx="12" cy="12" r="2.5" />
+  </svg>
+)
 
 /**
  * Component for browsing and searching scouts and players.
@@ -340,7 +356,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
               <Link
                 key={team.slug}
                 href={`/teams/${team.slug}`}
-                className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-lg transition-all"
+                className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
               >
                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
                   {team.logo ? (
@@ -350,7 +366,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                       width={64}
                       height={64}
                       className="object-contain"
-                      unoptimized
+                     
                     />
                   ) : (
                     <span className="text-lg font-semibold text-gray-600">
@@ -372,9 +388,32 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-500">
-            No teams found matching your search.
-          </div>
+          <EmptyState
+            icon={emptyTeamsIcon}
+            title="No teams found"
+            description="Try another school name, search by conference, or clear your filters to explore every program on Got1."
+            action={
+              trimmedQuery
+                ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                  >
+                    Clear search
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )
+                : undefined
+            }
+          />
         )
       ) : (
         <div className="space-y-4">
@@ -385,7 +424,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   <Link
                     key={`highlight-${team.slug}`}
                     href={`/teams/${team.slug}`}
-                    className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
+                    className="surface-card flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:shadow-md transition-shadow"
                   >
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
                       {team.logo ? (
@@ -398,7 +437,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                           unoptimized
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-gray-600">
+                        <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(team.slug)}`}>
                           {team.name.charAt(0)}
                         </div>
                       )}
@@ -428,9 +467,9 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             <Link
               key={profile.id}
               href={`/profile/${profile.id}`}
-              className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
+              className="flex items-center gap-3 md:gap-4 rounded-2xl bg-white p-3 md:p-4 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden flex-shrink-0">
                 {profile.avatar_url && !imageErrors.has(profile.id) ? (
                   <Image
                     src={profile.avatar_url}
@@ -439,18 +478,12 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                     height={48}
                     className="w-full h-full object-cover"
                     onError={() => {
-                      setImageErrors((prev) => {
-                        const next = new Set(prev)
-                        next.add(profile.id)
-                        return next
-                      })
+                      setImageErrors((prev) => new Set(prev).add(profile.id))
                     }}
                   />
                 ) : (
-                  <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profile.id)}`}>
-                    <span className="text-white text-lg font-semibold">
-                      {profile.full_name?.charAt(0).toUpperCase() || '?'}
-                    </span>
+                  <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(profile.id)}`}>
+                    {profile.full_name?.charAt(0).toUpperCase() || '?'}
                   </div>
                 )}
               </div>

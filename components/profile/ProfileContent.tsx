@@ -43,6 +43,43 @@ let globalAccountStatus: {
   requirementsReason: string | null
 } | null = null
 
+const MoneyDashboardSkeleton = () => (
+  <div className="mb-8 space-y-5 rounded-lg border border-gray-200 bg-gray-50 p-6 shadow-sm animate-pulse">
+    <div className="flex items-center justify-between">
+      <div className="h-6 w-48 rounded bg-gray-200" />
+      <div className="flex gap-2">
+        <div className="h-9 w-20 rounded bg-gray-200" />
+        <div className="h-9 w-28 rounded bg-gray-200" />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {[...Array(2)].map((_, index) => (
+        <div key={index} className="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
+          <div className="h-4 w-1/3 rounded bg-gray-200" />
+          <div className="h-8 w-1/2 rounded bg-gray-200" />
+          <div className="h-4 w-2/3 rounded bg-gray-200" />
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
+const StripeBannerSkeleton = () => (
+  <div className="mb-6 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-5 animate-pulse">
+    <div className="h-4 w-60 rounded bg-gray-200" />
+    <div className="h-3 w-full rounded bg-gray-200" />
+    <div className="h-3 w-2/3 rounded bg-gray-200" />
+  </div>
+)
+
+const StripeStatusSkeleton = () => (
+  <div className="space-y-3 pt-2 animate-pulse">
+    <div className="h-4 w-3/4 rounded bg-gray-200" />
+    <div className="h-3 w-2/3 rounded bg-gray-200" />
+    <div className="h-10 w-40 rounded bg-gray-200" />
+  </div>
+)
+
 /**
  * Money Dashboard Component
  * Shows pricing info and Stripe Connect account access for scouts with completed onboarding
@@ -59,6 +96,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
     requirementsPastDue: string[]
     requirementsReason: string | null
   } | null>(globalAccountStatus || null)
+  const [statusLoading, setStatusLoading] = useState(!globalAccountStatus)
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [isEditingPricing, setIsEditingPricing] = useState(false)
@@ -69,7 +107,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
 
   useEffect(() => {
-    checkAccountStatus()
+    checkAccountStatus({ suppressSkeleton: Boolean(globalAccountStatus) })
     
     // Check if returning from Stripe onboarding
     if (typeof window !== 'undefined') {
@@ -85,7 +123,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
         console.log('📧 Detected return from Stripe onboarding')
         const refreshInterval = setInterval(() => {
           console.log('📧 Refreshing account status after Stripe return (MoneyDashboard)...')
-          checkAccountStatus()
+          checkAccountStatus({ suppressSkeleton: true })
         }, 2000)
         
         // Stop refreshing after 10 seconds and clean up URL
@@ -109,7 +147,11 @@ function MoneyDashboard({ profile }: { profile: any }) {
     }
   }, [profile.price_per_eval, profile.turnaround_time])
 
-  const checkAccountStatus = async () => {
+  const checkAccountStatus = async (options: { suppressSkeleton?: boolean } = {}) => {
+    if (!options.suppressSkeleton) {
+      setStatusLoading(true)
+    }
+
     try {
       const response = await fetch('/api/stripe/connect/account-link', {
         method: 'GET',
@@ -130,6 +172,8 @@ function MoneyDashboard({ profile }: { profile: any }) {
       globalAccountStatus = status
     } catch (error) {
       console.error('Error checking account status:', error)
+    } finally {
+      setStatusLoading(false)
     }
   }
 
@@ -202,6 +246,10 @@ function MoneyDashboard({ profile }: { profile: any }) {
     }
   }
 
+  if (statusLoading) {
+    return <MoneyDashboardSkeleton />
+  }
+
   // Only show if account is complete
   if (!accountStatus) {
     console.log('📧 MoneyDashboard - No account status yet, showing nothing')
@@ -218,40 +266,40 @@ function MoneyDashboard({ profile }: { profile: any }) {
   console.log('📧 MoneyDashboard - Account fully enabled! Showing dashboard. Status:', accountStatus)
 
   return (
-    <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+    <div className="surface-card mb-8 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-black">Payouts and Turnaround Time</h3>
         <div className="flex gap-2">
           <button
             onClick={() => setIsEditingPricing(!isEditingPricing)}
-            className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium text-sm"
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
             Edit
           </button>
           <button
             onClick={handleGetAccountLink}
             disabled={loading}
-            className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Loading...' : 'View Dashboard'}
           </button>
         </div>
       </div>
       {showSuccessMessage && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-200 rounded-lg">
+        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-sm text-green-800">
             ✅ Your Stripe Connect account has been successfully set up!
           </p>
         </div>
       )}
       {saveMessage && (
-        <div className={`mb-4 p-3 rounded-lg ${saveMessage.includes('Failed') ? 'bg-red-100 border border-red-200 text-red-800' : 'bg-green-100 border border-green-200 text-green-800'}`}>
+        <div className={`mb-4 rounded-2xl p-3 ${saveMessage.includes('Failed') ? 'border border-red-200 bg-red-50 text-red-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
           <p className="text-sm">{saveMessage}</p>
         </div>
       )}
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="surface-card p-4">
             <div className="flex items-center gap-2 mb-1">
               <p className="text-sm text-gray-600">Price per Evaluation</p>
               <button
@@ -276,7 +324,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
               <p className="text-2xl font-bold text-black">${profile.price_per_eval || 99}</p>
             )}
           </div>
-          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="surface-card p-4">
             <div className="flex items-center gap-2 mb-1">
               <p className="text-sm text-gray-600">Turnaround Time</p>
               <button
@@ -307,7 +355,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
             <button
               onClick={handleSavePricing}
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -318,7 +366,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 setTurnaroundTime(profile.turnaround_time || '72 hrs')
                 setSaveMessage(null)
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium"
+              className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
@@ -329,14 +377,14 @@ function MoneyDashboard({ profile }: { profile: any }) {
       {/* Information Modal */}
       {infoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setInfoModal(null)}>
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="surface-card max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold text-black">
                 {infoModal === 'price' ? 'Price per Evaluation' : 'Turnaround Time'}
               </h3>
               <button
                 onClick={() => setInfoModal(null)}
-                className="text-gray-500 hover:text-black text-2xl leading-none"
+                className="interactive-press text-gray-500 hover:text-black text-2xl leading-none"
                 aria-label="Close"
               >
                 ×
@@ -359,7 +407,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
             </div>
             <button
               onClick={() => setInfoModal(null)}
-              className="w-full px-6 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium"
+              className="interactive-press w-full px-6 py-3 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
             >
               Got it
             </button>
@@ -387,11 +435,12 @@ function StripeConnectSection({ profile }: { profile: any }) {
     requirementsPastDue: string[]
     requirementsReason: string | null
   } | null>(null)
+  const [statusLoading, setStatusLoading] = useState(true)
   const [notificationSent, setNotificationSent] = useState(false)
 
   useEffect(() => {
     // Check account status on mount
-    checkAccountStatus()
+    checkAccountStatus({ suppressSkeleton: Boolean(globalAccountStatus) })
     
     // Check if returning from Stripe onboarding
     if (typeof window !== 'undefined') {
@@ -403,7 +452,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
         console.log('📧 Detected return from Stripe onboarding')
         const refreshInterval = setInterval(() => {
           console.log('📧 Refreshing account status after Stripe return (StripeConnectSection)...')
-          checkAccountStatus()
+          checkAccountStatus({ suppressSkeleton: true })
         }, 2000)
         
         // Stop refreshing after 10 seconds and clean up URL
@@ -415,7 +464,11 @@ function StripeConnectSection({ profile }: { profile: any }) {
     }
   }, [router])
 
-  const checkAccountStatus = async () => {
+  const checkAccountStatus = async (options: { suppressSkeleton?: boolean } = {}) => {
+    if (!options.suppressSkeleton) {
+      setStatusLoading(true)
+    }
+
     try {
       const response = await fetch('/api/stripe/connect/account-link', {
         method: 'GET',
@@ -434,11 +487,13 @@ function StripeConnectSection({ profile }: { profile: any }) {
       globalAccountStatus = status // Update global state
     } catch (error) {
       console.error('Error checking account status:', error)
+    } finally {
+      setStatusLoading(false)
     }
   }
 
-  const isFullyEnabled = accountStatus?.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
-  const needsUpdate = accountStatus?.onboardingComplete && !isFullyEnabled
+  const isFullyEnabled = !!accountStatus && accountStatus.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
+  const needsUpdate = !!accountStatus && accountStatus.onboardingComplete && !(accountStatus.chargesEnabled && accountStatus.payoutsEnabled)
 
   useEffect(() => {
     const sendNotification = async () => {
@@ -512,149 +567,54 @@ function StripeConnectSection({ profile }: { profile: any }) {
     }
   }
 
-  return (
-    <>
-      {needsUpdate && (
-        <div className="mb-4 p-5 border border-red-200 bg-red-50 rounded-lg">
-          <h4 className="text-red-700 font-semibold mb-2">Update needed for Stripe</h4>
-          <p className="text-sm text-red-700 mb-3">
-            Stripe periodically requires additional information to keep payouts flowing. Please review their request to avoid delays—this is controlled by Stripe directly, not Got1.
-          </p>
-          {accountStatus?.requirementsDue?.length ? (
-            <div className="mb-3 text-sm text-red-700">
-              <p className="font-medium">Items needed:</p>
-              <ul className="list-disc list-inside space-y-1">
-                {accountStatus.requirementsDue.map((item) => (
-                  <li key={item}>{item.replace(/_/g, ' ')}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <p className="text-xs text-red-600 font-medium">We also emailed these instructions to you.</p>
-        </div>
-      )}
-      <div className={`mb-8 p-6 border rounded-lg ${needsUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-xl font-bold text-black">Payment Account</h3>
-            <button
-              type="button"
-              onClick={() => setShowInfoModal(true)}
-              className="w-5 h-5 rounded-full bg-blue-400 text-white text-xs flex items-center justify-center hover:bg-blue-500 transition-colors font-bold"
-              aria-label="Information about Payment Account"
-            >
-              i
-            </button>
-          </div>
-          <p className="text-sm text-gray-600">
-            {needsUpdate
-              ? 'Stripe needs a quick update before payouts can resume'
-              : 'Manage your payouts and view your earnings'}
-          </p>
-        </div>
-      </div>
+  const containerClass = `surface-card mb-8 p-6 ${needsUpdate ? 'border-yellow-200 bg-yellow-50' : ''}`
 
-      {/* Info Modal */}
-      {showInfoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowInfoModal(false)}>
-          <div className="bg-white rounded-lg p-6 max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-black">Payment Account</h3>
-              <button
-                onClick={() => setShowInfoModal(false)}
-                className="text-gray-500 hover:text-black text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-4 text-sm text-gray-700">
-              <div>
-                <h4 className="font-semibold text-black mb-2">What is a Payment Account?</h4>
-                <p className="mb-3">
-                  Your Payment Account is a Stripe Connect account that allows you to receive payouts from completed evaluations.
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-black mb-2">Stripe Account vs Stripe Connect Account</h4>
-                <div className="space-y-2">
-                  <div>
-                    <p className="font-medium text-black">Stripe Account (Platform Account):</p>
-                    <p className="ml-4">• The main Got1 business account</p>
-                    <p className="ml-4">• Receives payments from players (money held in escrow)</p>
-                    <p className="ml-4">• Manages the platform and takes a 10% fee</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-black">Stripe Connect Account (Your Scout Account):</p>
-                    <p className="ml-4">• Your personal account as a scout</p>
-                    <p className="ml-4">• Receives 90% of each evaluation fee when you complete an evaluation</p>
-                    <p className="ml-4">• Separate from the platform account for clear tracking</p>
-                    <p className="ml-4">• You manage your own payouts and tax information</p>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-600">
-                  <strong>Note:</strong> Even if you own the platform Stripe account, you still need a separate Stripe Connect account to receive scout payouts and track your earnings.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowInfoModal(false)}
-              className="mt-4 px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {!accountStatus ? (
-        <div className="text-sm text-gray-600">
-          <p>Checking account status...</p>
-        </div>
-      ) : (
+  return (
+    <div className={containerClass}>
+      {statusLoading ? (
+        <StripeStatusSkeleton />
+      ) : accountStatus ? (
         <div className="space-y-3">
           {accountStatus.hasAccount ? (
             <>
               <div className="flex items-center gap-2 text-sm">
-                <span className={`w-2 h-2 rounded-full ${needsUpdate ? 'bg-yellow-500' : accountStatus.onboardingComplete ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                <span className={`h-2 w-2 rounded-full ${needsUpdate ? 'bg-amber-500' : accountStatus.onboardingComplete ? 'bg-emerald-500' : 'bg-amber-400'}`}></span>
                 <span className="text-gray-700">
                   {needsUpdate
-                    ? 'Account requires an update - Stripe needs additional information'
+                    ? 'Stripe placed payouts on hold until you upload the requested details.'
                     : accountStatus.onboardingComplete
-                      ? 'Account active - Ready to receive payouts'
-                      : 'Onboarding required - Complete setup to receive payouts'}
+                      ? 'You’re fully verified — payouts go out automatically after each evaluation.'
+                      : 'Finish setting up Stripe Connect so Got1 can pay you after each evaluation.'}
                 </span>
               </div>
               {needsUpdate ? (
-                <p className="text-xs text-gray-500">
-                  Log into Stripe to review the items they need. Once submitted, payouts will resume automatically.
+                <p className="text-xs text-gray-600">
+                  Review Stripe’s checklist to lift the payout hold. As soon as you submit everything, payouts resume automatically.
                 </p>
               ) : (
                 !accountStatus.onboardingComplete && (
-                  <p className="text-xs text-gray-500">Expected setup time: 3-5 minutes</p>
+                  <p className="text-xs text-gray-600">Setup usually takes about 3–5 minutes.</p>
                 )
               )}
               <button
                 onClick={handleGetAccountLink}
                 disabled={loading}
-                className={`px-6 py-2 font-medium rounded disabled:opacity-50 disabled:cursor-not-allowed ${needsUpdate ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                className={`interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed ${needsUpdate ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
                 {loading
                   ? 'Loading...'
                   : needsUpdate
-                    ? 'Review Stripe Requirements'
+                    ? 'Resolve Stripe Requirements'
                     : accountStatus.onboardingComplete
-                      ? 'Access Dashboard'
-                      : 'Complete Onboarding'}
+                      ? 'Open Stripe Dashboard'
+                      : 'Finish Stripe Setup'}
               </button>
             </>
           ) : (
             <div className="space-y-3">
               <div className="text-sm text-gray-600">
-                <p>Create your Stripe Connect account to start making money providing evaluations.</p>
-                <p className="mt-2 text-xs text-gray-500">Expected setup time: 3-5 minutes</p>
+                <p>Create your Stripe Connect account so Got1 can pay you after each completed evaluation.</p>
+                <p className="mt-2 text-xs text-gray-600">Most scouts finish this step in 3–5 minutes.</p>
               </div>
               <button
                 onClick={async () => {
@@ -666,7 +626,6 @@ function StripeConnectSection({ profile }: { profile: any }) {
                     const data = await response.json()
                     
                     if (data.success) {
-                      // Refresh account status to show the onboarding button
                       checkAccountStatus()
                     } else {
                       alert(`Failed to create account: ${data.error || 'Unknown error'}`)
@@ -679,16 +638,19 @@ function StripeConnectSection({ profile }: { profile: any }) {
                   }
                 }}
                 disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Create Stripe Connect Account'}
+                {loading ? 'Creating...' : 'Start Stripe Setup'}
               </button>
             </div>
           )}
         </div>
+      ) : (
+        <div className="text-sm text-gray-600">
+          <p>We couldn't load your Stripe status. Please refresh.</p>
+        </div>
       )}
-      </div>
-    </>
+    </div>
   )
 }
 
@@ -804,8 +766,8 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
 
       {/* Profile Card */}
-      <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6 bg-white border border-gray-200 rounded-lg">
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 mx-auto md:mx-0">
+      <div className="surface-card flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
           {profile.avatar_url && !imageErrors.has(profile.id) ? (
             <Image
               src={profile.avatar_url}
@@ -860,7 +822,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
         </div>
         <Link
           href="/profile/edit"
-          className="px-6 py-3 bg-gray-100 text-black rounded hover:bg-gray-200 font-medium"
+          className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Edit
         </Link>
@@ -874,7 +836,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
 
       {/* Scout Status Section - Only show if user is not a scout */}
       {profile.role !== 'scout' && (
-        <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="surface-card mb-8 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-black">Scout Status</h3>
             <button
@@ -906,7 +868,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
                 recruiting, general manager, assistant general manager, etc.
               </p>
               {hasPendingApplication ? (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-yellow-800">
                     Your scout application is pending review. You will be notified once a decision has
                     been made.
@@ -915,7 +877,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               ) : (
                 <Link
                   href="/profile/scout-application"
-                  className="inline-block px-6 py-3 bg-black text-white rounded hover:bg-gray-800 font-medium"
+                  className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
                 >
                   Apply
                 </Link>
@@ -929,17 +891,17 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       <div className="mt-8">
         <h2 className="text-lg font-bold text-black mb-4">General Info</h2>
         <div className="space-y-2">
-          <div className="flex items-center justify-between p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
             <div>
               <h3 className="font-bold text-black mb-1">Stripe</h3>
               <p className="text-sm text-gray-600">Update my stripe billing, card info, and more.</p>
             </div>
-            <button className="px-3 py-1.5 text-sm bg-gray-100 text-black rounded hover:bg-gray-200">
+            <button className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
               View
             </button>
           </div>
 
-          <div className="flex items-center justify-between p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
             <div>
               <h3 className="font-bold text-black mb-1">Terms of Service</h3>
               <p className="text-sm text-gray-600">Our Standard on Service</p>
@@ -948,13 +910,13 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               href="/terms-of-service"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 text-sm bg-gray-100 text-black rounded hover:bg-gray-200 inline-block"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               View
             </a>
           </div>
 
-          <div className="flex items-center justify-between p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
             <div>
               <h3 className="font-bold text-black mb-1">Privacy Policy</h3>
               <p className="text-sm text-gray-600">Our Standard on Privacy</p>
@@ -963,29 +925,29 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               href="/privacy-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 text-sm bg-gray-100 text-black rounded hover:bg-gray-200 inline-block"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               View
             </a>
           </div>
 
-          <div className="flex items-center justify-between p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
             <div>
               <h3 className="font-bold text-black mb-1">Account Ownership</h3>
               <p className="text-sm text-gray-600">Delete your account or download your data</p>
             </div>
             <Link
               href="/profile/account-ownership"
-              className="px-3 py-1.5 text-sm bg-gray-100 text-black rounded hover:bg-gray-200 inline-block"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               View
             </Link>
           </div>
 
-          <div className="p-4">
+          <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center justify-end">
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 text-sm border border-red-600 text-red-600 bg-white rounded hover:bg-red-50 font-medium transition-colors"
+              className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full border border-red-500 bg-white text-sm font-semibold text-red-600 hover:bg-red-50"
             >
               Log Out
             </button>
@@ -996,14 +958,14 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       {/* Information Modal */}
       {infoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setInfoModal(null)}>
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="surface-card max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold text-black">
                 {infoModal === 'price' ? 'Price per Evaluation' : 'Turnaround Time'}
               </h3>
               <button
                 onClick={() => setInfoModal(null)}
-                className="text-gray-500 hover:text-black text-2xl leading-none"
+                className="interactive-press text-gray-500 hover:text-black text-2xl leading-none"
                 aria-label="Close"
               >
                 ×
@@ -1026,7 +988,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
             </div>
             <button
               onClick={() => setInfoModal(null)}
-              className="w-full px-6 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium"
+              className="interactive-press w-full px-6 py-3 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
             >
               Got it
             </button>

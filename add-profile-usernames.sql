@@ -15,11 +15,13 @@ WHERE username IS NULL OR username = '';
 
 -- Ensure uniqueness by appending short id when duplicates exist
 WITH duplicates AS (
-  SELECT id, username, row_number() OVER (PARTITION BY username ORDER BY id) AS rn
+  SELECT id,
+         username,
+         row_number() OVER (PARTITION BY username ORDER BY id) AS rn
   FROM profiles
 )
 UPDATE profiles p
-SET username = username || '-' || substring(p.id::text, 1, 4)
+SET username = p.username || '-' || substring(p.id::text, 1, 4)
 FROM duplicates d
 WHERE p.id = d.id AND d.rn > 1;
 

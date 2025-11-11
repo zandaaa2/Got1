@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useId } from 'react'
 
 export default function FeatureRequest() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const inputId = useId()
+  const errorId = `${inputId}-error`
+  const successId = `${inputId}-success`
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,10 +65,14 @@ export default function FeatureRequest() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="hidden md:flex items-center gap-2 relative"
+      className="hidden md:flex items-center gap-3 relative"
     >
-      <div className="relative flex items-center">
+      <div className="relative flex items-center gap-2">
+        <label htmlFor={inputId} className="sr-only">
+          Share a feature request
+        </label>
         <input
+          id={inputId}
           type="text"
           value={message}
           onChange={(e) => {
@@ -77,26 +84,37 @@ export default function FeatureRequest() {
           }}
           placeholder="type feature request"
           maxLength={80}
-          className="px-3 py-1.5 text-sm bg-gray-100 text-black rounded-2xl border-none outline-none w-48 md:w-64 placeholder:text-gray-600 focus:bg-gray-200 transition-colors"
+          className="h-10 w-48 md:w-64 rounded-full border border-gray-200 bg-gray-50 px-4 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-300 focus:bg-white focus:outline-none transition-colors"
           disabled={submitting}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? errorId : success ? successId : undefined}
         />
         {message.trim() && (
           <button
             type="submit"
             disabled={submitting}
-            className="ml-2 px-3 py-1.5 text-sm bg-black text-white rounded-2xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="interactive-press inline-flex items-center justify-center h-10 px-4 rounded-full bg-black text-sm font-medium text-white hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? '...' : success ? '✓' : 'Send'}
           </button>
         )}
       </div>
       {error && (
-        <div className="absolute top-full left-0 mt-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded border border-red-200 whitespace-nowrap z-50">
+        <div
+          id={errorId}
+          role="alert"
+          className="absolute top-full left-0 mt-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded border border-red-200 whitespace-nowrap z-50"
+        >
           {error}
         </div>
       )}
       {success && (
-        <div className="absolute top-full left-0 mt-1 px-3 py-2 text-xs bg-green-100 text-green-800 rounded-lg border border-green-200 whitespace-nowrap z-50 flex items-center gap-2">
+        <div
+          id={successId}
+          role="status"
+          aria-live="polite"
+          className="absolute top-full left-0 mt-1 px-3 py-2 text-xs bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200 whitespace-nowrap z-50 flex items-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>

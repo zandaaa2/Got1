@@ -192,7 +192,7 @@ export default async function TeamPage({ params }: PageParams) {
                   width={128}
                   height={128}
                   className="object-contain"
-                  unoptimized
+                 
                 />
               ) : (
                 <span className="text-3xl font-semibold text-gray-600">
