@@ -4,6 +4,8 @@ import Sidebar from '@/components/layout/Sidebar'
 import ProfileContent from '@/components/profile/ProfileContent'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import Link from 'next/link'
+import { getGradientForId } from '@/lib/gradients'
+import { isMeaningfulAvatar } from '@/lib/avatar'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
@@ -96,23 +98,34 @@ export default async function ProfilePage() {
     .eq('user_id', session.user.id)
     .single()
 
+  const meaningfulAvatarUrl = isMeaningfulAvatar(userProfile?.avatar_url)
+    ? userProfile?.avatar_url
+    : null
+  const headerInitialSource =
+    profile.full_name?.trim()?.charAt(0) ||
+    profile.username?.charAt(0) ||
+    session.user.email?.charAt(0) ||
+    'G'
+  const headerInitial = headerInitialSource.toUpperCase()
+  const headerGradient = getGradientForId(profile.id || profile.username || session.user.id)
+
   const headerContent = (
     <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-      {userProfile?.avatar_url ? (
-        <div className="w-10 h-10 rounded-full border-2 border-black p-0.5">
+      <div className="w-10 h-10 rounded-full border-2 border-black p-0.5 overflow-hidden">
+        {meaningfulAvatarUrl ? (
           <img
-            src={userProfile.avatar_url}
+            src={meaningfulAvatarUrl}
             alt="Profile"
             className="w-full h-full rounded-full object-cover"
           />
-        </div>
-      ) : (
-        <div className="w-10 h-10 rounded-full border-2 border-black p-0.5 bg-gray-300 flex items-center justify-center">
-          <span className="text-gray-600 font-semibold">
-            {profile.role === 'player' ? 'P' : 'S'}
-          </span>
-        </div>
-      )}
+        ) : (
+          <div
+            className={`w-full h-full rounded-full flex items-center justify-center text-white font-semibold ${headerGradient}`}
+          >
+            {headerInitial}
+          </div>
+        )}
+      </div>
     </Link>
   )
 
