@@ -56,6 +56,15 @@ html, body {
   }
 }
 
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.2s ease-out forwards;
 }
@@ -68,10 +77,15 @@ html, body {
   animation: scale-in 0.25s ease-out forwards;
 }
 
+.animate-scroll {
+  animation: scroll 20s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-fade-in-up,
-  .animate-scale-in {
+  .animate-scale-in,
+  .animate-scroll {
     animation: none !important;
   }
 }

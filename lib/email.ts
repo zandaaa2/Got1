@@ -577,6 +577,52 @@ ${EMAIL_HEADER}
   await sendEmail(adminEmail, `New Scout Application from ${profile.full_name}`, html)
 }
 
+export async function sendCollegeContactEmail({
+  name,
+  email,
+  college,
+  position,
+  message,
+}: {
+  name: string
+  email: string
+  college?: string
+  position?: string
+  message: string
+}): Promise<void> {
+  const collegeInfo = college ? `<p style="margin: 8px 0;"><strong>College/University:</strong> ${college}</p>` : ''
+  const positionInfo = position ? `<p style="margin: 8px 0;"><strong>Position:</strong> ${position}</p>` : ''
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
+      <h2 style="color: #000; margin-bottom: 20px;">New College Administrator Inquiry</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 16px;">
+        A college administrator has reached out through the contact form.
+      </p>
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p>
+        <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${email}" style="color: #000;">${email}</a></p>
+        ${collegeInfo}
+        ${positionInfo}
+      </div>
+      <div style="margin-bottom: 20px;">
+        <h3 style="color: #000; margin-bottom: 10px;">Message</h3>
+        <p style="color: #333; line-height: 1.6; white-space: pre-line;">${message}</p>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Please respond to this inquiry at your earliest convenience.
+      </p>
+    </div>
+  `
+
+  await sendEmail(
+    'zander@got1.app',
+    'College Administrator Inquiry - Got1',
+    html
+  )
+}
+
 export async function sendPolicyUpdateEmail(to: string, options?: { policies?: PolicyKey[]; note?: string }): Promise<void> {
   const selectedKeys: PolicyKey[] = (options?.policies && options.policies.length)
     ? options.policies.filter((key): key is PolicyKey => key in POLICIES_METADATA)
