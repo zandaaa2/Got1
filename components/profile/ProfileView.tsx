@@ -612,15 +612,15 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         {/* More Info Modal */}
         {showMoreInfo && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in" 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in p-4" 
             onClick={() => setShowMoreInfo(false)}
           >
             <div 
-              className="bg-white rounded-lg p-6 max-w-2xl mx-4 max-h-[90vh] overflow-y-auto animate-scale-in" 
+              className="surface-card max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in p-4 md:p-6" 
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-2xl font-bold text-black">
+              <div className="flex items-start justify-between mb-6">
+                <h3 className="text-xl md:text-2xl font-bold text-black">
                   More Information
                 </h3>
                 <button
@@ -632,11 +632,11 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </button>
               </div>
               
-              <div className='space-y-6'>
+              <div className='space-y-5 md:space-y-6'>
                 {profile.bio && (
                   <div>
-                    <h4 className="text-lg font-semibold text-black mb-2">Bio</h4>
-                    <p className="text-black leading-relaxed whitespace-pre-wrap">
+                    <h4 className="text-base md:text-lg font-semibold text-black mb-2">Bio</h4>
+                    <p className="text-sm md:text-base text-black leading-relaxed whitespace-pre-wrap">
                       {profile.bio}
                     </p>
                   </div>
@@ -644,12 +644,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 
                 {profile.hudl_link && (
                   <div>
-                    <h4 className="text-lg font-semibold text-black mb-2">Hudl Profile</h4>
+                    <h4 className="text-base md:text-lg font-semibold text-black mb-2">Hudl Profile</h4>
                     <a
                       href={profile.hudl_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline break-words"
+                      className="text-sm md:text-base text-blue-600 hover:underline break-words"
                     >
                       {profile.hudl_link.replace(/^https?:\/\//, '')}
                     </a>
@@ -658,12 +658,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 
                 {profile.social_link && (
                   <div>
-                    <h4 className="text-lg font-semibold text-black mb-2">Social</h4>
+                    <h4 className="text-base md:text-lg font-semibold text-black mb-2">Social</h4>
                     <a
                       href={profile.social_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline break-words"
+                      className="text-sm md:text-base text-blue-600 hover:underline break-words"
                     >
                       {profile.social_link.replace(/^https?:\/\//, '')}
                     </a>
@@ -671,14 +671,14 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 )}
                 
                 {(!profile.bio && !profile.hudl_link && !profile.social_link) && (
-                  <p className="text-gray-500">No additional information available.</p>
+                  <p className="text-sm md:text-base text-gray-500">No additional information available.</p>
                 )}
               </div>
               
               <div className="mt-6">
                 <button
                   onClick={() => setShowMoreInfo(false)}
-                  className="interactive-press w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 font-medium transition-colors"
+                  className="interactive-press w-full px-6 py-3 border border-gray-300 bg-white text-black rounded-full hover:bg-gray-50 font-medium text-sm md:text-base transition-colors"
                 >
                   Close
                 </button>
@@ -875,15 +875,15 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       {/* More Info Modal */}
       {showMoreInfo && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in" 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in p-4" 
           onClick={() => setShowMoreInfo(false)}
         >
           <div 
-            className="bg-white rounded-lg p-6 max-w-2xl mx-4 max-h-[90vh] overflow-y-auto animate-scale-in" 
+            className="surface-card max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in p-4 md:p-6" 
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-2xl font-bold text-black">
+            <div className="flex items-start justify-between mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-black">
                 More Information
               </h3>
               <button
@@ -895,11 +895,11 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </button>
             </div>
             
-            <div className='space-y-6'>
+            <div className='space-y-5 md:space-y-6'>
               {profile.work_history && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Work History</h4>
-                  <p className="text-black leading-relaxed whitespace-pre-wrap">
+                  <h4 className="text-base md:text-lg font-semibold text-black mb-2">Work History</h4>
+                  <p className="text-sm md:text-base text-black leading-relaxed whitespace-pre-wrap">
                     {profile.work_history}
                   </p>
                 </div>
@@ -907,8 +907,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               
               {profile.additional_info && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Additional Information</h4>
-                  <p className="text-black leading-relaxed whitespace-pre-wrap">
+                  <h4 className="text-base md:text-lg font-semibold text-black mb-2">Additional Information</h4>
+                  <p className="text-sm md:text-base text-black leading-relaxed whitespace-pre-wrap">
                     {profile.additional_info}
                   </p>
                 </div>
@@ -916,8 +916,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               
               {profile.bio && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Bio</h4>
-                  <p className="text-black leading-relaxed whitespace-pre-wrap">
+                  <h4 className="text-base md:text-lg font-semibold text-black mb-2">Bio</h4>
+                  <p className="text-sm md:text-base text-black leading-relaxed whitespace-pre-wrap">
                     {profile.bio}
                   </p>
                 </div>
@@ -925,12 +925,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               
               {profile.social_link && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Social</h4>
+                  <h4 className="text-base md:text-lg font-semibold text-black mb-2">Social</h4>
                   <a
                     href={profile.social_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline break-words"
+                    className="text-sm md:text-base text-blue-600 hover:underline break-words"
                   >
                     {profile.social_link.replace(/^https?:\/\//, '')}
                   </a>
@@ -939,24 +939,24 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               
               {profile.price_per_eval && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Price per Evaluation</h4>
-                  <p className="text-black">${profile.price_per_eval}</p>
+                  <h4 className="text-base md:text-lg font-semibold text-black mb-2">Price per Evaluation</h4>
+                  <p className="text-sm md:text-base text-black font-medium">${profile.price_per_eval}</p>
                 </div>
               )}
               
               {profile.turnaround_time && (
                 <div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Turnaround Time</h4>
-                  <p className="text-black">{profile.turnaround_time}</p>
+                  <h4 className="text-base md:text-lg font-semibold text-black mb-2">Turnaround Time</h4>
+                  <p className="text-sm md:text-base text-black font-medium">{profile.turnaround_time}</p>
                 </div>
               )}
               
               {(!profile.work_history && !profile.additional_info && !profile.bio && !profile.price_per_eval && !profile.turnaround_time && !profile.social_link) && (
-                <p className="text-gray-500">No additional information available.</p>
+                <p className="text-sm md:text-base text-gray-500">No additional information available.</p>
               )}
             </div>
             
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
               {!isOwnProfile && (
                 <button
                   onClick={() => {
@@ -964,14 +964,14 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                     handleRequestEvaluation()
                   }}
                   disabled={requesting}
-                  className="interactive-press flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-lg transition-colors disabled:active:scale-100"
+                  className="interactive-press flex-1 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm md:text-base transition-colors disabled:active:scale-100"
                 >
                   {requesting ? 'Processing...' : `Purchase Evaluation - $${profile.price_per_eval || '99'}`}
                 </button>
               )}
               <button
                 onClick={() => setShowMoreInfo(false)}
-                className={`interactive-press px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 font-medium ${!isOwnProfile ? '' : 'w-full'}`}
+                className={`interactive-press px-6 py-3 border border-gray-300 bg-white text-black rounded-full hover:bg-gray-50 font-medium text-sm md:text-base transition-colors ${!isOwnProfile ? 'flex-1 sm:flex-initial' : 'w-full'}`}
               >
                 Close
               </button>
