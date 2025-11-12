@@ -46,9 +46,14 @@ export async function POST(request: Request) {
     console.warn('Policy notify endpoint received invalid JSON body, defaulting to empty payload.')
   }
 
-  const selectedKeys: PolicyKey[] = Array.isArray(body.policies) && body.policies.length
-    ? body.policies.filter((key): key is PolicyKey => key in POLICIES_METADATA)
-    : (Object.keys(POLICIES_METADATA) as PolicyKey[])
+  const selectedKeys: PolicyKey[] = (() => {
+    if (Array.isArray(body.policies) && body.policies.length) {
+      // body.policies is already string[] from the parsing above
+      const stringKeys = body.policies as string[]
+      return stringKeys.filter((key: string): key is PolicyKey => key in POLICIES_METADATA)
+    }
+    return Object.keys(POLICIES_METADATA) as PolicyKey[]
+  })()
 
   if (!selectedKeys.length) {
     return NextResponse.json({ error: 'No valid policy keys supplied.' }, { status: 400 })
