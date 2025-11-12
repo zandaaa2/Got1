@@ -377,7 +377,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
         {/* Player Profile Section */}
         <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="flex flex-col items-center md:items-start gap-2 flex-shrink-0 mx-auto md:mx-0">
+          <div className="flex flex-col items-start gap-2 flex-shrink-0">
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
               {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
                 <Image
