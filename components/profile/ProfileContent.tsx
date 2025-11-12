@@ -281,20 +281,20 @@ function MoneyDashboard({ profile }: { profile: any }) {
   console.log('📧 MoneyDashboard - Account fully enabled! Showing dashboard. Status:', accountStatus)
 
   return (
-    <div className="surface-card mb-8 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-black">Payouts and Turnaround Time</h3>
-        <div className="flex gap-2">
+    <div className="surface-card mb-8 p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h3 className="text-lg md:text-xl font-bold text-black">Payouts and Turnaround Time</h3>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={() => setIsEditingPricing(!isEditingPricing)}
-            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 w-full sm:w-auto"
           >
             Edit
           </button>
           <button
             onClick={handleGetAccountLink}
             disabled={loading}
-            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
           >
             {loading ? 'Loading...' : 'View Dashboard'}
           </button>
@@ -313,13 +313,13 @@ function MoneyDashboard({ profile }: { profile: any }) {
         </div>
       )}
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="surface-card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          <div className="surface-card p-3 md:p-4">
             <div className="flex items-center gap-2 mb-1">
-              <p className="text-sm text-gray-600">Price per Evaluation</p>
+              <p className="text-xs md:text-sm text-gray-600">Price per Evaluation</p>
               <button
                 onClick={() => setInfoModal('price')}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
                 title="More information"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -332,19 +332,19 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 type="number"
                 value={pricePerEval}
                 onChange={(e) => setPricePerEval(e.target.value)}
-                className="text-2xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
+                className="text-xl md:text-2xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
                 placeholder="99"
               />
             ) : (
-              <p className="text-2xl font-bold text-black">${profile.price_per_eval || 99}</p>
+              <p className="text-xl md:text-2xl font-bold text-black">${profile.price_per_eval || 99}</p>
             )}
           </div>
-          <div className="surface-card p-4">
+          <div className="surface-card p-3 md:p-4">
             <div className="flex items-center gap-2 mb-1">
-              <p className="text-sm text-gray-600">Turnaround Time</p>
+              <p className="text-xs md:text-sm text-gray-600">Turnaround Time</p>
               <button
                 onClick={() => setInfoModal('turnaround')}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
                 title="More information"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -357,20 +357,20 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 type="text"
                 value={turnaroundTime}
                 onChange={(e) => setTurnaroundTime(e.target.value)}
-                className="text-2xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
+                className="text-xl md:text-2xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
                 placeholder="72 hrs"
               />
             ) : (
-              <p className="text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+              <p className="text-xl md:text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
             )}
           </div>
         </div>
         {isEditingPricing && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleSavePricing}
               disabled={saving}
-              className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -381,7 +381,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 setTurnaroundTime(profile.turnaround_time || '72 hrs')
                 setSaveMessage(null)
               }}
-              className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
             >
               Cancel
             </button>
