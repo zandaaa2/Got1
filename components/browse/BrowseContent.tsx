@@ -358,13 +358,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                     </span>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-black text-base md:text-lg truncate">{team.name}</h3>
-                  <p className="text-xs md:text-sm text-gray-600 truncate">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <h3 className="font-bold text-black text-base md:text-lg truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{team.name}</h3>
+                  <p className="text-xs md:text-sm text-gray-600 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
                     {team.conference ? team.conference : 'Conference not specified'}
                     {team.division ? ` · ${team.division}` : ''}
                   </p>
-                  <p className="text-xs md:text-sm text-gray-500">
+                  <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
                     {team.scoutCount} scout{team.scoutCount === 1 ? '' : 's'} on Got1
                   </p>
                 </div>
@@ -426,11 +426,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-black text-base md:text-lg truncate flex items-center gap-2">
-                        {team.name}
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <h3 className="font-bold text-black text-base md:text-lg truncate flex items-center gap-2 min-w-0">
+                        <span className="truncate overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0">
+                          {team.name}
+                        </span>
                       </h3>
-                      <p className="text-black text-xs md:text-sm truncate">
+                      <p className="text-black text-xs md:text-sm truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
                         {team.conference || 'Conference not specified'}
                         {team.division ? ` · ${team.division}` : ''}
                       </p>
@@ -487,10 +489,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   )
                 })()}
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 min-w-0">
                   <span
-                    className="truncate flex-1 min-w-0"
+                    className="truncate flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
                     title={profile.full_name || undefined}
                   >
                     {profile.full_name || 'Unknown'}
@@ -503,7 +505,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   )}
                 </h3>
                 <p
-                  className="text-black text-xs md:text-sm truncate"
+                  className="text-black text-xs md:text-sm truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                   title={
                     profile.role === 'scout'
                       ? profile.position && profile.organization

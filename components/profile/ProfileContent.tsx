@@ -1136,61 +1136,61 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       {/* General Info Section */}
       <div className="mt-8">
         <h2 className="text-lg font-bold text-black mb-4">General Info</h2>
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div>
-              <h3 className="font-bold text-black mb-1">Stripe</h3>
-              <p className="text-sm text-gray-600">Update my stripe billing, card info, and more.</p>
+        <div className="space-y-3 md:space-y-2">
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Stripe</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">Update my stripe billing, card info, and more.</p>
             </div>
-            <button className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0">
               View
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div>
-              <h3 className="font-bold text-black mb-1">Terms of Service</h3>
-              <p className="text-sm text-gray-600">Our Standard on Service</p>
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Terms of Service</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">Our Standard on Service</p>
             </div>
             <a
               href="/terms-of-service"
               target="_blank"
               rel="noopener noreferrer"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
             >
               View
             </a>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div>
-              <h3 className="font-bold text-black mb-1">Privacy Policy</h3>
-              <p className="text-sm text-gray-600">Our Standard on Privacy</p>
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Privacy Policy</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">Our Standard on Privacy</p>
             </div>
             <a
               href="/privacy-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
             >
               View
             </a>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div>
-              <h3 className="font-bold text-black mb-1">Account Ownership</h3>
-              <p className="text-sm text-gray-600">Delete your account or download your data</p>
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Account Ownership</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">Delete your account or download your data</p>
             </div>
             <Link
               href="/profile/account-ownership"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
             >
               View
             </Link>
           </div>
 
-          <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center justify-end">
+          <div className="rounded-2xl bg-white p-4 md:p-4 shadow-sm flex items-center justify-end">
             <button
               onClick={handleLogout}
               className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full border border-red-500 bg-white text-sm font-semibold text-red-600 hover:bg-red-50"
