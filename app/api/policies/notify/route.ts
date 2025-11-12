@@ -13,7 +13,7 @@ interface RequestBody {
 const DEFAULT_PER_PAGE = 500
 
 function isValidPolicyKey(key: string): key is PolicyKey {
-  return key in POLICIES_METADATA
+  return (POLICIES_METADATA as Record<string, unknown>)[key] !== undefined
 }
 
 function validateAuthorization(request: Request) {
