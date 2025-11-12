@@ -377,39 +377,55 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
         {/* Player Profile Section */}
         <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-            {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
-              <Image
-                src={profileAvatarUrl}
-                alt={profile.full_name || 'Player'}
-                width={96}
-                height={96}
-                className="w-full h-full object-cover"
-                onError={() => {
-                  setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
-                }}
-                priority
-              />
-            ) : (
-            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
-                <span className="text-white text-3xl font-semibold">
-                  {profile.full_name?.charAt(0).toUpperCase() || '?'}
-                </span>
-              </div>
-            )}
+          <div className="flex flex-col items-center md:items-start gap-2 flex-shrink-0 mx-auto md:mx-0">
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
+              {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
+                <Image
+                  src={profileAvatarUrl}
+                  alt={profile.full_name || 'Player'}
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                  onError={() => {
+                    setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                  }}
+                  priority
+                />
+              ) : (
+                <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
+                  <span className="text-white text-3xl font-semibold">
+                    {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex-1 w-full text-left">
-            <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 flex items-center justify-center md:justify-start gap-2 break-words text-center md:text-left">
-              {profile.full_name || 'Unknown Player'}
+            <div className="flex flex-wrap items-center gap-1 mb-1">
+              <h1 className="text-xl md:text-2xl font-bold text-black break-words">
+                {profile.full_name || 'Unknown Player'}
+              </h1>
               {isTestAccount(profile.full_name) && (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+                <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0 whitespace-nowrap">
                   test account
                 </span>
               )}
-            </h1>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-1">
+              {profile.username && <span className="text-gray-500">@{profile.username}</span>}
+              {!isOwnProfile && <span className="text-gray-400">•</span>}
+              {!isOwnProfile && (
+                <button
+                  onClick={() => setShowMoreInfo(true)}
+                  className="interactive-press text-blue-600 hover:text-blue-800 underline font-medium"
+                >
+                  Details
+                </button>
+              )}
+            </div>
             {profileLinkElement}
             {(profile.position || profile.school) && (
-              <p className="text-black mb-1">
+              <p className="text-black mb-2">
                 {profile.position && profile.school
                   ? `${profile.position} at ${profile.school}`
                   : profile.position
@@ -425,7 +441,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 href={profile.hudl_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline mb-2 block text-center md:text-left"
+                className="text-blue-600 hover:underline mb-2 block"
               >
                 {profile.hudl_link.replace(/^https?:\/\//, '')}
               </a>
@@ -607,6 +623,84 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </div>
           )}
         </div>
+
+        {/* More Info Modal */}
+        {showMoreInfo && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in" 
+            onClick={() => setShowMoreInfo(false)}
+          >
+            <div 
+              className="bg-white rounded-lg p-6 max-w-2xl mx-4 max-h-[90vh] overflow-y-auto animate-scale-in" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-2xl font-bold text-black">
+                  More Information
+                </h3>
+                <button
+                  onClick={() => setShowMoreInfo(false)}
+                  className="interactive-press text-gray-500 hover:text-black text-2xl leading-none"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className='space-y-6'>
+                {profile.bio && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-black mb-2">Bio</h4>
+                    <p className="text-black leading-relaxed whitespace-pre-wrap">
+                      {profile.bio}
+                    </p>
+                  </div>
+                )}
+                
+                {profile.hudl_link && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-black mb-2">Hudl Profile</h4>
+                    <a
+                      href={profile.hudl_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-words"
+                    >
+                      {profile.hudl_link.replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                )}
+                
+                {profile.social_link && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-black mb-2">Social</h4>
+                    <a
+                      href={profile.social_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-words"
+                    >
+                      {profile.social_link.replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                )}
+                
+                {(!profile.bio && !profile.hudl_link && !profile.social_link) && (
+                  <p className="text-gray-500">No additional information available.</p>
+                )}
+              </div>
+              
+              <div className="mt-6">
+                <button
+                  onClick={() => setShowMoreInfo(false)}
+                  className="interactive-press w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
