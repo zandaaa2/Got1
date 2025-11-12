@@ -436,21 +436,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 {profile.school && profile.graduation_year && ` (${profile.graduation_year})`}
               </p>
             )}
-            {profile.hudl_link && (
-              <a
-                href={profile.hudl_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline mb-2 block"
-              >
-                {profile.hudl_link.replace(/^https?:\/\//, '')}
-              </a>
-            )}
-            {profile.bio && (
-              <p className="text-black mt-4 leading-relaxed whitespace-pre-wrap">
-                {profile.bio}
-              </p>
-            )}
           </div>
           {!isOwnProfile && (
             <div className="flex items-center gap-2 flex-shrink-0">
