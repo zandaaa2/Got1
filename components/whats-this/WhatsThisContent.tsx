@@ -13,9 +13,10 @@ interface WhatsThisContentProps {
 interface FAQItemProps {
   question: string
   answer: string
+  icon?: React.ReactNode
 }
 
-function FAQItem({ question, answer }: FAQItemProps) {
+function FAQItem({ question, answer, icon }: FAQItemProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -24,7 +25,10 @@ function FAQItem({ question, answer }: FAQItemProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full py-4 text-left flex items-center justify-between hover:text-gray-700 transition-colors"
       >
-        <span className="font-medium text-black pr-4">{question}</span>
+        <div className="flex items-center gap-2 pr-4">
+          {icon && <span className="flex-shrink-0">{icon}</span>}
+          <span className="font-medium text-black">{question}</span>
+        </div>
         <svg
           className={`w-5 h-5 text-gray-500 flex-shrink-0 transition-transform ${
             isOpen ? 'rotate-180' : ''
@@ -89,6 +93,30 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
             *Must be 16 years or older
           </p>
         </div>
+      </div>
+
+      {/* Compliance Badge Pill */}
+      <div className="mb-6 md:mb-8 flex flex-col items-center gap-2">
+        <button
+          onClick={() => {
+            const collegeSection = document.getElementById('college-section')
+            if (collegeSection) {
+              collegeSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          }}
+          className="group inline-flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 hover:border-blue-300 rounded-full transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-100"
+        >
+          <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-blue-900">University Compliance Certified</span>
+            <svg className="w-4 h-4 text-blue-600 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </button>
+        <span className="text-xs font-medium text-blue-600">Click to learn more</span>
       </div>
 
       {/* Main Content Grid */}
@@ -261,13 +289,11 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
       </div>
 
       {/* College Section */}
-      <div className="mb-8 md:mb-12">
+      <div id="college-section" className="mb-8 md:mb-12">
         <h2 className="text-lg md:text-xl font-bold text-black mb-4 md:mb-6 flex items-center gap-2">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
+          <svg className="w-5 h-5 md:w-6 md:h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
           For Colleges
         </h2>
         <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 rounded-xl p-6 md:p-8 border-2 border-blue-300 shadow-lg">
@@ -282,7 +308,7 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
           <div className="mb-8">
             <button
               onClick={() => setIsContactModalOpen(true)}
-              className="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg transform hover:scale-105 text-sm md:text-base"
+              className="interactive-press inline-flex items-center justify-center px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm md:text-base"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -303,6 +329,15 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
             <FAQItem
               question="Conflict of Interest"
               answer="This is an arm of the university. They still stay employed with the university earning you NIL Money. Our platform is designed to operate as an extension of your athletic department, ensuring that all NIL revenue generated through evaluations flows back to support your programs. Staff members remain university employees, and all activities are conducted under your oversight and approval, maintaining clear separation from any potential conflicts while maximizing NIL opportunities for your institution."
+            />
+            <FAQItem
+              question="University Compliance Certified"
+              answer="Got1 is certified for university partnerships and designed with NCAA compliance at its core. Our platform undergoes regular compliance reviews and works directly with university compliance offices to ensure all NIL activities meet institutional and regulatory standards. We maintain transparent reporting, protect recruiting calendars, and operate under full institutional oversight."
+              icon={
+                <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+              }
             />
           </div>
         </div>
