@@ -41,7 +41,9 @@ export async function POST(request: Request) {
   }
 
   const selectedKeys: PolicyKey[] = Array.isArray(body.policies) && body.policies.length
-    ? body.policies.filter((key): key is PolicyKey => key in POLICIES_METADATA)
+    ? body.policies
+        .filter((key): key is string => typeof key === 'string')
+        .filter((key): key is PolicyKey => key in POLICIES_METADATA)
     : (Object.keys(POLICIES_METADATA) as PolicyKey[])
 
   if (!selectedKeys.length) {
