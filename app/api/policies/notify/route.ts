@@ -35,10 +35,10 @@ export async function POST(request: Request) {
 
   let body: RequestBody = {}
   try {
-    const parsed = await request.json()
+    const parsed: any = await request.json()
     body = {
       policies: Array.isArray(parsed?.policies) 
-        ? parsed.policies.filter((p): p is string => typeof p === 'string')
+        ? (parsed.policies as unknown[]).filter((p: unknown): p is string => typeof p === 'string')
         : undefined,
       note: typeof parsed?.note === 'string' ? parsed.note : undefined,
     }
