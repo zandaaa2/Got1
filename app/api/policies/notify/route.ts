@@ -35,15 +35,19 @@ export async function POST(request: Request) {
 
   let body: RequestBody = {}
   try {
-    body = (await request.json()) || {}
+    const parsed = await request.json()
+    body = {
+      policies: Array.isArray(parsed?.policies) 
+        ? parsed.policies.filter((p): p is string => typeof p === 'string')
+        : undefined,
+      note: typeof parsed?.note === 'string' ? parsed.note : undefined,
+    }
   } catch (error) {
     console.warn('Policy notify endpoint received invalid JSON body, defaulting to empty payload.')
   }
 
   const selectedKeys: PolicyKey[] = Array.isArray(body.policies) && body.policies.length
-    ? body.policies
-        .filter((key): key is string => typeof key === 'string')
-        .filter((key): key is PolicyKey => key in POLICIES_METADATA)
+    ? body.policies.filter((key): key is PolicyKey => key in POLICIES_METADATA)
     : (Object.keys(POLICIES_METADATA) as PolicyKey[])
 
   if (!selectedKeys.length) {
