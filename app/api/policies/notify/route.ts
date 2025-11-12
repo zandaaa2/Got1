@@ -12,6 +12,10 @@ interface RequestBody {
 
 const DEFAULT_PER_PAGE = 500
 
+function isValidPolicyKey(key: string): key is PolicyKey {
+  return key in POLICIES_METADATA
+}
+
 function validateAuthorization(request: Request) {
   const expectedSecret = process.env.POLICY_NOTIFY_SECRET
   if (!expectedSecret) {
@@ -49,8 +53,7 @@ export async function POST(request: Request) {
   const selectedKeys: PolicyKey[] = (() => {
     if (Array.isArray(body.policies) && body.policies.length) {
       // body.policies is already string[] from the parsing above
-      const stringKeys = body.policies as string[]
-      return stringKeys.filter((key: string): key is PolicyKey => key in POLICIES_METADATA)
+      return body.policies.filter(isValidPolicyKey)
     }
     return Object.keys(POLICIES_METADATA) as PolicyKey[]
   })()
