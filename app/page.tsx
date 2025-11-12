@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import PageContent from '@/components/layout/PageContent'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -68,6 +69,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-white flex">
+      <AuthRefreshHandler />
       <Sidebar activePage="browse" />
       <PageContent header={headerContent}>
         <BrowseContent session={session} />

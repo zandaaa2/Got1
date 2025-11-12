@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import ProfileContent from '@/components/profile/ProfileContent'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
@@ -109,6 +110,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white flex">
+      <AuthRefreshHandler />
       <Sidebar />
       <DynamicLayout header={headerContent}>
         <ProfileContent profile={profile} hasPendingApplication={!!scoutApplication} />
