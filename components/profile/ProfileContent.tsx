@@ -284,17 +284,17 @@ function MoneyDashboard({ profile }: { profile: any }) {
     <div className="surface-card mb-8 p-4 md:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h3 className="text-lg md:text-xl font-bold text-black">Payouts and Turnaround Time</h3>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="hidden sm:flex flex-row gap-2">
           <button
             onClick={() => setIsEditingPricing(!isEditingPricing)}
-            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 w-full sm:w-auto"
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
             Edit
           </button>
           <button
             onClick={handleGetAccountLink}
             disabled={loading}
-            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Loading...' : 'View Dashboard'}
           </button>
@@ -364,6 +364,22 @@ function MoneyDashboard({ profile }: { profile: any }) {
               <p className="text-xl md:text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
             )}
           </div>
+        </div>
+        {/* Mobile buttons - shown below cards on mobile, hidden on desktop */}
+        <div className="flex flex-col gap-2 sm:hidden">
+          <button
+            onClick={() => setIsEditingPricing(!isEditingPricing)}
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 w-full"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleGetAccountLink}
+            disabled={loading}
+            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+          >
+            {loading ? 'Loading...' : 'View Dashboard'}
+          </button>
         </div>
         {isEditingPricing && (
           <div className="flex flex-col sm:flex-row gap-2">
