@@ -489,12 +489,9 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   )
                 })()}
               </div>
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 min-w-0">
-                  <span
-                    className="truncate flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-                    title={profile.full_name || undefined}
-                  >
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 flex-wrap">
+                  <span className="break-words" title={profile.full_name || undefined}>
                     {profile.full_name || 'Unknown'}
                   </span>
                   {profile.role === 'scout' && <VerificationBadge className="flex-shrink-0" />}
@@ -505,7 +502,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                   )}
                 </h3>
                 <p
-                  className="text-black text-xs md:text-sm truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                  className="text-black text-xs md:text-sm truncate"
                   title={
                     profile.role === 'scout'
                       ? profile.position && profile.organization
