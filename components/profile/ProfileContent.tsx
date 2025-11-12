@@ -211,11 +211,13 @@ function MoneyDashboard({ profile }: { profile: any }) {
       if (data.success) {
         if (data.dashboardUrl) {
           console.log('📧 Opening dashboard:', data.dashboardUrl)
-          window.open(data.dashboardUrl, '_blank')
+          // Use window.location.href for mobile compatibility (popup blockers block window.open)
+          window.location.href = data.dashboardUrl
         } else if (data.onboardingUrl) {
           // If no dashboard URL but onboarding URL exists, account might need more setup
           console.log('📧 No dashboard URL, but onboarding URL available. Opening onboarding...')
-          window.open(data.onboardingUrl, '_blank')
+          // Use window.location.href for mobile compatibility
+          window.location.href = data.onboardingUrl
         } else {
           throw new Error('Your Stripe account may need additional verification. Please try again in a few minutes or contact support.')
         }
