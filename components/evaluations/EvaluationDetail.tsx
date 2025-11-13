@@ -8,6 +8,7 @@ import Link from 'next/link'
 import HeaderMenu from '@/components/shared/HeaderMenu'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import ShareButton from './ShareButton'
 
 interface EvaluationDetailProps {
   evaluation: any
@@ -208,25 +209,28 @@ export default function EvaluationDetail({
     
     return (
       <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => router.push('/evaluations')}
-          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-        >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Header with back button and share button */}
+        <div className="mb-4 md:mb-6 flex items-center justify-between">
+          <button
+            onClick={() => router.push('/evaluations')}
+            className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          <span className="md:hidden">Back</span>
-        </button>
+            <svg
+              className="w-5 h-5 md:w-6 md:h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span className="md:hidden">Back</span>
+          </button>
+        </div>
 
         {/* Scout Profile Card - Show for requested status */}
         {evaluation.status === 'requested' && (
@@ -421,6 +425,18 @@ export default function EvaluationDetail({
                 </div>
               )}
             </div>
+            {/* Share button - bottom left underneath evaluation (available for all evaluations) */}
+            <div className="mt-6 flex items-start">
+              <ShareButton 
+                evaluationId={evaluation.id} 
+                evaluation={{
+                  id: evaluation.id,
+                  share_token: evaluation.share_token || null,
+                  status: evaluation.status,
+                  scout: evaluation.scout,
+                }}
+              />
+            </div>
           </div>
         ) : null}
       </div>
@@ -587,25 +603,28 @@ export default function EvaluationDetail({
     
     return (
       <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => router.push('/my-evals')}
-          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-        >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Header with back button and share button */}
+        <div className="mb-4 md:mb-6 flex items-center justify-between">
+          <button
+            onClick={() => router.push('/my-evals')}
+            className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          <span className="md:hidden">Back</span>
-        </button>
+            <svg
+              className="w-5 h-5 md:w-6 md:h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span className="md:hidden">Back</span>
+          </button>
+        </div>
 
         {/* Scout Profile Section - matches ProfileView exactly */}
         <Link 
@@ -709,6 +728,18 @@ export default function EvaluationDetail({
                 </p>
               </div>
             )}
+            {/* Share button - bottom left underneath evaluation (available for all evaluations) */}
+            <div className="pl-0 md:pl-20 mt-6 flex items-start">
+              <ShareButton 
+                evaluationId={evaluation.id} 
+                evaluation={{
+                  id: evaluation.id,
+                  share_token: evaluation.share_token || null,
+                  status: evaluation.status,
+                  scout: scout || evaluation.scout,
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import ShareButton from '@/components/evaluations/ShareButton'
 
 interface MyEvalsContentProps {
   role: 'player' | 'scout'
@@ -24,6 +25,7 @@ interface Evaluation {
   scout_payout?: number | null
   completed_at?: string | null
   created_at: string
+  share_token?: string | null
   scout?: {
     full_name: string | null
     avatar_url: string | null
@@ -62,30 +64,71 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
     try {
       setLoading(true)
       
-      // First, get the evaluations
-      let query = supabase
-        .from('evaluations')
-        .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id')
+      // First, get the evaluations (including share_token for sharing if column exists)
+      let evaluationsData
+      let evaluationsError
+      
+      try {
+        // Try with share_token first
+        let query = supabase
+          .from('evaluations')
+          .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id, share_token')
 
-      if (role === 'scout') {
-        query = query.eq('scout_id', userId)
-      } else {
-        query = query.eq('player_id', userId)
+        if (role === 'scout') {
+          query = query.eq('scout_id', userId)
+        } else {
+          query = query.eq('player_id', userId)
+        }
+
+        // Filter by status
+        if (activeTab === 'in_progress') {
+          // Include all non-completed statuses: requested, confirmed, in_progress
+          query = query.in('status', ['requested', 'confirmed', 'in_progress'])
+        } else {
+          query = query.eq('status', 'completed')
+        }
+
+        query = query.order('created_at', { ascending: false })
+
+        const result = await query
+        evaluationsData = result.data
+        evaluationsError = result.error
+
+        // If error is due to share_token column not existing, try without it
+        if (evaluationsError && (evaluationsError.code === '42703' || evaluationsError.message?.includes('column "share_token" does not exist'))) {
+          console.warn('share_token column not found, fetching without it')
+          let queryWithoutToken = supabase
+            .from('evaluations')
+            .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id')
+
+          if (role === 'scout') {
+            queryWithoutToken = queryWithoutToken.eq('scout_id', userId)
+          } else {
+            queryWithoutToken = queryWithoutToken.eq('player_id', userId)
+          }
+
+          // Filter by status
+          if (activeTab === 'in_progress') {
+            queryWithoutToken = queryWithoutToken.in('status', ['requested', 'confirmed', 'in_progress'])
+          } else {
+            queryWithoutToken = queryWithoutToken.eq('status', 'completed')
+          }
+
+          const resultWithoutToken = await queryWithoutToken.order('created_at', { ascending: false })
+          evaluationsData = resultWithoutToken.data
+          evaluationsError = resultWithoutToken.error
+          
+          // Add share_token as null if column doesn't exist
+          if (evaluationsData) {
+            evaluationsData = evaluationsData.map((e: any) => ({ ...e, share_token: null }))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading evaluations:', error)
+        evaluationsError = error as any
       }
 
-      // Filter by status
-      if (activeTab === 'in_progress') {
-        // Include all non-completed statuses: requested, confirmed, in_progress
-        query = query.in('status', ['requested', 'confirmed', 'in_progress'])
-      } else {
-        query = query.eq('status', 'completed')
-      }
-
-      query = query.order('created_at', { ascending: false })
-
-      const { data: evaluationsData, error: evaluationsError } = await query
-
-      if (evaluationsError) {
+      if (evaluationsError && evaluationsError.code !== '42703') {
         console.error('Error loading evaluations:', evaluationsError)
         console.error('Error details:', JSON.stringify(evaluationsError, null, 2))
         console.error('Error code:', evaluationsError.code)
@@ -371,6 +414,18 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   </>
                   )}
                 </Link>
+                {/* Share button - visible for all evaluations */}
+                <div className="flex-shrink-0">
+                  <ShareButton 
+                    evaluationId={evaluation.id} 
+                    evaluation={{
+                      id: evaluation.id,
+                      share_token: evaluation.share_token || null,
+                      status: evaluation.status,
+                      scout: evaluation.scout,
+                    }}
+                  />
+                </div>
               </div>
             )})}
             </div>

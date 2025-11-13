@@ -12,6 +12,7 @@ import { getProfilePath } from '@/lib/profile-url'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import ShareButton from '@/components/evaluations/ShareButton'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -86,6 +87,7 @@ interface Evaluation {
   id: string
   notes: string | null
   created_at: string
+  share_token?: string | null
   scout_id?: string | null
   player_id?: string | null
   scout?: {
@@ -243,24 +245,60 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     try {
       setLoading(true)
       
-      // First, get the evaluations
-      let query = supabase
-        .from('evaluations')
-        .select('id, notes, created_at, scout_id, player_id')
+      // First, get the evaluations (including share_token for sharing if column exists)
+      let evaluationsData
+      let evaluationsError
+      
+      try {
+        // Try with share_token first
+        let query = supabase
+          .from('evaluations')
+          .select('id, notes, created_at, scout_id, player_id, share_token')
 
-      if (profile.role === 'player') {
-        // Get evaluations received by this player
-        query = query.eq('player_id', profile.user_id).eq('status', 'completed')
-      } else {
-        // Get evaluations contributed by this scout
-        query = query.eq('scout_id', profile.user_id).eq('status', 'completed')
+        if (profile.role === 'player') {
+          // Get evaluations received by this player
+          query = query.eq('player_id', profile.user_id).eq('status', 'completed')
+        } else {
+          // Get evaluations contributed by this scout
+          query = query.eq('scout_id', profile.user_id).eq('status', 'completed')
+        }
+
+        query = query.order('created_at', { ascending: false })
+
+        const result = await query
+        evaluationsData = result.data
+        evaluationsError = result.error
+
+        // If error is due to share_token column not existing, try without it
+        if (evaluationsError && (evaluationsError.code === '42703' || evaluationsError.message?.includes('column "share_token" does not exist'))) {
+          console.warn('share_token column not found, fetching without it')
+          let queryWithoutToken = supabase
+            .from('evaluations')
+            .select('id, notes, created_at, scout_id, player_id')
+
+          if (profile.role === 'player') {
+            queryWithoutToken = queryWithoutToken.eq('player_id', profile.user_id).eq('status', 'completed')
+          } else {
+            queryWithoutToken = queryWithoutToken.eq('scout_id', profile.user_id).eq('status', 'completed')
+          }
+
+          const resultWithoutToken = await queryWithoutToken.order('created_at', { ascending: false })
+          evaluationsData = resultWithoutToken.data
+          evaluationsError = resultWithoutToken.error
+          
+          // Add share_token as null if column doesn't exist
+          if (evaluationsData) {
+            evaluationsData = evaluationsData.map((e: any) => ({ ...e, share_token: null }))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading evaluations:', error)
+        evaluationsError = error as any
       }
 
-      query = query.order('created_at', { ascending: false })
-
-      const { data: evaluationsData, error: evaluationsError } = await query
-
-      if (evaluationsError) throw evaluationsError
+      if (evaluationsError && evaluationsError.code !== '42703') {
+        throw evaluationsError
+      }
 
       if (!evaluationsData || evaluationsData.length === 0) {
         setEvaluations([])
@@ -571,6 +609,21 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                             </p>
                           </div>
                         )}
+                        {/* Share button - bottom left underneath evaluation (always visible) */}
+                        <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
+                          <ShareButton 
+                            evaluationId={evaluation.id} 
+                            evaluation={{
+                              id: evaluation.id,
+                              share_token: evaluation.share_token || null,
+                              status: 'completed',
+                              scout: evaluation.scout ? {
+                                full_name: evaluation.scout.full_name,
+                                organization: evaluation.scout.organization,
+                              } : null,
+                            }}
+                          />
+                        </div>
                       </div>
                     )
                   })
@@ -1178,13 +1231,28 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                           </button>
                         )}
                       </div>
-                      {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
+                        {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
                         <div className="pl-0 md:pl-20 mt-4 md:mt-0">
                           <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                             {evaluation.notes}
                           </p>
                         </div>
                       )}
+                      {/* Share button - bottom left underneath evaluation (always visible) */}
+                      <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
+                        <ShareButton 
+                          evaluationId={evaluation.id} 
+                          evaluation={{
+                            id: evaluation.id,
+                            share_token: evaluation.share_token || null,
+                            status: 'completed',
+                            scout: profile.role === 'scout' ? {
+                              full_name: profile.full_name,
+                              organization: profile.organization,
+                            } : null,
+                          }}
+                        />
+                      </div>
                     </div>
                   )
                 })

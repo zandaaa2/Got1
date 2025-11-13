@@ -29,3 +29,6 @@ The redirect flow is: Google → Supabase → Your App
 - The `redirectTo` parameter tells Supabase where to redirect after auth
 
 
+
+
+

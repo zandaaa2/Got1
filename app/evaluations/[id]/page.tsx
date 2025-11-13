@@ -29,28 +29,56 @@ export default async function EvaluationPage({
   }
 
   // Get evaluation without joins (since foreign keys reference auth.users)
-  const { data: evaluation, error: evaluationError } = await supabase
-    .from('evaluations')
-    .select('*')
-    .eq('id', params.id)
-    .maybeSingle()
+  // Try to include share_token if column exists (may not exist if migration hasn't run)
+  let evaluation
+  let evaluationError
+  
+  try {
+    // First try with share_token
+    const result = await supabase
+      .from('evaluations')
+      .select('*, share_token')
+      .eq('id', params.id)
+      .maybeSingle()
+    
+    evaluation = result.data
+    evaluationError = result.error
+    
+    // If error is due to column not existing, try without share_token
+    if (evaluationError && (evaluationError.code === '42703' || evaluationError.message?.includes('column "share_token" does not exist'))) {
+      console.warn('share_token column not found, fetching without it')
+      const resultWithoutToken = await supabase
+        .from('evaluations')
+        .select('*')
+        .eq('id', params.id)
+        .maybeSingle()
+      
+      evaluation = resultWithoutToken.data
+      evaluationError = resultWithoutToken.error
+      // Add share_token as null if it doesn't exist
+      if (evaluation) {
+        evaluation.share_token = null
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching evaluation:', error)
+    evaluationError = error as any
+  }
 
-  if (evaluationError) {
+  if (evaluationError && evaluationError.code !== '42703') {
     console.error('Error fetching evaluation:', evaluationError)
     notFound()
   }
 
   if (!evaluation) {
+    console.error('Evaluation not found:', params.id)
     notFound()
   }
 
-  // Check if user has access to this evaluation
+  // Check if user is the scout or player (for UI purposes)
+  // But allow ALL users to view evaluations (for sharing)
   const isScout = session.user.id === evaluation.scout_id
   const isPlayer = session.user.id === evaluation.player_id
-
-  if (!isScout && !isPlayer) {
-    redirect('/my-evals')
-  }
 
   // Manually join profiles
   let evaluationWithProfiles = evaluation
@@ -63,6 +91,7 @@ export default async function EvaluationPage({
 
     evaluationWithProfiles = {
       ...evaluation,
+      share_token: evaluation.share_token, // Ensure share_token is included
       scout: profiles?.find((p) => p.user_id === evaluation.scout_id) || null,
       player: profiles?.find((p) => p.user_id === evaluation.player_id) || null,
     }
