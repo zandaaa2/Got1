@@ -65,7 +65,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
-  const [viewMode, setViewMode] = useState<'profiles' | 'teams'>('profiles')
+  const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const supabase = createClient()
   
@@ -220,10 +220,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     )
   })
 
-  const showTeamHighlights = viewMode !== 'teams' && trimmedQuery.length > 0 && filteredTeams.length > 0
+  const showTeamHighlights = viewMode !== 'universities' && trimmedQuery.length > 0 && filteredTeams.length > 0
 
   const handleScoutsClick = () => {
-    if (viewMode === 'teams') {
+    if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('scout')
       return
@@ -232,7 +232,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }
 
   const handlePlayersClick = () => {
-    if (viewMode === 'teams') {
+    if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('player')
       return
@@ -240,13 +240,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     setRoleFilter(roleFilter === 'player' ? 'all' : 'player')
   }
 
-  const handleTeamsClick = () => {
-    if (viewMode === 'teams') {
+  const handleUniversitiesClick = () => {
+    if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('all')
       return
     }
-    setViewMode('teams')
+    setViewMode('universities')
     if (roleFilter !== 'all') {
       setRoleFilter('all')
     }
@@ -279,7 +279,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           </div>
           <input
             type="text"
-            placeholder="Search people, teams, schools..."
+            placeholder="Search people, universities, schools..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 md:py-3 bg-gray-100 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm md:text-base"
@@ -309,14 +309,14 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             Players
           </button>
           <button
-            onClick={handleTeamsClick}
+            onClick={handleUniversitiesClick}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              viewMode === 'teams'
+              viewMode === 'universities'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Teams
+            Universities
           </button>
           
           {/* Clear filters button - only show when filters are active */}
@@ -333,48 +333,101 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
       {loading ? (
         <div className="text-center py-12">Loading...</div>
-      ) : viewMode === 'teams' ? (
+      ) : viewMode === 'universities' ? (
         filteredTeams.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {filteredTeams.map((team) => (
-              <Link
-                key={team.slug}
-                href={`/teams/${team.slug}`}
-                className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
-                  {team.logo ? (
-                    <Image
-                      src={team.logo}
-                      alt={team.name}
-                      width={64}
-                      height={64}
-                      className="object-contain"
-                     
-                    />
-                  ) : (
-                    <span className="text-lg font-semibold text-gray-600">
-                      {team.name.charAt(0)}
-                    </span>
-                  )}
+          <div className="space-y-8">
+            {/* Represented Universities */}
+            {filteredTeams.filter(team => team.scoutCount > 0).length > 0 && (
+              <div>
+                <h2 className="text-lg md:text-xl font-bold text-black mb-4">Represented</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {filteredTeams
+                    .filter(team => team.scoutCount > 0)
+                    .map((team) => (
+                      <Link
+                        key={team.slug}
+                        href={`/teams/${team.slug}`}
+                        className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                          {team.logo ? (
+                            <Image
+                              src={team.logo}
+                              alt={team.name}
+                              width={64}
+                              height={64}
+                              className="object-contain"
+                            />
+                          ) : (
+                            <span className="text-lg font-semibold text-gray-600">
+                              {team.name.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <h3 className="font-bold text-black text-base md:text-lg truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{team.name}</h3>
+                          <p className="text-xs md:text-sm text-gray-600 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                            {team.conference ? team.conference : 'Conference not specified'}
+                            {team.division ? ` · ${team.division}` : ''}
+                          </p>
+                          <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                            {team.scoutCount} scout{team.scoutCount === 1 ? '' : 's'} on Got1
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
                 </div>
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <h3 className="font-bold text-black text-base md:text-lg truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{team.name}</h3>
-                  <p className="text-xs md:text-sm text-gray-600 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-                    {team.conference ? team.conference : 'Conference not specified'}
-                    {team.division ? ` · ${team.division}` : ''}
-                  </p>
-                  <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-                    {team.scoutCount} scout{team.scoutCount === 1 ? '' : 's'} on Got1
-                  </p>
+              </div>
+            )}
+
+            {/* Nonrepresented Universities */}
+            {filteredTeams.filter(team => team.scoutCount === 0).length > 0 && (
+              <div>
+                <h2 className="text-lg md:text-xl font-bold text-black mb-4">Nonrepresented</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {filteredTeams
+                    .filter(team => team.scoutCount === 0)
+                    .map((team) => (
+                      <Link
+                        key={team.slug}
+                        href={`/teams/${team.slug}`}
+                        className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                          {team.logo ? (
+                            <Image
+                              src={team.logo}
+                              alt={team.name}
+                              width={64}
+                              height={64}
+                              className="object-contain"
+                            />
+                          ) : (
+                            <span className="text-lg font-semibold text-gray-600">
+                              {team.name.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <h3 className="font-bold text-black text-base md:text-lg truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{team.name}</h3>
+                          <p className="text-xs md:text-sm text-gray-600 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                            {team.conference ? team.conference : 'Conference not specified'}
+                            {team.division ? ` · ${team.division}` : ''}
+                          </p>
+                          <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                            No scouts on Got1
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
                 </div>
-              </Link>
-            ))}
+              </div>
+            )}
           </div>
         ) : (
           <EmptyState
             icon={emptyTeamsIcon}
-            title="No teams found"
+            title="No universities found"
             description="Try another school name, search by conference, or clear your filters to explore every program on Got1."
             action={
               trimmedQuery
