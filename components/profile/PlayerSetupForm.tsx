@@ -191,7 +191,7 @@ export default function PlayerSetupForm({ profile }: PlayerSetupFormProps) {
             Film Link <span className="text-red-500">*</span>
           </label>
           <HudlLinkSelector
-            links={formData.hudl_links}
+            hudlLinks={formData.hudl_links}
             onChange={handleHudlLinksChange}
           />
           <p className="text-xs text-gray-500 mt-1">
