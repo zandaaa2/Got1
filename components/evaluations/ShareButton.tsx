@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface ShareButtonProps {
   evaluationId: string
@@ -18,19 +18,40 @@ interface ShareButtonProps {
 export default function ShareButton({ evaluationId, evaluation }: ShareButtonProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string>('')
 
   // Share button available for ALL evaluations (not just completed)
   // For completed evaluations, use share_token for public link
   // For other statuses, share the regular evaluation link (requires auth)
   
-  const shareToken = evaluation.share_token
-  // If evaluation is completed and has share_token, use public share URL
-  // Otherwise, use the regular evaluation URL (requires login)
-  const shareUrl = (evaluation.status === 'completed' && shareToken)
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/evaluations/${evaluationId}/share/${shareToken}`
-    : `${typeof window !== 'undefined' ? window.location.origin : ''}/evaluations/${evaluationId}`
+  useEffect(() => {
+    // Calculate share URL only on client side
+    if (typeof window === 'undefined') return
+    
+    try {
+      const shareToken = evaluation?.share_token
+      const baseUrl = window.location.origin
+      
+      const url = (evaluation?.status === 'completed' && shareToken)
+        ? `${baseUrl}/evaluations/${evaluationId}/share/${shareToken}`
+        : `${baseUrl}/evaluations/${evaluationId}`
+      
+      setShareUrl(url)
+    } catch (error) {
+      console.error('Error setting share URL:', error)
+      // Fallback URL
+      setShareUrl(`/evaluations/${evaluationId}`)
+    }
+  }, [evaluationId, evaluation?.share_token, evaluation?.status])
+
+  // Don't render until we have the share URL (prevents SSR issues)
+  if (!shareUrl) {
+    return null
+  }
 
   const handleShareTwitter = async () => {
+    if (!shareUrl || typeof window === 'undefined') return
+    
     // Track share event (only if authenticated - fails silently if not)
     try {
       const response = await fetch(`/api/evaluations/${evaluationId}/share`, {
@@ -52,13 +73,21 @@ export default function ShareButton({ evaluationId, evaluation }: ShareButtonPro
     }
 
     // Open Twitter Web Intent - only share the URL, no pre-filled text
-    const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`
-    window.open(twitterUrl, '_blank', 'width=550,height=420')
+    try {
+      const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`
+      window.open(twitterUrl, '_blank', 'width=550,height=420')
+    } catch (error) {
+      console.error('Error opening Twitter:', error)
+    }
     
     setShowMenu(false)
   }
 
   const handleCopyLink = async () => {
+    if (!shareUrl || typeof navigator === 'undefined' || !navigator.clipboard) {
+      return
+    }
+    
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
@@ -87,7 +116,11 @@ export default function ShareButton({ evaluationId, evaluation }: ShareButtonPro
       setShowMenu(false)
     } catch (error) {
       console.error('Error copying link:', error)
-      alert('Failed to copy link. Please try again.')
+      try {
+        alert('Failed to copy link. Please try again.')
+      } catch (e) {
+        // Ignore if alert fails (e.g., in SSR)
+      }
     }
   }
 
