@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotification } from '@/lib/notifications'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -138,11 +139,127 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Create in-app notification for scout about new evaluation request
+      if (action === 'upfront_payment') {
+        try {
+          const { data: playerProfile } = await adminSupabase
+            .from('profiles')
+            .select('full_name')
+            .eq('user_id', evaluation.player_id)
+            .maybeSingle()
+
+          await createNotification({
+            userId: evaluation.scout_id,
+            type: 'evaluation_requested',
+            title: 'New Evaluation Request',
+            message: `${playerProfile?.full_name || 'A player'} has requested an evaluation from you.`,
+            link: `/evaluations/${evaluationId}`,
+            metadata: {
+              evaluation_id: evaluationId,
+              player_id: evaluation.player_id,
+              price: evaluation.price,
+            },
+          })
+        } catch (notificationError) {
+          console.error('Error creating evaluation request notification:', notificationError)
+          // Don't fail the webhook if notification fails
+        }
+      }
+
+      // Create in-app notification for player about successful payment
+      try {
+        await createNotification({
+          userId: evaluation.player_id,
+          type: 'payment_received',
+          title: 'Payment Received',
+          message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation has been processed successfully.`,
+          link: `/evaluations/${evaluationId}`,
+          metadata: {
+            evaluation_id: evaluationId,
+            amount: evaluation.price,
+            payment_intent_id: session.payment_intent as string,
+          },
+        })
+      } catch (notificationError) {
+        console.error('Error creating payment received notification:', notificationError)
+        // Don't fail the webhook if notification fails
+      }
+
       console.log(`✅ Payment successful for evaluation ${evaluationId}, session ${session.id}`)
     } else if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       // Handle successful payment if needed
       console.log('Payment intent succeeded:', paymentIntent.id)
+    } else if (event.type === 'payment_intent.payment_failed') {
+      // Handle payment failure
+      const paymentIntent = event.data.object as Stripe.PaymentIntent
+      const paymentIntentId = paymentIntent.id
+      
+      if (paymentIntentId) {
+        try {
+          // Find evaluation by payment_intent_id
+          const { data: evaluation } = await adminSupabase
+            .from('evaluations')
+            .select('*')
+            .eq('payment_intent_id', paymentIntentId)
+            .maybeSingle()
+
+          if (evaluation) {
+            // Create in-app notification for player about payment failure
+            await createNotification({
+              userId: evaluation.player_id,
+              type: 'payment_failed',
+              title: 'Payment Failed',
+              message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation could not be processed. Please try again.`,
+              link: `/evaluations/${evaluation.id}`,
+              metadata: {
+                evaluation_id: evaluation.id,
+                amount: evaluation.price,
+                payment_intent_id: paymentIntentId,
+              },
+            })
+            console.log(`⚠️ Payment failed for evaluation ${evaluation.id}, notification sent`)
+          }
+        } catch (notificationError) {
+          console.error('Error creating payment failed notification:', notificationError)
+          // Don't fail the webhook if notification fails
+        }
+      }
+    } else if (event.type === 'charge.failed') {
+      // Handle charge failure (alternative event type)
+      const charge = event.data.object as Stripe.Charge
+      const paymentIntentId = charge.payment_intent as string
+      
+      if (paymentIntentId) {
+        try {
+          // Find evaluation by payment_intent_id
+          const { data: evaluation } = await adminSupabase
+            .from('evaluations')
+            .select('*')
+            .eq('payment_intent_id', paymentIntentId)
+            .maybeSingle()
+
+          if (evaluation) {
+            // Create in-app notification for player about payment failure
+            await createNotification({
+              userId: evaluation.player_id,
+              type: 'payment_failed',
+              title: 'Payment Failed',
+              message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation could not be processed. Please try again.`,
+              link: `/evaluations/${evaluation.id}`,
+              metadata: {
+                evaluation_id: evaluation.id,
+                amount: evaluation.price,
+                payment_intent_id: paymentIntentId,
+              },
+            })
+            console.log(`⚠️ Payment failed for evaluation ${evaluation.id}, notification sent`)
+          }
+        } catch (notificationError) {
+          console.error('Error creating payment failed notification:', notificationError)
+          // Don't fail the webhook if notification fails
+        }
+      }
     }
 
     return NextResponse.json({ received: true })

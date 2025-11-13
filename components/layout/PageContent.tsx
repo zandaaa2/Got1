@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import FeatureRequest from '@/components/shared/FeatureRequest'
+import NotificationIconWrapper from '@/components/shared/NotificationIconWrapper'
+import { createClient } from '@/lib/supabase-client'
 
 interface PageContentProps {
   children: React.ReactNode
@@ -10,6 +12,7 @@ interface PageContentProps {
 
 export default function PageContent({ children, header }: PageContentProps) {
   const [sidebarWidth, setSidebarWidth] = useState(256) // 64 * 4 = 256px (w-64)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const checkSidebarState = () => {
@@ -52,6 +55,24 @@ export default function PageContent({ children, header }: PageContentProps) {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  useEffect(() => {
+    const supabase = createClient()
+    
+    const getUserId = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUserId(session?.user?.id || null)
+    }
+    getUserId()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      getUserId()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
   return (
      <div 
        className="flex-1 transition-all duration-300" 
@@ -65,6 +86,7 @@ export default function PageContent({ children, header }: PageContentProps) {
        >
         <div className="flex w-full items-center justify-end gap-3">
           <FeatureRequest />
+          <NotificationIconWrapper userId={userId} />
           {header ? (
             <div className="flex items-center gap-2 md:gap-3">
               {header}

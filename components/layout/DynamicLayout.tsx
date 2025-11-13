@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import FeatureRequest from '@/components/shared/FeatureRequest'
+import NotificationIconWrapper from '@/components/shared/NotificationIconWrapper'
+import { createClient } from '@/lib/supabase-client'
 
 interface DynamicLayoutProps {
   children: React.ReactNode
@@ -16,6 +18,7 @@ interface DynamicLayoutProps {
 export default function DynamicLayout({ children, header }: DynamicLayoutProps) {
   const sidebarWidth = useSidebarWidth()
   const [isMobile, setIsMobile] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -24,6 +27,24 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    
+    const getUserId = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUserId(session?.user?.id || null)
+    }
+    getUserId()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      getUserId()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   return (
@@ -39,6 +60,7 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
       >
         <div className="flex w-full items-center justify-end gap-3">
           <FeatureRequest />
+          <NotificationIconWrapper userId={userId} />
           {header ? (
             <div className="flex items-center gap-2 md:gap-3">
               {header}

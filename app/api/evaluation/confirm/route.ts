@@ -5,6 +5,7 @@ import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
 import { sendEvaluationRequestEmail, sendEvaluationDeniedEmail, sendEvaluationConfirmedEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
+import { createNotification } from '@/lib/notifications'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -169,6 +170,31 @@ export async function POST(request: NextRequest) {
         // Don't fail the request if email fails
       }
 
+      // Create in-app notification for player about denial
+      try {
+        const { data: scoutProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', evaluation.scout_id)
+          .maybeSingle()
+
+        await createNotification({
+          userId: evaluation.player_id,
+          type: 'evaluation_denied',
+          title: 'Evaluation Request Denied',
+          message: `${scoutProfile?.full_name || 'The scout'} has denied your evaluation request.${deniedReason ? ` Reason: ${deniedReason}` : ''}`,
+          link: `/evaluations/${evaluationId}`,
+          metadata: {
+            evaluation_id: evaluationId,
+            scout_id: evaluation.scout_id,
+            refunded: shouldRefund,
+          },
+        })
+      } catch (notificationError) {
+        console.error('Error creating denial notification:', notificationError)
+        // Don't fail the request if notification fails
+      }
+
       return NextResponse.json({ 
         success: true, 
         status: 'denied',
@@ -230,6 +256,31 @@ export async function POST(request: NextRequest) {
       }
     } catch (emailError) {
       console.error('Error sending confirmation email:', emailError)
+    }
+
+    // Create in-app notification for player about confirmation
+    try {
+      const { data: scoutProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', evaluation.scout_id)
+        .maybeSingle()
+
+      await createNotification({
+        userId: evaluation.player_id,
+        type: 'evaluation_confirmed',
+        title: 'Evaluation Confirmed',
+        message: `${scoutProfile?.full_name || 'The scout'} has confirmed your evaluation request. They will begin working on it soon.`,
+        link: `/evaluations/${evaluationId}`,
+        metadata: {
+          evaluation_id: evaluationId,
+          scout_id: evaluation.scout_id,
+          price: evaluation.price,
+        },
+      })
+    } catch (notificationError) {
+      console.error('Error creating confirmation notification:', notificationError)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({

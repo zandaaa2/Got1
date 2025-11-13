@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server'
 import { isAdmin } from '@/lib/admin'
 import { sendApplicationApprovedEmail, sendApplicationDeniedEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
+import { createNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -195,6 +196,24 @@ export async function POST(
         console.error('Error sending approval email:', emailError)
         // Don't fail the request if email fails
       }
+
+      // Create in-app notification for approved application
+      try {
+        await createNotification({
+          userId: application.user_id,
+          type: 'scout_application_approved',
+          title: 'Scout Application Approved',
+          message: 'Congratulations! Your scout application has been approved. You can now start receiving evaluation requests.',
+          link: '/profile',
+          metadata: {
+            application_id: params.id,
+            organization: application.current_workplace,
+          },
+        })
+      } catch (notificationError) {
+        console.error('Error creating approval notification:', notificationError)
+        // Don't fail the request if notification fails
+      }
     } else {
       // Send denial email to user
       try {
@@ -214,6 +233,23 @@ export async function POST(
       } catch (emailError) {
         console.error('Error sending denial email:', emailError)
         // Don't fail the request if email fails
+      }
+
+      // Create in-app notification for denied application
+      try {
+        await createNotification({
+          userId: application.user_id,
+          type: 'scout_application_denied',
+          title: 'Scout Application Denied',
+          message: 'Your scout application has been reviewed and unfortunately was not approved at this time.',
+          link: '/profile/scout-application',
+          metadata: {
+            application_id: params.id,
+          },
+        })
+      } catch (notificationError) {
+        console.error('Error creating denial notification:', notificationError)
+        // Don't fail the request if notification fails
       }
     }
 

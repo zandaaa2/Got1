@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { sendEvaluationCompleteEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
+import { createNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -202,6 +203,24 @@ export async function POST(request: NextRequest) {
       }
     } else {
       console.log('⚠️  Could not send evaluation complete email - player email not available (SUPABASE_SERVICE_ROLE_KEY may not be configured)')
+    }
+
+    // Create in-app notification for player about completion
+    try {
+      await createNotification({
+        userId: evaluation.player_id,
+        type: 'evaluation_completed',
+        title: 'Evaluation Completed',
+        message: `${scoutProfile?.full_name || 'The scout'} has completed your evaluation. Check it out now!`,
+        link: `/evaluations/${evaluationId}`,
+        metadata: {
+          evaluation_id: evaluationId,
+          scout_id: evaluation.scout_id,
+        },
+      })
+    } catch (notificationError) {
+      console.error('Error creating completion notification:', notificationError)
+      // Don't fail the request if notification fails
     }
 
     // TODO: Send email to scout with payout info

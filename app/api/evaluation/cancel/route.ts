@@ -6,6 +6,7 @@ import type { NextRequest } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase'
 import { getUserEmail } from '@/lib/supabase-admin'
 import { sendEvaluationCancelledEmail } from '@/lib/email'
+import { createNotification } from '@/lib/notifications'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -108,6 +109,31 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error('⚠️ Failed to send cancellation email notification:', emailError)
       // Do not fail request if email fails
+    }
+
+    // Create in-app notification for scout about cancellation
+    try {
+      const { data: playerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', evaluation.player_id)
+        .maybeSingle()
+
+      await createNotification({
+        userId: evaluation.scout_id,
+        type: 'evaluation_cancelled',
+        title: 'Evaluation Cancelled',
+        message: `${playerProfile?.full_name || 'A player'} has cancelled their evaluation request.${hasPaid ? ' Payment has been refunded.' : ''}`,
+        link: `/evaluations/${evaluationId}`,
+        metadata: {
+          evaluation_id: evaluationId,
+          player_id: evaluation.player_id,
+          refunded: hasPaid,
+        },
+      })
+    } catch (notificationError) {
+      console.error('Error creating cancellation notification:', notificationError)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({
