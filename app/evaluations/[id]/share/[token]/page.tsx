@@ -147,7 +147,7 @@ export default async function EvaluationSharePage({
         {/* Player Info */}
         <div className="mb-8 flex flex-col md:flex-row items-center md:items-start gap-6">
           <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden flex-shrink-0">
-            {isMeaningfulAvatar(player?.avatar_url) ? (
+            {player?.avatar_url && isMeaningfulAvatar(player.avatar_url) ? (
               <Image
                 src={player.avatar_url}
                 alt={player?.full_name || 'Player'}

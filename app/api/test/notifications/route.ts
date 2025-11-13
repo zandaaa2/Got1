@@ -2,6 +2,8 @@ import { createServerClient } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Test endpoint to view all notifications for the logged-in user
  * Access at: /api/test/notifications

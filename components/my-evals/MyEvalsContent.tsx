@@ -65,7 +65,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
       setLoading(true)
       
       // First, get the evaluations (including share_token for sharing if column exists)
-      let evaluationsData
+      let evaluationsData: any[] | null = null
       let evaluationsError
       
       try {
