@@ -182,6 +182,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   const teamEntries = useMemo<TeamEntry[]>(() => {
     return normalizedColleges
+      .filter((college) => college.slug !== 'got1') // Exclude Got1 from universities list
       .map<TeamEntry>((college) => ({
         name: college.name,
         slug: college.slug,
