@@ -104,19 +104,19 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
               collegeSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
           }}
-          className="group inline-flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 hover:border-blue-300 rounded-full transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-100"
+          className="group inline-flex items-center gap-2.5 px-5 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-full transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-100"
         >
           <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-blue-900">University Compliance Certified</span>
-            <svg className="w-4 h-4 text-blue-600 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="text-sm font-semibold text-gray-900">Working to be University Compliance Certified</span>
+            <svg className="w-4 h-4 text-gray-600 group-hover:text-gray-700 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
         </button>
-        <span className="text-xs font-medium text-blue-600">Click to learn more</span>
+        <span className="text-xs font-medium text-gray-600">Click to learn more</span>
       </div>
 
       {/* Main Content Grid */}
@@ -302,7 +302,7 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
               Partner with Got1 for NIL Opportunities
             </p>
             <p className="text-sm md:text-base text-gray-700 leading-relaxed">
-              Are you an administrator at a college or university? We'd love to hear from you. Send us an email with any questions about how Got1 can work with your institution for NIL opportunities.
+              Are you an administrator at a college or university? We'd love to hear from you. Got1 is currently working to become University Compliance Certified. We're actively engaging with compliance offices and working through the certification process to ensure our platform meets all institutional and NCAA guidelines. Send us an email with any questions about how Got1 can work with your institution for NIL opportunities.
             </p>
           </div>
           <div className="mb-8">
@@ -331,11 +331,11 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
               answer="This is an arm of the university. They still stay employed with the university earning you NIL Money. Our platform is designed to operate as an extension of your athletic department, ensuring that all NIL revenue generated through evaluations flows back to support your programs. Staff members remain university employees, and all activities are conducted under your oversight and approval, maintaining clear separation from any potential conflicts while maximizing NIL opportunities for your institution."
             />
             <FAQItem
-              question="University Compliance Certified"
-              answer="Got1 is certified for university partnerships and designed with NCAA compliance at its core. Our platform undergoes regular compliance reviews and works directly with university compliance offices to ensure all NIL activities meet institutional and regulatory standards. We maintain transparent reporting, protect recruiting calendars, and operate under full institutional oversight."
+              question="Working to be University Compliance Certified"
+              answer="Got1 is currently working to become University Compliance Certified. We're actively engaging with compliance offices and working through the certification process. Our platform is designed with NCAA compliance at its core, and we're committed to meeting all institutional and regulatory standards. We're building transparent reporting systems, implementing recruiting calendar protections, and designing our platform to operate under full institutional oversight. We're working directly with university compliance offices throughout this process to ensure we meet all requirements."
               icon={
                 <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
             />
