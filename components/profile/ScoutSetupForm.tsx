@@ -162,7 +162,7 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
             onToggle={(sport) => {
               const currentSports = formData.sports || []
               const newSports = currentSports.includes(sport)
-                ? currentSports.filter(s => s !== sport)
+                ? currentSports.filter((s: string) => s !== sport)
                 : [...currentSports, sport]
               setFormData({ ...formData, sports: newSports })
             }}
