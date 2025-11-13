@@ -1,10 +1,5 @@
 import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/layout/Sidebar'
-import ProfileSetupForm from '@/components/profile/ProfileSetupForm'
-import PageContent from '@/components/layout/PageContent'
-import { isMeaningfulAvatar } from '@/lib/avatar'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function ProfileSetupPage() {
   const supabase = createServerClient()
@@ -30,34 +25,7 @@ export default async function ProfileSetupPage() {
     redirect('/profile/user-setup')
   }
 
-  // Get user info from auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Get user avatar for header
-  const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
-  const sanitizedAvatar = isMeaningfulAvatar(rawAvatarUrl) ? rawAvatarUrl : null
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={rawAvatarUrl}
-      fullName={user?.user_metadata?.full_name || user?.user_metadata?.name}
-      email={user?.email}
-    />
-  )
-
-  return (
-    <div className="min-h-screen bg-white flex">
-      <Sidebar activePage="browse" />
-      <PageContent header={headerContent}>
-        <ProfileSetupForm
-          userEmail={user?.email || ''}
-          userName={user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
-          userAvatar={sanitizedAvatar || ''}
-        />
-      </PageContent>
-    </div>
-  )
+  // This code is unreachable but needed for TypeScript
+  return null
 }
 
