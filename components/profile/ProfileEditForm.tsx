@@ -100,9 +100,9 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
    * Handles input field changes and updates form state.
    * Prevents changes to birthday if it's already locked.
    *
-   * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>} e - The input change event
+   * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>} e - The input change event
    */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     
     if (name === 'birthday' && isBirthdayLocked) {
