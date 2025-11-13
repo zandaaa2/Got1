@@ -43,6 +43,18 @@ export default function RoleSelectionPage() {
     checkProfile()
   }, [router, supabase])
 
+  // Get user info for header
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  useEffect(() => {
+    const getUserInfo = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setUserEmail(session.user.email || null)
+      }
+    }
+    getUserInfo()
+  }, [supabase])
+
   const handleRoleSelection = async (role: 'player' | 'scout' | 'skip') => {
     if (role === 'skip') {
       router.push('/profile')
@@ -65,10 +77,20 @@ export default function RoleSelectionPage() {
     )
   }
 
+  const headerContent = profile ? (
+    <HeaderUserAvatar
+      userId={profile.user_id}
+      avatarUrl={profile.avatar_url}
+      fullName={profile.full_name}
+      username={profile.username}
+      email={userEmail}
+    />
+  ) : null
+
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <PageContent>
+      <PageContent header={headerContent || <div />}>
         <div className="max-w-2xl mx-auto py-12">
           <h1 className="text-2xl md:text-3xl font-bold text-black mb-4">
             Choose Your Path
