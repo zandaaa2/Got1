@@ -80,6 +80,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     hudl_links: getInitialHudlLinks(),
     school: profile.school || '',
     graduation_year: profile.graduation_year?.toString() || '',
+    graduation_month: profile.graduation_month?.toString() || '',
     parent_name: profile.parent_name || '',
     sport: profile.sport || '',
     // Scout fields
@@ -275,6 +276,80 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         return
       }
 
+      // Role-specific validation
+      if (profile.role === 'player') {
+        if (!formData.social_link || formData.social_link.trim() === '') {
+          setError('Social media link is required for players.')
+          setLoading(false)
+          return
+        }
+        const validHudlLinks = formData.hudl_links.filter(
+          (hl: HudlLink) => hl.link && hl.link.trim() !== ''
+        )
+        if (validHudlLinks.length === 0) {
+          setError('At least one film link (HUDL, QwikCut, or YouTube) is required for players.')
+          setLoading(false)
+          return
+        }
+        for (const link of validHudlLinks) {
+          const validSports = ['football', 'mens-basketball']
+          if (!link.sport || !validSports.includes(link.sport)) {
+            setError('Please select a sport (football or men\'s basketball) for each film link.')
+            setLoading(false)
+            return
+          }
+        }
+        if (!formData.position || formData.position.trim() === '') {
+          setError('Position is required for players.')
+          setLoading(false)
+          return
+        }
+        if (!formData.school || formData.school.trim() === '') {
+          setError('School is required for players.')
+          setLoading(false)
+          return
+        }
+        if (!formData.graduation_month) {
+          setError('Graduation month is required for players.')
+          setLoading(false)
+          return
+        }
+        if (!formData.graduation_year) {
+          setError('Graduation year is required for players.')
+          setLoading(false)
+          return
+        }
+      } else if (profile.role === 'scout') {
+        if (!formData.organization || formData.organization.trim() === '') {
+          setError('Organization is required for scouts.')
+          setLoading(false)
+          return
+        }
+        if (!formData.sports || formData.sports.length === 0) {
+          setError('Please select at least one sport you evaluate (football or men\'s basketball).')
+          setLoading(false)
+          return
+        }
+        const validSports = formData.sports.filter((sport: string) => 
+          sport === 'football' || sport === 'mens-basketball'
+        )
+        if (validSports.length === 0) {
+          setError('Please select football or men\'s basketball as the sport you evaluate.')
+          setLoading(false)
+          return
+        }
+        if (!formData.position || formData.position.trim() === '') {
+          setError('Position is required for scouts.')
+          setLoading(false)
+          return
+        }
+        if (!formData.social_link || formData.social_link.trim() === '') {
+          setError('Social media link is required for scouts.')
+          setLoading(false)
+          return
+        }
+      }
+
       const sanitizedAvatar = isMeaningfulAvatar(formData.avatar_url) ? formData.avatar_url : null
 
       const updateData: any = {
@@ -289,7 +364,26 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.birthday = formData.birthday
       }
 
-      if (profile.role === 'scout') {
+      // USER role - no bio, clear all role-specific fields
+      if (profile.role === 'user') {
+        updateData.bio = null
+        // Clear role-specific fields for USER
+        updateData.organization = null
+        updateData.price_per_eval = null
+        updateData.turnaround_time = null
+        updateData.sports = null
+        updateData.hudl_links = null
+        updateData.hudl_link = null
+        updateData.sport = null
+        updateData.position = null
+        updateData.school = null
+        updateData.graduation_year = null
+        updateData.graduation_month = null
+        updateData.parent_name = null
+        updateData.social_link = null
+        updateData.work_history = null
+        updateData.additional_info = null
+      } else if (profile.role === 'scout') {
         updateData.organization = formData.organization || null
         updateData.price_per_eval = formData.price_per_eval ? parseFloat(formData.price_per_eval.toString()) : null
         updateData.social_link = formData.social_link || null
@@ -300,7 +394,15 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.sports = Array.isArray(formData.sports) ? formData.sports : []
         // Bio is not available for scouts
         updateData.bio = null
-      } else {
+        // Clear player-specific fields
+        updateData.hudl_links = null
+        updateData.hudl_link = null
+        updateData.sport = null
+        updateData.school = null
+        updateData.graduation_year = null
+        updateData.graduation_month = null
+        updateData.parent_name = null
+      } else if (profile.role === 'player') {
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
           .filter((hl: HudlLink) => hl.link && hl.link.trim() !== '')
@@ -312,9 +414,17 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.position = formData.position || null
         updateData.school = formData.school || null
         updateData.graduation_year = formData.graduation_year ? parseInt(formData.graduation_year.toString()) : null
+        updateData.graduation_month = formData.graduation_month ? parseInt(formData.graduation_month.toString()) : null
         updateData.parent_name = formData.parent_name || null
         updateData.social_link = formData.social_link || null
         updateData.bio = formData.bio || null
+        // Clear scout-specific fields
+        updateData.organization = null
+        updateData.price_per_eval = null
+        updateData.turnaround_time = null
+        updateData.sports = null
+        updateData.work_history = null
+        updateData.additional_info = null
       }
 
       const { error: updateError } = await supabase
@@ -398,171 +508,313 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-        {/* Profile Picture Section */}
+      <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+        {/* Profile Info Section */}
         <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Profile Picture
-          </label>
-          <div className="flex flex-col md:flex-row gap-4 items-start">
-            <div className="flex-1">
-              <label
-                htmlFor="avatar_upload"
-                className={`inline-block px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                  uploading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <span className="text-black font-medium">
-                  {uploading ? 'Uploading...' : 'Choose Image'}
-                </span>
-                <input
-                  type="file"
-                  id="avatar_upload"
-                  name="avatar_upload"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  disabled={uploading}
-                  className="hidden"
-                />
+          <h2 className="text-xl font-bold text-black mb-4 md:mb-6">Profile Info</h2>
+          <div className="space-y-4 md:space-y-6">
+            {/* Profile Picture */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-2">
+                Profile Picture
               </label>
-              <p className="mt-2 text-sm text-gray-600">
-                Select an image from your device. Max size: 5MB. This will appear in the top right corner and on your profile page.
-              </p>
-              {uploading && (
-                <p className="mt-1 text-sm text-blue-600">Uploading image...</p>
-              )}
-            </div>
-            <div className="flex-shrink-0">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center">
-                {avatarPreview ? (
-                  <img
-                    src={avatarPreview}
-                    alt="Profile preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <div className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(profile.user_id || profile.id || profile.username || profile.full_name || 'profile')}`}>
-                    {formData.full_name?.charAt(0).toUpperCase() || '?'}
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="flex-1">
+                  <label
+                    htmlFor="avatar_upload"
+                    className={`inline-block px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                      uploading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <span className="text-black font-medium">
+                      {uploading ? 'Uploading...' : 'Choose Image'}
+                    </span>
+                    <input
+                      type="file"
+                      id="avatar_upload"
+                      name="avatar_upload"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Select an image from your device. Max size: 5MB. This will appear in the top right corner and on your profile page.
+                  </p>
+                  {uploading && (
+                    <p className="mt-1 text-sm text-blue-600">Uploading image...</p>
+                  )}
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center">
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Profile preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(profile.user_id || profile.id || profile.username || profile.full_name || 'profile')}`}>
+                        {formData.full_name?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div>
-          <label htmlFor="full_name" className="block text-sm font-medium text-black mb-2">
-            Full Name *
-          </label>
-          <input
-            type="text"
-            id="full_name"
-            name="full_name"
-            value={formData.full_name}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-          />
-          {isNewProfile && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm leading-relaxed">
-                *if you're a scout, you'll fill out the remaining information on your scout application - scroll down to save changes.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-black mb-2">
-            Username *
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-            pattern="[a-z0-9_-]+"
-            minLength={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-          />
-                    <p className="mt-1 text-sm text-gray-600">
-            This will be your public link: got1.app/<span className="font-semibold">{formData.username || 'username'}</span>. Use letters, numbers, or underscores.
-          </p>
-        </div>
-
-        <div>
-          <label htmlFor="birthday" className="block text-sm font-medium text-black mb-2">
-            Birthday * {isNewProfile && <span className="text-red-600">(Required - Must be 16+)</span>}
-            {isBirthdayLocked && <span className="text-gray-500 text-xs ml-2">(Cannot be changed)</span>}
-          </label>
-          <input
-            type="date"
-            id="birthday"
-            name="birthday"
-            value={formData.birthday}
-            onChange={handleChange}
-            required={isNewProfile}
-            disabled={isBirthdayLocked}
-            max={new Date(new Date().setFullYear(new Date().getFullYear() - 16)).toISOString().split('T')[0]}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black ${
-              isBirthdayLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-            }`}
-          />
-          {!isBirthdayLocked && (
-            <p className="mt-1 text-sm text-gray-600">
-              You must be at least 16 years old to use this platform.
-            </p>
-          )}
-          {formData.birthday && !isBirthdayLocked && (() => {
-            const age = calculateAge(formData.birthday)
-            return age !== null && (
-              <p className={`mt-1 text-sm ${age < 16 ? 'text-red-600' : 'text-green-600'}`}>
-                Age: {age} {age < 16 ? '(Must be 16 or older)' : 'years old'}
-              </p>
-            )
-          })()}
-        </div>
-
-        {profile.role === 'scout' ? (
-          <>
+            {/* Full Name */}
             <div>
-              <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
-                Social Media Link (X/Twitter, etc.)
+              <label htmlFor="full_name" className="block text-sm font-medium text-black mb-2">
+                Full Name *
               </label>
               <input
-                type="url"
-                id="social_link"
-                name="social_link"
-                value={formData.social_link}
+                type="text"
+                id="full_name"
+                name="full_name"
+                value={formData.full_name}
                 onChange={handleChange}
-                placeholder="https://x.com/yourhandle"
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
 
-            {/* Scout Info Section */}
-            <div className="mt-8">
-              <h2 className="text-xl font-bold text-black mb-4">Scout Info</h2>
+            {/* Username */}
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-black mb-2">
+                Username *
+              </label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                pattern="[a-z0-9_-]+"
+                minLength={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <p className="mt-1 text-sm text-gray-600">
+                This will be your public link: got1.app/<span className="font-semibold">{formData.username || 'username'}</span>. Use letters, numbers, or underscores.
+              </p>
+            </div>
 
-              <div className="space-y-6">
-                <div>
-                  <CollegeSelector
-                    value={formData.organization}
-                    onChange={(value) => setFormData((prev) => ({ ...prev, organization: value }))}
-                    label="Organization"
-                    placeholder="Search or type college name..."
-                  />
-                  <p className="mt-1 text-sm text-gray-600">
-                    Select from major colleges or type a custom organization (e.g., "Dallas Cowboys", "Auburn Player Personnel")
+            {/* Birthday */}
+            <div>
+              <label htmlFor="birthday" className="block text-sm font-medium text-black mb-2">
+                Birthday * {isNewProfile && <span className="text-red-600">(Required - Must be 16+)</span>}
+                {isBirthdayLocked && <span className="text-gray-500 text-xs ml-2">(Cannot be changed)</span>}
+              </label>
+              <input
+                type="date"
+                id="birthday"
+                name="birthday"
+                value={formData.birthday}
+                onChange={handleChange}
+                required={isNewProfile}
+                disabled={isBirthdayLocked}
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 16)).toISOString().split('T')[0]}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black ${
+                  isBirthdayLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
+              />
+              {!isBirthdayLocked && (
+                <p className="mt-1 text-sm text-gray-600">
+                  You must be at least 16 years old to use this platform.
+                </p>
+              )}
+              {formData.birthday && !isBirthdayLocked && (() => {
+                const age = calculateAge(formData.birthday)
+                return age !== null && (
+                  <p className={`mt-1 text-sm ${age < 16 ? 'text-red-600' : 'text-green-600'}`}>
+                    Age: {age} {age < 16 ? '(Must be 16 or older)' : 'years old'}
                   </p>
+                )
+              })()}
+            </div>
+
+          </div>
+        </div>
+
+        {/* Player Info Section */}
+        {profile.role === 'player' && (
+          <div>
+            <h2 className="text-xl font-bold text-black mb-4 md:mb-6">Player Info</h2>
+            <div className="space-y-4 md:space-y-6">
+              <div>
+                <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
+                  Social Media Link <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="url"
+                  id="social_link"
+                  name="social_link"
+                  value={formData.social_link}
+                  onChange={handleChange}
+                  required
+                  placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                <HudlLinkSelector
+                  hudlLinks={formData.hudl_links}
+                  onChange={(links) => setFormData((prev) => ({ ...prev, hudl_links: links }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
+                  Position <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="position"
+                  name="position"
+                  value={formData.position}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Quarterback, Point Guard"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="school" className="block text-sm font-medium text-black mb-2">
+                  School <span className="text-red-500">*</span>
+                </label>
+                <CollegeSelector
+                  value={formData.school}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, school: value }))}
+                  placeholder="Search for your school"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="graduation_month" className="block text-sm font-medium text-black mb-2">
+                    Graduation Month <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="graduation_month"
+                    name="graduation_month"
+                    value={formData.graduation_month}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    <option value="">Select Month</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
                 </div>
+                <div>
+                  <label htmlFor="graduation_year" className="block text-sm font-medium text-black mb-2">
+                    Graduation Year <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="graduation_year"
+                    name="graduation_year"
+                    value={formData.graduation_year}
+                    onChange={handleChange}
+                    required
+                    min={new Date().getFullYear()}
+                    max={new Date().getFullYear() + 10}
+                    placeholder="2025"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="parent_name" className="block text-sm font-medium text-black mb-2">
+                  Parent Name (if account is run by parent)
+                </label>
+                <input
+                  type="text"
+                  id="parent_name"
+                  name="parent_name"
+                  value={formData.parent_name}
+                  onChange={handleChange}
+                  placeholder="Parent or guardian name"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="bio" className="block text-sm font-medium text-black mb-2">
+                  Bio
+                </label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Tell us about yourself..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scout Info Section */}
+        {profile.role === 'scout' && (
+          <div>
+            <h2 className="text-xl font-bold text-black mb-4 md:mb-6">Scout Info</h2>
+            <div className="space-y-4 md:space-y-6">
+              <div>
+                <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
+                  Social Media Link <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="url"
+                  id="social_link"
+                  name="social_link"
+                  value={formData.social_link}
+                  onChange={handleChange}
+                  required
+                  placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-black mb-2">
+                  Organization <span className="text-red-500">*</span>
+                </label>
+                <CollegeSelector
+                  value={formData.organization}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, organization: value }))}
+                  placeholder="Search or type college name..."
+                />
+                <p className="mt-1 text-sm text-gray-600">
+                  Select from major colleges or type a custom organization (e.g., "Dallas Cowboys", "Auburn Player Personnel")
+                </p>
+              </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-black mb-2">
+                    Sport You Evaluate <span className="text-red-500">*</span>
+                  </label>
                   <MultiSportSelector
                     selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
                     onToggle={(sport) => {
@@ -572,30 +824,31 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                         : [...currentSports, sport]
                       setFormData((prev) => ({ ...prev, sports: newSports }))
                     }}
-                    label="Sports You Evaluate For"
+                    label=""
+                    availableSports={['football', 'basketball']}
                   />
+                  <p className="mt-1 text-sm text-gray-600">
+                    Select at least one sport (football or men's basketball)
+                  </p>
                 </div>
 
-                <div>
-                  <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
-                    Position
-                  </label>
-                  <input
-                    type="text"
-                    id="position"
-                    name="position"
-                    value={formData.position}
-                    onChange={handleChange}
-                    placeholder="e.g., Player Personnel Assistant, Director of Recruiting"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
+              <div>
+                <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
+                  Position <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="position"
+                  name="position"
+                  value={formData.position}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Player Personnel Assistant, Director of Recruiting"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
               </div>
-            </div>
 
-            <div className="mt-8">
-
-              <div className="mt-4">
+              <div>
                 <label htmlFor="work_history" className="block text-sm font-medium text-black mb-2">
                   Work History
                 </label>
@@ -610,7 +863,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                 />
               </div>
 
-              <div className="mt-4">
+              <div>
                 <label htmlFor="additional_info" className="block text-sm font-medium text-black mb-2">
                   Additional Information
                 </label>
@@ -625,107 +878,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                 />
               </div>
             </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <HudlLinkSelector
-                hudlLinks={formData.hudl_links}
-                onChange={(links) => setFormData((prev) => ({ ...prev, hudl_links: links }))}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
-                Position
-              </label>
-              <input
-                type="text"
-                id="position"
-                name="position"
-                value={formData.position}
-                onChange={handleChange}
-                placeholder="e.g., Quarterback"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="school" className="block text-sm font-medium text-black mb-2">
-                School
-              </label>
-              <input
-                type="text"
-                id="school"
-                name="school"
-                value={formData.school}
-                onChange={handleChange}
-                placeholder="e.g., Niceville High School"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="graduation_year" className="block text-sm font-medium text-black mb-2">
-                Graduation Year
-              </label>
-              <input
-                type="number"
-                id="graduation_year"
-                name="graduation_year"
-                value={formData.graduation_year}
-                onChange={handleChange}
-                min="2020"
-                max="2030"
-                placeholder="2027"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="parent_name" className="block text-sm font-medium text-black mb-2">
-                Parent Name (if run by parent)
-              </label>
-              <input
-                type="text"
-                id="parent_name"
-                name="parent_name"
-                value={formData.parent_name}
-                onChange={handleChange}
-                placeholder="e.g., Brandon Huff"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
-                Social Media Link (X/Twitter, etc.)
-              </label>
-              <input
-                type="url"
-                id="social_link"
-                name="social_link"
-                value={formData.social_link}
-                onChange={handleChange}
-                placeholder="https://x.com/yourhandle"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-black mb-2">
-                Bio
-              </label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-          </>
+          </div>
         )}
 
         <div className="flex flex-col sm:flex-row gap-4">

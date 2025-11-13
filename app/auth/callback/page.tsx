@@ -82,7 +82,7 @@ function AuthCallbackContent() {
           // Use window.location with cache bust to force fresh server render
           const timestamp = Date.now()
           if (!profile) {
-            window.location.href = `/profile/edit?refresh=${timestamp}`
+            window.location.href = `/profile/user-setup?refresh=${timestamp}`
           } else {
             window.location.href = `/?refresh=${timestamp}`
           }
@@ -324,7 +324,7 @@ function AuthCallbackContent() {
         // Use window.location with cache bust to force fresh server render
         const timestamp = Date.now()
         if (!profile) {
-          window.location.href = `/profile/edit?refresh=${timestamp}`
+          window.location.href = `/profile/user-setup?refresh=${timestamp}`
         } else {
           window.location.href = `/?refresh=${timestamp}`
         }

@@ -27,21 +27,41 @@ interface SportSelectorProps {
   selectedSport: string
   onSelect: (sport: string) => void
   label?: string
+  availableSports?: string[] // Filter to specific sports (e.g., ['football', 'basketball'])
 }
 
-export function SportSelector({ selectedSport, onSelect, label = 'Sport' }: SportSelectorProps) {
+export function SportSelector({ selectedSport, onSelect, label = 'Sport', availableSports }: SportSelectorProps) {
+  // Filter sports if availableSports is provided
+  const filteredSports = availableSports 
+    ? SPORTS.filter(sport => {
+        // Only show football and men's basketball
+        if (availableSports.includes('basketball')) {
+          return sport.value === 'football' || sport.value === 'mens-basketball'
+        }
+        return availableSports.includes(sport.value)
+      })
+    : SPORTS
+
+  const handleSportClick = (sportValue: string) => {
+    onSelect(sportValue)
+  }
+
   return (
     <div>
       <label className="block text-sm font-medium text-black mb-2">
         {label}
       </label>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-        {SPORTS.map((sport) => (
+        {filteredSports.map((sport) => (
           <button
             key={sport.value}
             type="button"
-            onClick={() => onSelect(sport.value)}
-            className={`p-3 rounded-lg border-2 transition-all ${
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleSportClick(sport.value)
+            }}
+            className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
               selectedSport === sport.value
                 ? 'bg-black text-white border-black'
                 : 'bg-white text-black border-gray-300 hover:border-gray-400'
@@ -65,17 +85,32 @@ interface MultiSportSelectorProps {
   selectedSports: string[]
   onToggle: (sport: string) => void
   label?: string
+  availableSports?: string[] // Filter to specific sports (e.g., ['football', 'basketball'])
 }
 
-export function MultiSportSelector({ selectedSports, onToggle, label = 'Sports' }: MultiSportSelectorProps) {
+export function MultiSportSelector({ selectedSports, onToggle, label = 'Sports', availableSports }: MultiSportSelectorProps) {
+  // Filter sports if availableSports is provided
+  // Only show football and men's basketball
+  const filteredSports = availableSports 
+    ? SPORTS.filter(sport => {
+        // Only show football and men's basketball
+        if (availableSports.includes('basketball')) {
+          return sport.value === 'football' || sport.value === 'mens-basketball'
+        }
+        return availableSports.includes(sport.value)
+      })
+    : SPORTS
+
   return (
     <div>
-      <label className="block text-sm font-medium text-black mb-2">
-        {label}
-      </label>
+      {label && (
+        <label className="block text-sm font-medium text-black mb-2">
+          {label}
+        </label>
+      )}
       <select
         multiple
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white min-h-[200px]"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white min-h-[80px]"
         onChange={(e) => {
           const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
           // Toggle each newly selected or deselected option
@@ -93,7 +128,7 @@ export function MultiSportSelector({ selectedSports, onToggle, label = 'Sports' 
         }}
         value={selectedSports}
       >
-        {SPORTS.map((sport) => (
+        {filteredSports.map((sport) => (
           <option 
             key={sport.value} 
             value={sport.value}

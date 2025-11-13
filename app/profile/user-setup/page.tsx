@@ -1,12 +1,12 @@
 import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
-import ProfileSetupForm from '@/components/profile/ProfileSetupForm'
+import UserSetupForm from '@/components/profile/UserSetupForm'
 import PageContent from '@/components/layout/PageContent'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
-export default async function ProfileSetupPage() {
+export default async function UserSetupPage() {
   const supabase = createServerClient()
   const {
     data: { session },
@@ -16,19 +16,20 @@ export default async function ProfileSetupPage() {
     redirect('/auth/signin')
   }
 
-  // Check if profile already exists (use maybeSingle to avoid errors)
+  // Check if profile already exists
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('user_id', session.user.id)
     .maybeSingle()
 
-  // Redirect to new user-setup flow
-  if (profile) {
+  // If profile exists and has a role other than 'user', redirect to profile
+  if (profile && profile.role !== 'user') {
     redirect('/profile')
-  } else {
-    redirect('/profile/user-setup')
   }
+
+  // If profile exists with 'user' role, they can still access this page to update
+  // But if they have completed player/scout setup, redirect to profile
 
   // Get user info from auth
   const {
@@ -36,13 +37,13 @@ export default async function ProfileSetupPage() {
   } = await supabase.auth.getUser()
 
   // Get user avatar for header
-  const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
+  const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || profile?.avatar_url || null
   const sanitizedAvatar = isMeaningfulAvatar(rawAvatarUrl) ? rawAvatarUrl : null
   const headerContent = (
     <HeaderUserAvatar
       userId={session.user.id}
       avatarUrl={rawAvatarUrl}
-      fullName={user?.user_metadata?.full_name || user?.user_metadata?.name}
+      fullName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name}
       email={user?.email}
     />
   )
@@ -51,9 +52,9 @@ export default async function ProfileSetupPage() {
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
       <PageContent header={headerContent}>
-        <ProfileSetupForm
+        <UserSetupForm
           userEmail={user?.email || ''}
-          userName={user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
+          userName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
           userAvatar={sanitizedAvatar || ''}
         />
       </PageContent>

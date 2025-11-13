@@ -23,10 +23,10 @@ export default async function ProfilePage() {
     .from('profiles')
     .select('*')
     .eq('user_id', session.user.id)
-    .single()
+    .maybeSingle()
 
   if (!profile) {
-    redirect('/profile/setup')
+    redirect('/profile/user-setup')
   }
 
   // Check if user has pending or approved scout application

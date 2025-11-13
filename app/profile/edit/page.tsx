@@ -22,37 +22,18 @@ export default async function ProfileEditPage() {
     .eq('user_id', session.user.id)
     .maybeSingle()
 
-  // If no profile exists, create a basic one with default role 'player'
-  let isNewProfile = false
+  // If no profile exists, redirect to user-setup
   if (!profile) {
-    const { data: newProfile, error: createError } = await supabase
-      .from('profiles')
-      .insert({
-        user_id: session.user.id,
-        role: 'player',
-        full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || null,
-        avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single()
-
-    if (createError) {
-      console.error('Error creating profile:', createError)
-      redirect('/profile/setup')
-    }
-    profile = newProfile
-    isNewProfile = true
-  } else {
-    // Check if profile has been saved for the first time
-    // If updated_at is very close to created_at (within 5 seconds), it hasn't been saved yet
-    const profileCreatedAt = new Date(profile.created_at)
-    const profileUpdatedAt = new Date(profile.updated_at)
-    const timeDiff = Math.abs(profileUpdatedAt.getTime() - profileCreatedAt.getTime())
-    // If updated_at is within 5 seconds of created_at, consider it unsaved
-    isNewProfile = timeDiff < 5000
+    redirect('/profile/user-setup')
   }
+
+  // Check if profile has been saved for the first time
+  // If updated_at is very close to created_at (within 5 seconds), it hasn't been saved yet
+  const profileCreatedAt = new Date(profile.created_at)
+  const profileUpdatedAt = new Date(profile.updated_at)
+  const timeDiff = Math.abs(profileUpdatedAt.getTime() - profileCreatedAt.getTime())
+  // If updated_at is within 5 seconds of created_at, consider it unsaved
+  const isNewProfile = timeDiff < 5000
 
   const headerContent = session ? (
     <HeaderUserAvatar

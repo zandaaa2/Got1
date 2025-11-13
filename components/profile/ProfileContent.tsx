@@ -1098,8 +1098,8 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
         </div>
       )}
 
-      {/* Scout Status Section - Only show if user is not a scout */}
-      {profile.role !== 'scout' && (
+      {/* Scout Status Section - Only show if user is a base user (not player or scout) */}
+      {profile.role === 'user' && (
         <div className="surface-card mb-8 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-black">Scout Status</h3>
@@ -1193,6 +1193,22 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
             >
               View
             </a>
+          </div>
+
+          {/* Account Type */}
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Account Type</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">
+                {profile.role === 'user' ? 'User' : profile.role === 'player' ? 'Player' : 'Scout'}
+              </p>
+            </div>
+            <Link
+              href="/profile/account-type"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+            >
+              View
+            </Link>
           </div>
 
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
