@@ -76,14 +76,6 @@ function AuthCallbackContent() {
             .eq('user_id', session.user.id)
             .maybeSingle()
 
-          // Verify session exists client-side
-          const { data: { session: verifySession } } = await supabase.auth.getSession()
-          if (!verifySession) {
-            console.error('❌ Session not found after email verification')
-            router.push('/?error=session_not_persisted')
-            return
-          }
-
           // Determine redirect URL
           const finalRedirect = !profile 
             ? '/profile/user-setup'
@@ -312,14 +304,6 @@ function AuthCallbackContent() {
           .select('*')
           .eq('user_id', data.session.user.id)
           .maybeSingle()
-
-        // Verify session exists before redirect
-        const { data: { session: verifySession } } = await supabase.auth.getSession()
-        if (!verifySession) {
-          console.error('❌ Session not found after exchange')
-          router.push('/?error=session_not_persisted')
-          return
-        }
 
         // Determine redirect URL
         const finalRedirect = !profile 
