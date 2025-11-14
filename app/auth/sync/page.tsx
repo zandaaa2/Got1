@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 
@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase-client'
  * Intermediate page that waits for cookies to be fully set before redirecting.
  * Shows a loading overlay for 1 second to ensure cookies are processed, then does a hard refresh.
  */
-export default function AuthSyncPage() {
+function AuthSyncContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -63,6 +63,24 @@ export default function AuthSyncPage() {
         <p className="text-lg font-medium text-gray-900">Completing sign in...</p>
       </div>
     </div>
+  )
+}
+
+export default function AuthSyncPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="relative w-12 h-12 mx-auto">
+            <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-lg font-medium text-gray-900">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthSyncContent />
+    </Suspense>
   )
 }
 
