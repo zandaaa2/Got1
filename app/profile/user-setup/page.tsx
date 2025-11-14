@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import UserSetupForm from '@/components/profile/UserSetupForm'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
@@ -51,13 +51,13 @@ export default async function UserSetupPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <PageContent header={headerContent}>
+      <DynamicLayout header={headerContent}>
         <UserSetupForm
           userEmail={user?.email || ''}
           userName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
           userAvatar={sanitizedAvatar || ''}
         />
-      </PageContent>
+      </DynamicLayout>
     </div>
   )
 }

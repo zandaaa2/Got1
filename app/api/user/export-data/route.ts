@@ -1,15 +1,15 @@
-import { createServerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth, handleApiError } from '@/lib/api-helpers'
 import PDFDocument from 'pdfkit'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const userId = session.user.id
     const searchParams = request.nextUrl.searchParams
@@ -82,11 +82,7 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error: any) {
-    console.error('Error exporting user data:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to export data' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to export data')
   }
 }
 

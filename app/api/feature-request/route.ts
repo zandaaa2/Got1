@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createServerClient } from '@/lib/supabase'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -37,10 +37,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user info if available
-    const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    const userEmail = session?.user?.email || 'Anonymous'
+    // Get user info if available (optional auth for feature requests)
+    // Feature requests can be submitted anonymously, so we don't require auth
+    const authResult = await requireAuth(request)
+    const userEmail = authResult.response ? 'Anonymous' : (authResult.session?.user?.email || 'Anonymous')
     const userAgent = request.headers.get('user-agent') || 'Unknown'
 
     console.log('📧 Sending email to zander@got1.app')
@@ -96,14 +96,11 @@ export async function POST(request: NextRequest) {
       console.log('✅ Check delivery at: https://resend.com/emails/' + data.id)
     }
 
-    return NextResponse.json({ success: true, message: 'Feature request submitted successfully' })
+    return successResponse({ success: true, message: 'Feature request submitted successfully' })
   } catch (error: any) {
     console.error('❌ Error submitting feature request:', error)
     console.error('❌ Error stack:', error.stack)
-    return NextResponse.json(
-      { error: error.message || 'Failed to submit feature request' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to submit feature request')
   }
 }
 

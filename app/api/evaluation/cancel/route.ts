@@ -1,9 +1,7 @@
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
-
-import { createRouteHandlerClient } from '@/lib/supabase'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { getUserEmail } from '@/lib/supabase-admin'
 import { sendEvaluationCancelledEmail } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
@@ -18,16 +16,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const body = await request.json()
     const { evaluationId, reason } = body
@@ -136,17 +130,13 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if notification fails
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       status: 'cancelled',
       refunded: hasPaid,
     })
   } catch (error: any) {
-    console.error('Error cancelling evaluation:', error)
-    return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

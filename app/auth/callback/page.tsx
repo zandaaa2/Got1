@@ -76,16 +76,24 @@ function AuthCallbackContent() {
             .eq('user_id', session.user.id)
             .maybeSingle()
 
-          // Wait a bit more to ensure cookies are fully set
-          await new Promise(resolve => setTimeout(resolve, 500))
-
-          // Use window.location with cache bust to force fresh server render
-          const timestamp = Date.now()
-          if (!profile) {
-            window.location.href = `/profile/user-setup?refresh=${timestamp}`
-          } else {
-            window.location.href = `/?refresh=${timestamp}`
+          // Verify session exists client-side
+          const { data: { session: verifySession } } = await supabase.auth.getSession()
+          if (!verifySession) {
+            console.error('❌ Session not found after email verification')
+            router.push('/?error=session_not_persisted')
+            return
           }
+
+          // Determine redirect URL
+          const finalRedirect = !profile 
+            ? '/profile/user-setup'
+            : '/'
+
+          console.log('✅ Email verification session verified, redirecting through sync page to:', finalRedirect)
+          
+          // Redirect through sync page which will ensure cookies are set server-side
+          const syncUrl = `/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`
+          window.location.href = syncUrl
 
           return
         } catch (error: any) {
@@ -278,7 +286,8 @@ function AuthCallbackContent() {
         console.log('✅ Session created, user ID:', data.session.user.id)
 
         // Wait for cookies to be set by the browser client
-        await new Promise(resolve => setTimeout(resolve, 300))
+        // createBrowserClient from @supabase/ssr sets cookies automatically
+        await new Promise(resolve => setTimeout(resolve, 500))
 
         // Verify session is actually in the client
         const { data: { session: verifySession } } = await supabase.auth.getSession()
@@ -289,27 +298,13 @@ function AuthCallbackContent() {
         }
 
         // Verify user can be retrieved (this validates the JWT)
-        // This is critical - if this fails, the server won't be able to read the session
         const { data: { user: verifyUser }, error: userError } = await supabase.auth.getUser()
-        if (userError) {
-          console.error('❌ getUser failed after session exchange:', userError.message)
-          console.error('Error details:', JSON.stringify(userError, null, 2))
-          // Try one more time after a delay
-          await new Promise(resolve => setTimeout(resolve, 500))
-          const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser()
-          if (retryError || !retryUser) {
-            console.error('❌ getUser still failing after retry:', retryError?.message)
-            router.push('/?error=user_validation_failed')
-            return
-          }
-          console.log('✅ User validated after retry:', retryUser.id)
-        } else if (!verifyUser) {
-          console.error('❌ getUser returned no user')
+        if (userError || !verifyUser) {
+          console.error('❌ getUser failed after session exchange:', userError?.message)
           router.push('/?error=user_validation_failed')
           return
-        } else {
-          console.log('✅ User validated successfully:', verifyUser.id)
         }
+        console.log('✅ User validated successfully:', verifyUser.id)
 
         // Check if profile exists
         const { data: profile } = await supabase
@@ -318,16 +313,25 @@ function AuthCallbackContent() {
           .eq('user_id', data.session.user.id)
           .maybeSingle()
 
-        // Wait a bit more to ensure cookies are fully set
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        // Use window.location with cache bust to force fresh server render
-        const timestamp = Date.now()
-        if (!profile) {
-          window.location.href = `/profile/user-setup?refresh=${timestamp}`
-        } else {
-          window.location.href = `/?refresh=${timestamp}`
+        // Verify session exists before redirect
+        const { data: { session: verifySession } } = await supabase.auth.getSession()
+        if (!verifySession) {
+          console.error('❌ Session not found after exchange')
+          router.push('/?error=session_not_persisted')
+          return
         }
+
+        // Determine redirect URL
+        const finalRedirect = !profile 
+          ? '/profile/user-setup'
+          : '/'
+
+        console.log('✅ Session verified, redirecting through sync page to:', finalRedirect)
+        
+        // Redirect through sync page which will ensure cookies are set server-side
+        // before doing the final redirect
+        const syncUrl = `/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`
+        window.location.href = syncUrl
       } catch (error: any) {
         console.error('Callback error:', error)
         router.push('/?error=auth_failed')

@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import PlayerSetupForm from '@/components/profile/PlayerSetupForm'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function PlayerSetupPage() {
@@ -49,9 +49,9 @@ export default async function PlayerSetupPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <PageContent header={headerContent}>
+      <DynamicLayout header={headerContent}>
         <PlayerSetupForm profile={profile} />
-      </PageContent>
+      </DynamicLayout>
     </div>
   )
 }

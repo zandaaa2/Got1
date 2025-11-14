@@ -1,23 +1,22 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@/lib/supabase'
+import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { sendProfileReportEmail } from '@/lib/email'
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json()
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
+    }
+    const { session, supabase } = authResult
+
+    const body = await request.json()
     const { profileId, reason } = body || {}
 
     if (!profileId) {
       return NextResponse.json({ error: 'Missing profileId' }, { status: 400 })
-    }
-
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { data: reportedProfile, error: reportedError } = await supabase
@@ -57,9 +56,8 @@ export async function POST(req: Request) {
       profileUrl,
     })
 
-    return NextResponse.json({ success: true })
+    return successResponse({ success: true })
   } catch (error: any) {
-    console.error('Error reporting profile:', error)
-    return NextResponse.json({ error: 'Failed to submit report' }, { status: 500 })
+    return handleApiError(error, 'Failed to submit report')
   }
 }

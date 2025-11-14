@@ -55,46 +55,51 @@ export async function middleware(request: NextRequest) {
         }
       )
 
-      // Try getSession first (more reliable than getUser)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession().catch((err) => {
-        return { data: { session: null }, error: err }
-      })
-      
-      if (session) {
-        console.log('Middleware: Session found via getSession, user ID:', session.user.id)
-        // Refresh session if expired - this keeps the session alive
-        const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
-          return { data: { user: null }, error: err }
+      // Always try to refresh the session if we have auth cookies
+      // This ensures cookies set client-side are immediately available to server components
+      if (supabaseCookies.length > 0) {
+        // Try getSession first
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession().catch((err) => {
+          return { data: { session: null }, error: err }
         })
         
-        if (process.env.NODE_ENV === 'development') {
-          if (userError) {
-            console.log('Middleware: getUser error:', userError.message)
+        if (session) {
+          // Verify the session is valid by getting the user
+          const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
+            return { data: { user: null }, error: err }
+          })
+          
+          // If getUser fails, refresh the session
+          if (userError || !user) {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session).catch((err) => {
+              return { data: { session: null }, error: err }
+            })
+            
+            if (refreshData?.session) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshData.session.user.id)
+              }
+            } else if (refreshError && process.env.NODE_ENV === 'development') {
+              console.log('Middleware: Session refresh error:', refreshError.message)
+            }
+          } else if (process.env.NODE_ENV === 'development') {
+            console.log('Middleware: Session valid, user ID:', user.id)
           }
-          if (user) {
-            console.log('Middleware: User authenticated:', user.id)
-          } else {
-            console.log('Middleware: No user found (but session exists)')
-          }
-        }
-      } else {
-        // No session found - try getUser as fallback
-        const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
-          return { data: { user: null }, error: err }
-        })
-        
-        // Log for debugging (only in development)
-        if (process.env.NODE_ENV === 'development') {
-          if (sessionError) {
-            console.log('Middleware: getSession error:', sessionError.message)
-          }
-          if (userError) {
-            console.log('Middleware: getUser error:', userError.message)
-          }
-          if (user) {
-            console.log('Middleware: User authenticated:', user.id)
-          } else {
-            console.log('Middleware: No user found')
+        } else {
+          // No session found - try getUser as a fallback
+          const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
+            return { data: { user: null }, error: err }
+          })
+          
+          if (process.env.NODE_ENV === 'development') {
+            if (sessionError) {
+              console.log('Middleware: getSession error:', sessionError.message)
+            }
+            if (user) {
+              console.log('Middleware: User found via getUser fallback:', user.id)
+            } else {
+              console.log('Middleware: No session or user found')
+            }
           }
         }
       }

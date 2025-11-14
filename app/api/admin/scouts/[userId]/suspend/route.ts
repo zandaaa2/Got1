@@ -1,8 +1,6 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin, handleApiError, successResponse } from '@/lib/api-helpers'
 
 /**
  * API route to suspend a scout for a specified number of days.
@@ -12,23 +10,12 @@ export async function POST(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require admin access
+    const adminResult = await requireAdmin(request)
+    if (adminResult.response) {
+      return adminResult.response
     }
-
-    // Check admin access
-    const userIsAdmin = await isAdmin(session.user.id)
-    if (!userIsAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const { session, supabase } = adminResult
 
     const { userId } = params
     const body = await request.json()
@@ -74,23 +61,15 @@ export async function POST(
       .eq('user_id', userId)
 
     if (updateError) {
-      console.error('Error suspending scout:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to suspend scout' },
-        { status: 500 }
-      )
+      return handleApiError(updateError, 'Failed to suspend scout')
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       suspended_until: suspendedUntil.toISOString(),
     })
   } catch (error: any) {
-    console.error('Error suspending scout:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

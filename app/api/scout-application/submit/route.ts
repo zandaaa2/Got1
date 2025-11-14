@@ -1,22 +1,16 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { sendApplicationEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const body = await request.json()
     const { current_workplace, current_position, work_history, additional_info } = body
@@ -73,11 +67,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (applicationError || !application) {
-      console.error('Error creating application:', applicationError)
-      return NextResponse.json(
-        { error: 'Failed to submit application' },
-        { status: 500 }
-      )
+      return handleApiError(applicationError, 'Failed to submit application')
     }
 
     // Get user email for the email notification
@@ -91,13 +81,9 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if email fails
     }
 
-    return NextResponse.json({ success: true, application })
+    return successResponse({ success: true, application })
   } catch (error: any) {
-    console.error('Error submitting scout application:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

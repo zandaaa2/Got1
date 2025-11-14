@@ -1,21 +1,15 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const body = await request.json()
     const { newRole, password } = body
@@ -116,11 +110,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', session.user.id)
 
     if (updateError) {
-      console.error('Error updating profile role:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update role' },
-        { status: 500 }
-      )
+      return handleApiError(updateError, 'Failed to update role')
     }
 
     // If converting to player or scout, redirect to setup page
@@ -131,16 +121,12 @@ export async function POST(request: NextRequest) {
       redirectUrl = '/profile/scout-setup'
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       redirectUrl,
     })
   } catch (error: any) {
-    console.error('Error converting role:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

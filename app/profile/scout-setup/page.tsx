@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ScoutSetupForm from '@/components/profile/ScoutSetupForm'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function ScoutSetupPage() {
@@ -49,9 +49,9 @@ export default async function ScoutSetupPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <PageContent header={headerContent}>
+      <DynamicLayout header={headerContent}>
         <ScoutSetupForm profile={profile} />
-      </PageContent>
+      </DynamicLayout>
     </div>
   )
 }

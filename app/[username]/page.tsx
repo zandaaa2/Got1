@@ -1,8 +1,12 @@
 import { createServerClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
-import ProfileView from '@/components/profile/ProfileView'
+import dynamic from 'next/dynamic'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
+
+const ProfileView = dynamic(() => import('@/components/profile/ProfileView'), {
+  ssr: false,
+})
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import type { Metadata } from 'next'

@@ -1,6 +1,6 @@
-import { createServerClient } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { sendEvaluationRequestEmail } from '@/lib/email'
 import { getUserEmail, createAdminClient } from '@/lib/supabase-admin'
 import Stripe from 'stripe'
@@ -19,16 +19,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
-    
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const body = await request.json()
     const { scoutId, price } = body
@@ -204,17 +200,14 @@ export async function POST(request: NextRequest) {
     console.log('✅ Evaluation created successfully:', evaluation.id)
     console.log('✅ Stripe checkout session created:', checkoutSession.id)
     
-    return NextResponse.json({ 
+    return successResponse({ 
       success: true, 
       evaluationId: evaluation.id,
       sessionId: checkoutSession.id
     })
   } catch (error: any) {
     console.error('Error creating evaluation:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

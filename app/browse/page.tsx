@@ -1,11 +1,15 @@
 import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
-import BrowseContent from '@/components/browse/BrowseContent'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
+import dynamicImport from 'next/dynamic'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
+
+const BrowseContent = dynamicImport(() => import('@/components/browse/BrowseContent'), {
+  ssr: false,
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely

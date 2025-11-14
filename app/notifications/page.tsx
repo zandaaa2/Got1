@@ -1,7 +1,7 @@
 import { createServerClient } from '@/lib/supabase'
 import NotificationsContent from '@/components/notifications/NotificationsContent'
 import Sidebar from '@/components/layout/Sidebar'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
@@ -19,12 +19,12 @@ export default async function NotificationsPage() {
     return (
       <div className="min-h-screen bg-white flex">
         <Sidebar />
-        <PageContent header={headerContent}>
+        <DynamicLayout header={headerContent}>
           <div className="pt-8">
             <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Notifications</h1>
             <p className="text-gray-600">Please sign in to view your notifications.</p>
           </div>
-        </PageContent>
+        </DynamicLayout>
       </div>
     )
   }
@@ -50,12 +50,12 @@ export default async function NotificationsPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar />
-      <PageContent header={headerContent}>
+      <DynamicLayout header={headerContent}>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Notifications</h1>
           <NotificationsContent userId={session.user.id} />
         </div>
-      </PageContent>
+      </DynamicLayout>
     </div>
   )
 }

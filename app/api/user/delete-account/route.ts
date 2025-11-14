@@ -1,16 +1,16 @@
-import { createServerClient } from '@/lib/supabase'
-import { createAdminClient } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
-
+    const { session } = authResult
     const userId = session.user.id
 
     // Use service role client for admin operations
@@ -71,13 +71,9 @@ export async function DELETE() {
       console.warn('Auth user deletion failed, but profile was deleted. User may need manual cleanup.')
     }
 
-    return NextResponse.json({ success: true, message: 'Account deleted successfully' })
+    return successResponse({ success: true, message: 'Account deleted successfully' })
   } catch (error: any) {
-    console.error('Error deleting account:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to delete account' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to delete account')
   }
 }
 

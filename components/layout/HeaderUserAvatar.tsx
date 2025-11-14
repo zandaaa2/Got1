@@ -30,7 +30,7 @@ export default function HeaderUserAvatar({
   const gradientClass = getGradientForId(userId)
 
   return (
-    <Link href={profileUrl} className="cursor-pointer hover:opacity-80 transition-opacity">
+    <Link href={profileUrl} className="cursor-pointer hover:opacity-80 transition-opacity" data-user-avatar>
       <div
         className={`w-10 h-10 rounded-full overflow-hidden ${
           showBorder ? 'border-2 border-black p-0.5' : ''

@@ -1,8 +1,7 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { sendEvaluationRequestEmail, sendEvaluationDeniedEmail, sendEvaluationConfirmedEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
 import { createNotification } from '@/lib/notifications'
@@ -18,17 +17,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-    
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const body = await request.json()
     const { evaluationId, action, deniedReason } = body // action: 'confirm' or 'deny'
@@ -195,7 +189,7 @@ export async function POST(request: NextRequest) {
         // Don't fail the request if notification fails
       }
 
-      return NextResponse.json({ 
+      return successResponse({ 
         success: true, 
         status: 'denied',
         refunded: shouldRefund,
@@ -283,17 +277,13 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if notification fails
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       status: 'confirmed',
       message: 'Evaluation confirmed. Payment already captured and held in escrow.',
     })
   } catch (error: any) {
-    console.error('Error in evaluation confirm:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

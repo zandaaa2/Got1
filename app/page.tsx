@@ -1,10 +1,15 @@
 import { createServerClient } from '@/lib/supabase'
-import BrowseContent from '@/components/browse/BrowseContent'
 import Sidebar from '@/components/layout/Sidebar'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
+import dynamicImport from 'next/dynamic'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
-import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
+import AuthSessionSync from '@/components/shared/AuthSessionSync'
+
+const BrowseContent = dynamicImport(() => import('@/components/browse/BrowseContent'), {
+  ssr: false,
+})
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -69,11 +74,11 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      <AuthRefreshHandler />
+      <AuthSessionSync />
       <Sidebar activePage="browse" />
-      <PageContent header={headerContent}>
+      <DynamicLayout header={headerContent}>
         <BrowseContent session={session} />
-      </PageContent>
+      </DynamicLayout>
     </div>
   )
 }

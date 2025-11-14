@@ -1,8 +1,6 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin, handleApiError, successResponse } from '@/lib/api-helpers'
 
 /**
  * API route to revoke a scout's verification status by changing their role back to 'player'.
@@ -12,23 +10,12 @@ export async function POST(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require admin access
+    const adminResult = await requireAdmin(request)
+    if (adminResult.response) {
+      return adminResult.response
     }
-
-    // Check admin access
-    const userIsAdmin = await isAdmin(session.user.id)
-    if (!userIsAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const { session, supabase } = adminResult
 
     const { userId } = params
     console.log('Revoke request for userId:', userId)
@@ -40,14 +27,9 @@ export async function POST(
       .eq('user_id', userId)
       .single()
 
-    if (profileError) {
+    if (profileError || !profile) {
       console.error('Error fetching profile:', profileError)
-      return NextResponse.json({ error: 'Profile not found', details: profileError.message }, { status: 404 })
-    }
-
-    if (!profile) {
-      console.error('Profile not found for userId:', userId)
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      return handleApiError(profileError || new Error('Profile not found'), 'Profile not found')
     }
 
     console.log('Profile found:', { id: profile.id, user_id: profile.user_id, role: profile.role })
@@ -108,17 +90,7 @@ export async function POST(
 
     if (updateError) {
       console.error('Error revoking scout status:', updateError)
-      console.error('Error code:', updateError.code)
-      console.error('Error message:', updateError.message)
-      console.error('Error details:', JSON.stringify(updateError, null, 2))
-      return NextResponse.json(
-        { 
-          error: 'Failed to revoke scout status',
-          details: updateError.message,
-          code: updateError.code
-        },
-        { status: 500 }
-      )
+      return handleApiError(updateError, 'Failed to revoke scout status')
     }
 
     if (!updatedProfiles || updatedProfiles.length === 0) {
@@ -150,13 +122,10 @@ export async function POST(
     }
 
     console.log('✅ Scout status revoked successfully:', updatedProfiles[0])
-    return NextResponse.json({ success: true, profile: updatedProfiles[0] })
+    return successResponse({ success: true, profile: updatedProfiles[0] })
   } catch (error: any) {
     console.error('Error revoking scout status:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

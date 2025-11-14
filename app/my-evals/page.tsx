@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import MyEvalsContent from '@/components/my-evals/MyEvalsContent'
 import Sidebar from '@/components/layout/Sidebar'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
@@ -23,12 +23,12 @@ export default async function MyEvalsPage() {
     return (
       <div className="min-h-screen bg-white flex">
         <Sidebar activePage="my-evals" />
-        <PageContent header={headerContent}>
+        <DynamicLayout header={headerContent}>
           <div className="pt-8">
             <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">My Evals</h1>
             <AuthInline mode="signin" />
           </div>
-        </PageContent>
+        </DynamicLayout>
       </div>
     )
   }
@@ -65,12 +65,12 @@ export default async function MyEvalsPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="my-evals" />
-      <PageContent header={headerContent}>
+      <DynamicLayout header={headerContent}>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">My Evals</h1>
           <MyEvalsContent role={validRole} userId={session.user.id} />
         </div>
-      </PageContent>
+      </DynamicLayout>
     </div>
   )
 }

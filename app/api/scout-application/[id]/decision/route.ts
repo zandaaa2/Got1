@@ -1,8 +1,6 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin, handleApiError, successResponse } from '@/lib/api-helpers'
 import { sendApplicationApprovedEmail, sendApplicationDeniedEmail } from '@/lib/email'
 import { getUserEmail } from '@/lib/supabase-admin'
 import { createNotification } from '@/lib/notifications'
@@ -17,23 +15,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require admin access
+    const adminResult = await requireAdmin(request)
+    if (adminResult.response) {
+      return adminResult.response
     }
-
-    // Check admin access
-    const userIsAdmin = await isAdmin(session.user.id)
-    if (!userIsAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const { session, supabase } = adminResult
 
     const body = await request.json()
     const { decision } = body
@@ -253,13 +240,10 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ success: true, decision })
+    return successResponse({ success: true, decision })
   } catch (error: any) {
     console.error('Error processing decision:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Internal server error')
   }
 }
 

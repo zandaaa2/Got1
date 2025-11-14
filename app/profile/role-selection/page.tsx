@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import Sidebar from '@/components/layout/Sidebar'
-import PageContent from '@/components/layout/PageContent'
+import DynamicLayout from '@/components/layout/DynamicLayout'
 import RoleSelectionModal from '@/components/profile/RoleSelectionModal'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
@@ -90,7 +90,7 @@ export default function RoleSelectionPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <PageContent header={headerContent || <div />}>
+      <DynamicLayout header={headerContent || <div />}>
         <div className="max-w-2xl mx-auto py-12">
           <h1 className="text-2xl md:text-3xl font-bold text-black mb-4">
             Choose Your Path
@@ -99,7 +99,7 @@ export default function RoleSelectionPage() {
             Select how you'd like to use Got1. You can always change this later.
           </p>
         </div>
-      </PageContent>
+      </DynamicLayout>
       <RoleSelectionModal
         isOpen={isModalOpen}
         onClose={() => {
