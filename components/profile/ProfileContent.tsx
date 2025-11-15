@@ -222,7 +222,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
               const linkData = await linkResponse.json()
               
               if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
-                window.location.href = linkData.onboardingUrl
+                window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
                 return
               }
             }
@@ -568,6 +568,19 @@ function StripeConnectSection({ profile }: { profile: any }) {
 
   useEffect(() => {
     const sendNotification = async () => {
+      // Check sessionStorage to see if we've already sent a notification for this specific state
+      const storageKey = `stripe_requirements_notified_${profile.user_id}`
+      const requirementsKey = JSON.stringify({
+        due: accountStatus?.requirementsDue || [],
+        pastDue: accountStatus?.requirementsPastDue || [],
+      })
+      const lastNotifiedKey = sessionStorage.getItem(storageKey)
+      
+      // Only send if this is a NEW requirements state
+      if (lastNotifiedKey === requirementsKey) {
+        return // Already notified for this exact state
+      }
+      
       try {
         const response = await fetch('/api/stripe/connect/requirements-notice', {
           method: 'POST',
@@ -580,6 +593,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
           }),
         })
         if (response.ok) {
+          sessionStorage.setItem(storageKey, requirementsKey) // Remember this state
           setNotificationSent(true)
         } else {
           console.error('Failed to send requirements email')
@@ -592,12 +606,26 @@ function StripeConnectSection({ profile }: { profile: any }) {
     if (needsUpdate && !notificationSent) {
       sendNotification()
     }
-  }, [needsUpdate, notificationSent, accountStatus?.requirementsDue, accountStatus?.requirementsPastDue])
+  }, [needsUpdate, notificationSent, accountStatus?.requirementsDue, accountStatus?.requirementsPastDue, profile.user_id])
 
   // Create in-app notification when Stripe has issues
   useEffect(() => {
     const createStripeIssueNotification = async () => {
       if (needsUpdate && accountStatus && !stripeIssueNotificationSent) {
+        // Check sessionStorage to see if we've already created a notification for this specific state
+        const storageKey = `stripe_issue_notified_${profile.user_id}`
+        const requirementsKey = JSON.stringify({
+          due: accountStatus.requirementsDue || [],
+          pastDue: accountStatus.requirementsPastDue || [],
+          reason: accountStatus.requirementsReason,
+        })
+        const lastNotifiedKey = sessionStorage.getItem(storageKey)
+        
+        // Only create if this is a NEW requirements state
+        if (lastNotifiedKey === requirementsKey) {
+          return // Already notified for this exact state
+        }
+        
         try {
           const response = await fetch('/api/notifications/create', {
             method: 'POST',
@@ -615,6 +643,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
             }),
           })
           if (response.ok) {
+            sessionStorage.setItem(storageKey, requirementsKey) // Remember this state
             setStripeIssueNotificationSent(true)
           }
         } catch (error) {
@@ -624,7 +653,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
     }
 
     createStripeIssueNotification()
-  }, [needsUpdate, accountStatus, stripeIssueNotificationSent])
+  }, [needsUpdate, accountStatus, stripeIssueNotificationSent, profile.user_id])
 
   // Create notification when scout becomes fully ready to earn
   // Use sessionStorage to track if we've checked this browser session (persists across remounts)
@@ -755,7 +784,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
               const linkData = await linkResponse.json()
               
               if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
-                window.location.href = linkData.onboardingUrl
+                window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
                 return
               }
             }
@@ -768,12 +797,13 @@ function StripeConnectSection({ profile }: { profile: any }) {
       
       if (data.success) {
         // If onboarding is complete, open dashboard; otherwise open onboarding
+        // Open in a new tab instead of redirecting in the same tab
         if (data.onboardingComplete && data.dashboardUrl) {
-          console.log('📧 Opening dashboard:', data.dashboardUrl)
-          window.location.href = data.dashboardUrl
+          console.log('📧 Opening dashboard in new tab:', data.dashboardUrl)
+          window.open(data.dashboardUrl, '_blank', 'noopener,noreferrer')
         } else if (data.onboardingUrl) {
-          console.log('📧 Opening onboarding:', data.onboardingUrl)
-          window.location.href = data.onboardingUrl
+          console.log('📧 Opening onboarding in new tab:', data.onboardingUrl)
+          window.open(data.onboardingUrl, '_blank', 'noopener,noreferrer')
         } else {
           console.error('❌ No onboarding or dashboard URL returned')
           alert('Failed to get account link. Please try again.')
@@ -860,12 +890,12 @@ function StripeConnectSection({ profile }: { profile: any }) {
                       
                       if (linkResponse.ok && linkData.success) {
                         if (linkData.onboardingUrl) {
-                          // Step 4: Redirect to Stripe onboarding immediately
-                          window.location.href = linkData.onboardingUrl
+                          // Step 4: Open Stripe onboarding in new tab immediately
+                          window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
                           return
                         } else if (linkData.dashboardUrl) {
                           // If already onboarded (shouldn't happen, but handle it)
-                          window.location.href = linkData.dashboardUrl
+                          window.open(linkData.dashboardUrl, '_blank', 'noopener,noreferrer')
                           return
                         }
                       }
@@ -1135,7 +1165,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               const linkData = await linkResponse.json()
               
               if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
-                window.location.href = linkData.onboardingUrl
+                window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
                 return
               }
             }
@@ -1148,11 +1178,11 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       
       if (data.success) {
         if (data.dashboardUrl) {
-          // Open dashboard
-          window.location.href = data.dashboardUrl
+          // Open dashboard in new tab
+          window.open(data.dashboardUrl, '_blank', 'noopener,noreferrer')
         } else if (data.onboardingUrl) {
-          // Open onboarding if no dashboard URL
-          window.location.href = data.onboardingUrl
+          // Open onboarding in new tab if no dashboard URL
+          window.open(data.onboardingUrl, '_blank', 'noopener,noreferrer')
         } else {
           alert('Your Stripe account may need additional verification. Please try again in a few minutes or contact support.')
         }
