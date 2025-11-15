@@ -1,9 +1,14 @@
 import { createServerClient } from '@/lib/supabase'
+import dynamicImport from 'next/dynamic'
+import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
-import WhatsThisContent from '@/components/whats-this/WhatsThisContent'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+
+const WhatsThisContent = dynamicImport(() => import('@/components/whats-this/WhatsThisContent'), {
+  ssr: false,
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -60,7 +65,9 @@ export default async function WhatsThisPage() {
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="whats-this" />
       <DynamicLayout header={headerContent}>
-        <WhatsThisContent organizations={uniqueOrganizations} hasSession={!!session} />
+        <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>
+          <WhatsThisContent organizations={uniqueOrganizations} hasSession={!!session} />
+        </Suspense>
       </DynamicLayout>
     </div>
   )

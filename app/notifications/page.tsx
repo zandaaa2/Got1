@@ -1,9 +1,14 @@
 import { createServerClient } from '@/lib/supabase'
-import NotificationsContent from '@/components/notifications/NotificationsContent'
+import dynamicImport from 'next/dynamic'
+import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+
+const NotificationsContent = dynamicImport(() => import('@/components/notifications/NotificationsContent'), {
+  ssr: false,
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -53,7 +58,9 @@ export default async function NotificationsPage() {
       <DynamicLayout header={headerContent}>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Notifications</h1>
-          <NotificationsContent userId={session.user.id} />
+          <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>
+            <NotificationsContent userId={session.user.id} />
+          </Suspense>
         </div>
       </DynamicLayout>
     </div>

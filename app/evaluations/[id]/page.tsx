@@ -1,9 +1,14 @@
 import { createServerClient } from '@/lib/supabase'
 import { notFound, redirect } from 'next/navigation'
-import EvaluationDetail from '@/components/evaluations/EvaluationDetail'
+import dynamicImport from 'next/dynamic'
+import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+
+const EvaluationDetail = dynamicImport(() => import('@/components/evaluations/EvaluationDetail'), {
+  ssr: false,
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
@@ -117,12 +122,14 @@ export default async function EvaluationPage({
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="my-evals" />
       <DynamicLayout header={headerContent}>
-        <EvaluationDetail
-          evaluation={evaluationWithProfiles}
-          isScout={isScout}
-          userId={session.user.id}
-          scoutProfile={isScout ? profile : undefined}
-        />
+        <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>
+          <EvaluationDetail
+            evaluation={evaluationWithProfiles}
+            isScout={isScout}
+            userId={session.user.id}
+            scoutProfile={isScout ? profile : undefined}
+          />
+        </Suspense>
       </DynamicLayout>
     </div>
   )

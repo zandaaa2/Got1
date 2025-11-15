@@ -160,8 +160,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('✅ Stripe checkout session created (evaluation will be created after payment):', checkoutSession.id)
-    
     return successResponse({ 
       success: true, 
       sessionId: checkoutSession.id

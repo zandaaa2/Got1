@@ -159,8 +159,6 @@ export async function POST(request: NextRequest) {
 
         if (updateError) {
           console.error('Error updating evaluation with transfer_id:', updateError)
-        } else {
-          console.log(`✅ Payout successful: Transferred $${scoutPayout.toFixed(2)} to scout ${scoutProfile.stripe_account_id}, transfer ID: ${transferId}`)
         }
       } catch (stripeError: any) {
         console.error('Error processing payout:', stripeError)
@@ -176,9 +174,7 @@ export async function POST(request: NextRequest) {
         )
       }
     } else if (!scoutProfile.stripe_account_id) {
-      console.warn(`⚠️ Scout ${evaluation.scout_id} does not have a Stripe Connect account. Cannot process payout.`)
-    } else if (transferId) {
-      console.log(`ℹ️ Payout already processed for evaluation ${evaluationId}, transfer ID: ${transferId}`)
+      console.warn(`Scout ${evaluation.scout_id} does not have a Stripe Connect account. Cannot process payout.`)
     }
 
     // Get player's email
@@ -197,18 +193,10 @@ export async function POST(request: NextRequest) {
         console.error('Error sending evaluation complete email:', emailError)
         // Don't fail the request if email fails
       }
-    } else {
-      console.log('⚠️  Could not send evaluation complete email - player email not available (SUPABASE_SERVICE_ROLE_KEY may not be configured)')
     }
 
     // Create in-app notification for player about completion
     try {
-      console.log('📧 Creating evaluation_completed notification for player...', {
-        player_id: evaluation.player_id,
-        evaluation_id: evaluationId,
-        scout_name: scoutProfile?.full_name,
-      })
-
       const notificationCreated = await createNotification({
         userId: evaluation.player_id,
         type: 'evaluation_completed',
@@ -221,24 +209,12 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      if (notificationCreated) {
-        console.log('✅ Evaluation completed notification created successfully for player:', {
-          player_id: evaluation.player_id,
-          evaluation_id: evaluationId,
-          type: 'evaluation_completed',
-        })
-      } else {
-        console.error('❌ Failed to create evaluation_completed notification - createNotification returned false')
-        console.error('❌ This means createNotification failed - check logs above for details')
+      if (!notificationCreated) {
+        console.error('Failed to create evaluation_completed notification for player:', evaluation.player_id)
       }
     } catch (notificationError: any) {
-      console.error('❌ Error creating completion notification:', notificationError)
-      console.error('❌ Notification error details:', {
-        message: notificationError?.message,
-        stack: notificationError?.stack,
-        error: JSON.stringify(notificationError, Object.getOwnPropertyNames(notificationError)),
-      })
-      // Don't fail the request if notification fails, but log extensively
+      console.error('Error creating completion notification:', notificationError)
+      // Don't fail the request if notification fails
     }
 
     // TODO: Send email to scout with payout info

@@ -23,8 +23,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 })
   }
 
-  console.log('🔐 Attempting to verify with secret prefix:', webhookSecret?.slice(0, 8))
-
   let event: Stripe.Event
 
   try {
@@ -33,8 +31,6 @@ export async function POST(request: NextRequest) {
     console.error(`Webhook signature verification failed:`, err.message)
     return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
   }
-
-  console.log('🔐 Webhook secret prefix after verification:', process.env.STRIPE_WEBHOOK_SECRET?.slice(0, 8))
 
   const adminSupabase = createAdminClient()
   if (!adminSupabase) {
@@ -57,17 +53,6 @@ export async function POST(request: NextRequest) {
       const priceStr = session.metadata?.price
       const action = session.metadata?.action // 'upfront_payment' or 'scout_confirmed'
       const evaluationId = session.metadata?.evaluation_id // For old flow (scout_confirmed)
-
-      console.log('🔍 Webhook received checkout.session.completed:', {
-        session_id: session.id,
-        scout_id: scoutId,
-        player_id: playerId,
-        price: priceStr,
-        action,
-        evaluation_id: evaluationId, // May be null for upfront_payment flow
-        metadata: session.metadata,
-        payment_status: session.payment_status,
-      })
 
       // For upfront_payment flow, create evaluation here
       // For scout_confirmed flow, evaluation_id should exist and we update it
@@ -104,7 +89,6 @@ export async function POST(request: NextRequest) {
             .maybeSingle()
 
           if (existingByPaymentIntent) {
-            console.log('✅ Evaluation already exists for this payment_intent_id, using existing:', existingByPaymentIntent.id)
             const { data: existingEval } = await adminSupabase
               .from('evaluations')
               .select('*')
@@ -147,12 +131,6 @@ export async function POST(request: NextRequest) {
           const platformFee = Math.round(price * 0.1 * 100) / 100
           const scoutPayout = Math.round(price * 0.9 * 100) / 100
 
-          console.log('📝 Creating evaluation after successful payment...', {
-            scout_id: scoutId,
-            player_id: playerId,
-            price,
-          })
-
           const { data: newEvaluation, error: createError } = await adminSupabase
             .from('evaluations')
             .insert({
@@ -189,15 +167,6 @@ export async function POST(request: NextRequest) {
           }
 
           evaluation = newEvaluation
-          console.log('✅ Evaluation created successfully after payment:', {
-            id: evaluation.id,
-            scout_id: evaluation.scout_id,
-            player_id: evaluation.player_id,
-            status: evaluation.status,
-            payment_status: evaluation.payment_status,
-            price: evaluation.price,
-            payment_intent_id: evaluation.payment_intent_id,
-          })
         }
       } else if (action === 'scout_confirmed' && evaluationId) {
         // OLD FLOW: Update existing evaluation (for scout_confirmed flow)
@@ -243,37 +212,14 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Failed to update evaluation' }, { status: 500 })
         }
       } else {
-        console.error('❌ Invalid action or missing required data:', { action, evaluationId, scoutId, playerId })
+        console.error('Invalid action or missing required data:', { action, evaluationId, scoutId, playerId })
         return NextResponse.json({ error: 'Invalid webhook data' }, { status: 400 })
       }
 
       // Safety check: evaluation should always be set by now
       if (!evaluation) {
-        console.error('❌ CRITICAL: Evaluation is undefined after processing webhook')
+        console.error('CRITICAL: Evaluation is undefined after processing webhook')
         return NextResponse.json({ error: 'Failed to process evaluation' }, { status: 500 })
-      }
-
-      console.log('✅ Evaluation processed:', {
-        id: evaluation.id,
-        status: evaluation.status,
-        payment_status: evaluation.payment_status || 'paid',
-        scout_id: evaluation.scout_id,
-        player_id: evaluation.player_id,
-        created_at: evaluation.created_at,
-      })
-
-      // Verify the evaluation can be read back (check RLS/access)
-      const { data: verifyEval, error: verifyError } = await adminSupabase
-        .from('evaluations')
-        .select('id, status, payment_status')
-        .eq('id', evaluation.id)
-        .single()
-      
-      if (verifyError || !verifyEval) {
-        console.error('⚠️ WARNING: Created evaluation cannot be read back:', verifyError)
-        console.error('⚠️ This might indicate an RLS issue or database constraint problem')
-      } else {
-        console.log('✅ Verification: Evaluation can be read back:', verifyEval)
       }
 
       // Send email notification to scout for upfront payment
@@ -320,15 +266,6 @@ export async function POST(request: NextRequest) {
       
       if (shouldCreateScoutNotification) {
         try {
-          console.log('📧 Creating notification for scout about evaluation request...', {
-            scout_id: evaluation.scout_id,
-            evaluation_id: evaluation.id,
-            player_id: evaluation.player_id,
-            action,
-            evaluation_status: evaluation.status,
-            payment_status: evaluation.payment_status,
-          })
-          
           const { data: playerProfile, error: playerProfileError } = await adminSupabase
             .from('profiles')
             .select('full_name')
@@ -336,13 +273,8 @@ export async function POST(request: NextRequest) {
             .maybeSingle()
 
           if (playerProfileError) {
-            console.error('❌ Error fetching player profile for notification:', playerProfileError)
+            console.error('Error fetching player profile for notification:', playerProfileError)
           }
-
-          console.log('📧 Player profile for notification:', {
-            player_name: playerProfile?.full_name,
-            player_profile_error: playerProfileError,
-          })
 
           const notificationCreated = await createNotification({
             userId: evaluation.scout_id,
@@ -354,49 +286,21 @@ export async function POST(request: NextRequest) {
               evaluation_id: evaluation.id,
               player_id: evaluation.player_id,
               price: evaluation.price,
-              action: action || 'upfront_payment', // Include action in metadata
+              action: action || 'upfront_payment',
             },
           })
           
-          if (notificationCreated) {
-            console.log('✅ Notification created successfully for scout:', evaluation.scout_id)
-            console.log('✅ Notification details:', {
-              scout_id: evaluation.scout_id,
-              type: 'evaluation_requested',
-              evaluation_id: evaluation.id,
-              player_name: playerProfile?.full_name,
-            })
-          } else {
-            console.error('❌ Failed to create notification - createNotification returned false')
-            console.error('❌ Notification creation failed for scout:', evaluation.scout_id)
-            console.error('❌ This means createNotification returned false - check logs above for details')
+          if (!notificationCreated) {
+            console.error('Failed to create evaluation_requested notification for scout:', evaluation.scout_id)
           }
         } catch (notificationError: any) {
-          console.error('❌ Error creating evaluation request notification:', notificationError)
-          console.error('❌ Notification error details:', {
-            message: notificationError?.message,
-            stack: notificationError?.stack,
-            error: JSON.stringify(notificationError, Object.getOwnPropertyNames(notificationError)),
-          })
-          // Don't fail the webhook if notification fails, but log extensively
+          console.error('Error creating evaluation request notification:', notificationError)
+          // Don't fail the webhook if notification fails
         }
-      } else {
-        console.log('⏭️ Skipping scout notification creation - conditions not met:', {
-          action,
-          evaluation_status: evaluation.status,
-          payment_status: evaluation.payment_status,
-          should_create: shouldCreateScoutNotification,
-        })
       }
 
       // Create in-app notification for player about successful payment
       try {
-        console.log('📧 Creating payment_received notification for player...', {
-          player_id: evaluation.player_id,
-          evaluation_id: evaluation.id,
-          price: evaluation.price,
-        })
-
         const notificationCreated = await createNotification({
           userId: evaluation.player_id,
           type: 'payment_received',
@@ -410,33 +314,16 @@ export async function POST(request: NextRequest) {
           },
         })
         
-        if (notificationCreated) {
-          console.log('✅ Payment received notification created successfully for player:', evaluation.player_id)
-          console.log('✅ Notification details:', {
-            player_id: evaluation.player_id,
-            type: 'payment_received',
-            evaluation_id: evaluation.id,
-            price: evaluation.price,
-          })
-        } else {
-          console.error('❌ Failed to create payment_received notification - createNotification returned false')
-          console.error('❌ Notification creation failed for player:', evaluation.player_id)
+        if (!notificationCreated) {
+          console.error('Failed to create payment_received notification for player:', evaluation.player_id)
         }
       } catch (notificationError: any) {
-        console.error('❌ Error creating payment received notification:', notificationError)
-        console.error('❌ Payment notification error details:', {
-          message: notificationError?.message,
-          stack: notificationError?.stack,
-          error: JSON.stringify(notificationError, Object.getOwnPropertyNames(notificationError)),
-        })
+        console.error('Error creating payment received notification:', notificationError)
         // Don't fail the webhook if notification fails
       }
-
-      console.log(`✅ Payment successful for evaluation ${evaluation.id}, session ${session.id}`)
     } else if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       // Handle successful payment if needed
-      console.log('Payment intent succeeded:', paymentIntent.id)
     } else if (event.type === 'payment_intent.payment_failed') {
       // Handle payment failure
       const paymentIntent = event.data.object as Stripe.PaymentIntent
@@ -465,7 +352,7 @@ export async function POST(request: NextRequest) {
                 payment_intent_id: paymentIntentId,
               },
             })
-            console.log(`⚠️ Payment failed for evaluation ${evaluation.id}, notification sent`)
+            // Payment failed notification sent
           }
         } catch (notificationError) {
           console.error('Error creating payment failed notification:', notificationError)
@@ -500,7 +387,7 @@ export async function POST(request: NextRequest) {
                 payment_intent_id: paymentIntentId,
               },
             })
-            console.log(`⚠️ Payment failed for evaluation ${evaluation.id}, notification sent`)
+            // Payment failed notification sent
           }
         } catch (notificationError) {
           console.error('Error creating payment failed notification:', notificationError)

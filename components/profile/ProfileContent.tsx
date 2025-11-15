@@ -509,18 +509,28 @@ function StripeConnectSection({ profile }: { profile: any }) {
       const stripeParam = urlParams.get('stripe')
       
       if (stripeParam === 'success' || stripeParam === 'refresh') {
-        // Wait a moment for Stripe to update, then refresh status multiple times
+        // Wait longer for Stripe to fully process the onboarding before first check
         console.log('📧 Detected return from Stripe onboarding')
-        const refreshInterval = setInterval(() => {
-          console.log('📧 Refreshing account status after Stripe return (StripeConnectSection)...')
-          checkAccountStatus({ suppressSkeleton: true })
-        }, 2000)
         
-        // Stop refreshing after 10 seconds and clean up URL
+        // Initial delay before first check (Stripe needs time to process)
         setTimeout(() => {
-          clearInterval(refreshInterval)
-          router.replace('/profile')
-        }, 10000)
+          console.log('📧 Checking account status after Stripe return (first check after 3s delay)...')
+          checkAccountStatus({ suppressSkeleton: true })
+          
+          // Then check multiple times with delays
+          let checkCount = 0
+          const refreshInterval = setInterval(() => {
+            checkCount++
+            console.log(`📧 Refreshing account status after Stripe return (attempt ${checkCount + 1})...`)
+            checkAccountStatus({ suppressSkeleton: true })
+            
+            // Stop after 5 additional checks (10 seconds) and clean up URL
+            if (checkCount >= 5) {
+              clearInterval(refreshInterval)
+              router.replace('/profile')
+            }
+          }, 2000)
+        }, 3000) // Wait 3 seconds before first check to give Stripe time to process
       }
     }
   }, [router])
@@ -832,13 +842,38 @@ function StripeConnectSection({ profile }: { profile: any }) {
                 onClick={async () => {
                   setLoading(true)
                   try {
+                    // Step 1: Create the account
                     const response = await fetch('/api/stripe/connect/create-account', {
                       method: 'POST',
                     })
                     const data = await response.json()
                     
-                    if (data.success) {
+                    if (data.success && data.accountId) {
+                      // Step 2: Wait a moment for DB to update
+                      await new Promise(resolve => setTimeout(resolve, 500))
+                      
+                      // Step 3: Get the onboarding link immediately
+                      const linkResponse = await fetch('/api/stripe/connect/account-link', {
+                        method: 'POST',
+                      })
+                      const linkData = await linkResponse.json()
+                      
+                      if (linkResponse.ok && linkData.success) {
+                        if (linkData.onboardingUrl) {
+                          // Step 4: Redirect to Stripe onboarding immediately
+                          window.location.href = linkData.onboardingUrl
+                          return
+                        } else if (linkData.dashboardUrl) {
+                          // If already onboarded (shouldn't happen, but handle it)
+                          window.location.href = linkData.dashboardUrl
+                          return
+                        }
+                      }
+                      
+                      // Fallback: refresh status
+                      alert('Account created! Please click "Finish Stripe Setup" to continue.')
                       checkAccountStatus()
+                      router.refresh()
                     } else {
                       alert(`Failed to create account: ${data.error || 'Unknown error'}`)
                     }

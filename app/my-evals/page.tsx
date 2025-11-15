@@ -1,12 +1,16 @@
 import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
-import MyEvalsContent from '@/components/my-evals/MyEvalsContent'
+import dynamicImport from 'next/dynamic'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import { Suspense } from 'react'
+
+const MyEvalsContent = dynamicImport(() => import('@/components/my-evals/MyEvalsContent'), {
+  ssr: false,
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
