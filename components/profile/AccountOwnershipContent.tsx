@@ -21,17 +21,17 @@ export default function AccountOwnershipContent() {
     setSuccess(null)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        throw new Error('Not authenticated')
-      }
-
+      // API route handles authentication server-side using cookies
       const response = await fetch(`/api/user/export-data?format=${format}`, {
         method: 'GET',
+        credentials: 'include', // Ensure cookies are sent
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({ error: 'Failed to export data' }))
+        if (response.status === 401) {
+          throw new Error('Session expired. Please refresh the page and try again.')
+        }
         throw new Error(errorData.error || 'Failed to export data')
       }
 
@@ -65,17 +65,17 @@ export default function AccountOwnershipContent() {
     setError(null)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        throw new Error('Not authenticated')
-      }
-
+      // API route handles authentication server-side using cookies
       const response = await fetch('/api/user/delete-account', {
         method: 'DELETE',
+        credentials: 'include', // Ensure cookies are sent
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete account' }))
+        if (response.status === 401) {
+          throw new Error('Session expired. Please refresh the page and try again.')
+        }
         throw new Error(errorData.error || 'Failed to delete account')
       }
 

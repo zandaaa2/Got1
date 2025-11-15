@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@/lib/supabase'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { sendStripeRequirementsEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
@@ -10,16 +9,12 @@ export async function POST(request: NextRequest) {
     const requirementsDue: string[] = body.requirementsDue || []
     const requirementsPastDue: string[] = body.requirementsPastDue || []
 
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -28,7 +23,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (profileError) {
-      return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 })
+      return handleApiError(profileError, 'Failed to load profile')
     }
 
     if (!profile?.stripe_account_id) {
@@ -48,10 +43,9 @@ export async function POST(request: NextRequest) {
       requirementsPastDue
     )
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error sending Stripe requirements email:', error)
-    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
+    return successResponse({ success: true })
+  } catch (error: any) {
+    return handleApiError(error, 'Failed to send email')
   }
 }
 

@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { getGradientForId } from '@/lib/gradients'
 import { getProfilePath } from '@/lib/profile-url'
 import { isMeaningfulAvatar } from '@/lib/avatar'
@@ -205,6 +205,31 @@ function MoneyDashboard({ profile }: { profile: any }) {
       console.log('📧 Response data:', data)
       
       if (!response.ok) {
+        // If account not found, prompt user to create a new one
+        if (data.accountNotFound) {
+          if (confirm('Your Stripe account is no longer valid. Would you like to create a new one?')) {
+            // Create a new account
+            const createResponse = await fetch('/api/stripe/connect/create-account', {
+              method: 'POST',
+            })
+            const createData = await createResponse.json()
+            
+            if (createResponse.ok && createData.accountId) {
+              // Account created, now get the link
+              const linkResponse = await fetch('/api/stripe/connect/account-link', {
+                method: 'POST',
+              })
+              const linkData = await linkResponse.json()
+              
+              if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
+                window.location.href = linkData.onboardingUrl
+                return
+              }
+            }
+            alert('Failed to create new account. Please try again.')
+            return
+          }
+        }
         throw new Error(data.error || 'Failed to get account link')
       }
       
@@ -470,6 +495,9 @@ function StripeConnectSection({ profile }: { profile: any }) {
   } | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
   const [notificationSent, setNotificationSent] = useState(false)
+  const [stripeIssueNotificationSent, setStripeIssueNotificationSent] = useState(false)
+  const [readyNotificationSent, setReadyNotificationSent] = useState(false)
+  const [wasFullyEnabled, setWasFullyEnabled] = useState(false)
 
   useEffect(() => {
     // Check account status on mount
@@ -556,6 +584,132 @@ function StripeConnectSection({ profile }: { profile: any }) {
     }
   }, [needsUpdate, notificationSent, accountStatus?.requirementsDue, accountStatus?.requirementsPastDue])
 
+  // Create in-app notification when Stripe has issues
+  useEffect(() => {
+    const createStripeIssueNotification = async () => {
+      if (needsUpdate && accountStatus && !stripeIssueNotificationSent) {
+        try {
+          const response = await fetch('/api/notifications/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'stripe_account_issue',
+              title: 'Stripe Account Action Required',
+              message: 'Your Stripe account needs attention. Please resolve the requirements to enable payouts.',
+              link: '/profile',
+              metadata: {
+                requirementsDue: accountStatus.requirementsDue || [],
+                requirementsPastDue: accountStatus.requirementsPastDue || [],
+                requirementsReason: accountStatus.requirementsReason,
+              },
+            }),
+          })
+          if (response.ok) {
+            setStripeIssueNotificationSent(true)
+          }
+        } catch (error) {
+          console.error('Error creating Stripe issue notification:', error)
+        }
+      }
+    }
+
+    createStripeIssueNotification()
+  }, [needsUpdate, accountStatus, stripeIssueNotificationSent])
+
+  // Create notification when scout becomes fully ready to earn
+  // Use sessionStorage to track if we've checked this browser session (persists across remounts)
+  useEffect(() => {
+    // Only check if account is fully enabled
+    if (isFullyEnabled && accountStatus) {
+      const checkAndCreateReadyNotification = async () => {
+        try {
+          // Check sessionStorage first - if we've already checked this session, skip
+          const storageKey = `scout_ready_checked_${profile.user_id}`
+          const hasCheckedThisSession = sessionStorage.getItem(storageKey) === 'true'
+          
+          if (hasCheckedThisSession) {
+            console.log('⏭️ Already checked scout_ready_to_earn this session (sessionStorage)')
+            return
+          }
+          
+          const supabase = createClient()
+          
+          // ALWAYS check database first - this is the single source of truth
+          // Check if notification exists EVER, and also check if one was created in last minute (prevent race conditions)
+          const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
+          const { data: existingNotification } = await supabase
+            .from('notifications')
+            .select('id, created_at')
+            .eq('user_id', profile.user_id)
+            .eq('type', 'scout_ready_to_earn')
+            .maybeSingle()
+          
+          if (existingNotification) {
+            // Notification already exists - mark sessionStorage and stop
+            sessionStorage.setItem(storageKey, 'true')
+            console.log('⏭️ scout_ready_to_earn notification already exists in database (created:', existingNotification.created_at, ')')
+            return
+          }
+          
+          // Also check for very recent notifications (within last minute) to prevent race conditions
+          const { data: recentNotification } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', profile.user_id)
+            .eq('type', 'scout_ready_to_earn')
+            .gte('created_at', oneMinuteAgo)
+            .maybeSingle()
+          
+          if (recentNotification) {
+            // Very recent notification exists - mark sessionStorage and stop
+            sessionStorage.setItem(storageKey, 'true')
+            console.log('⏭️ Very recent scout_ready_to_earn notification exists (within last minute)')
+            return
+          }
+          
+          // Mark as checked BEFORE creating to prevent duplicates
+          sessionStorage.setItem(storageKey, 'true')
+          
+          // Notification doesn't exist - create it (this should only happen once ever)
+          console.log('Creating scout_ready_to_earn notification (first time)')
+          const response = await fetch('/api/notifications/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'scout_ready_to_earn',
+              title: 'Congratulations! You\'re Ready to Earn',
+              message: 'Your Stripe account is fully set up! You can now start receiving evaluation requests and earning money.',
+              link: '/browse',
+              metadata: {
+                chargesEnabled: accountStatus.chargesEnabled,
+                payoutsEnabled: accountStatus.payoutsEnabled,
+              },
+            }),
+          })
+          if (response.ok) {
+            console.log('✅ scout_ready_to_earn notification created')
+          } else {
+            const error = await response.json().catch(() => ({}))
+            console.error('Failed to create scout_ready_to_earn notification:', error)
+            sessionStorage.removeItem(storageKey) // Remove on error so we can retry
+          }
+        } catch (error) {
+          console.error('Error creating ready notification:', error)
+          const storageKey = `scout_ready_checked_${profile.user_id}`
+          sessionStorage.removeItem(storageKey) // Remove on error so we can retry
+        }
+      }
+
+      checkAndCreateReadyNotification()
+    } else if (!isFullyEnabled) {
+      // Reset sessionStorage when not fully enabled so we can check again if they become enabled later
+      const storageKey = `scout_ready_checked_${profile.user_id}`
+      sessionStorage.removeItem(storageKey)
+      setWasFullyEnabled(false)
+      setReadyNotificationSent(false)
+    }
+  }, [isFullyEnabled, accountStatus, profile.user_id])
+
   // Hide this section if account is fully enabled (Money Dashboard will show instead)
   if (isFullyEnabled) {
     return null
@@ -574,6 +728,31 @@ function StripeConnectSection({ profile }: { profile: any }) {
       console.log('📧 Response data:', data)
       
       if (!response.ok) {
+        // If account not found, prompt user to create a new one
+        if (data.accountNotFound) {
+          if (confirm('Your Stripe account is no longer valid. Would you like to create a new one?')) {
+            // Create a new account
+            const createResponse = await fetch('/api/stripe/connect/create-account', {
+              method: 'POST',
+            })
+            const createData = await createResponse.json()
+            
+            if (createResponse.ok && createData.accountId) {
+              // Account created, now get the link
+              const linkResponse = await fetch('/api/stripe/connect/account-link', {
+                method: 'POST',
+              })
+              const linkData = await linkResponse.json()
+              
+              if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
+                window.location.href = linkData.onboardingUrl
+                return
+              }
+            }
+            alert('Failed to create new account. Please try again.')
+            return
+          }
+        }
         throw new Error(data.error || 'Failed to get account link')
       }
       
@@ -892,6 +1071,65 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
     }
   }
 
+  /**
+   * Handles getting Stripe account link from General Info section
+   */
+  const handleViewStripeAccount = async () => {
+    try {
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'POST',
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        // If account not found, prompt user to create a new one
+        if (data.accountNotFound) {
+          if (confirm('Your Stripe account is no longer valid. Would you like to create a new one?')) {
+            // Create a new account
+            const createResponse = await fetch('/api/stripe/connect/create-account', {
+              method: 'POST',
+            })
+            const createData = await createResponse.json()
+            
+            if (createResponse.ok && createData.accountId) {
+              // Account created, now get the link
+              const linkResponse = await fetch('/api/stripe/connect/account-link', {
+                method: 'POST',
+              })
+              const linkData = await linkResponse.json()
+              
+              if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
+                window.location.href = linkData.onboardingUrl
+                return
+              }
+            }
+            alert('Failed to create new account. Please try again.')
+            return
+          }
+        }
+        throw new Error(data.error || 'Failed to get account link')
+      }
+      
+      if (data.success) {
+        if (data.dashboardUrl) {
+          // Open dashboard
+          window.location.href = data.dashboardUrl
+        } else if (data.onboardingUrl) {
+          // Open onboarding if no dashboard URL
+          window.location.href = data.onboardingUrl
+        } else {
+          alert('Your Stripe account may need additional verification. Please try again in a few minutes or contact support.')
+        }
+      } else {
+        throw new Error(data.error || 'No dashboard URL available')
+      }
+    } catch (error: any) {
+      console.error('❌ Error getting Stripe account link:', error)
+      alert(`Failed to access Stripe account: ${error.message || 'Please try again.'}`)
+    }
+  }
+
   const handleCopyProfileUrl = async () => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -1160,7 +1398,10 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               <h3 className="font-bold text-black mb-1 text-sm md:text-base">Stripe</h3>
               <p className="text-xs md:text-sm text-gray-600 break-words">Update my stripe billing, card info, and more.</p>
             </div>
-            <button className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0">
+            <button 
+              onClick={handleViewStripeAccount}
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+            >
               View
             </button>
           </div>

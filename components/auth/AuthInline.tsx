@@ -61,9 +61,8 @@ export default function AuthInline({ mode }: AuthInlineProps) {
         
         setLoading(false)
         
-        // Use window.location with cache bust to force fresh server render
-        const timestamp = Date.now()
-        window.location.href = `/?refresh=${timestamp}` // Full reload with cache bust
+        // Redirect through sync page to create sign-in notification
+        window.location.href = '/auth/sync?redirect=/'
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')

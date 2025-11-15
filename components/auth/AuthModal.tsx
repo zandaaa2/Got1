@@ -81,10 +81,8 @@ export default function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
         setLoading(false)
         onClose() // Close modal on successful signin
         
-        // Use router refresh and push to ensure server components re-render with new session
-        // Add timestamp to force fresh server render
-        const timestamp = Date.now()
-        window.location.href = `/?refresh=${timestamp}` // Full reload with cache bust
+        // Redirect through sync page to create sign-in notification
+        window.location.href = '/auth/sync?redirect=/'
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')

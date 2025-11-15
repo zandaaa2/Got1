@@ -6,6 +6,7 @@ import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
@@ -68,7 +69,9 @@ export default async function MyEvalsPage() {
       <DynamicLayout header={headerContent}>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">My Evals</h1>
-          <MyEvalsContent role={validRole} userId={session.user.id} />
+          <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>
+            <MyEvalsContent role={validRole} userId={session.user.id} />
+          </Suspense>
         </div>
       </DynamicLayout>
     </div>

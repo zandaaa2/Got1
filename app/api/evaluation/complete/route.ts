@@ -203,7 +203,13 @@ export async function POST(request: NextRequest) {
 
     // Create in-app notification for player about completion
     try {
-      await createNotification({
+      console.log('📧 Creating evaluation_completed notification for player...', {
+        player_id: evaluation.player_id,
+        evaluation_id: evaluationId,
+        scout_name: scoutProfile?.full_name,
+      })
+
+      const notificationCreated = await createNotification({
         userId: evaluation.player_id,
         type: 'evaluation_completed',
         title: 'Evaluation Completed',
@@ -214,9 +220,25 @@ export async function POST(request: NextRequest) {
           scout_id: evaluation.scout_id,
         },
       })
-    } catch (notificationError) {
-      console.error('Error creating completion notification:', notificationError)
-      // Don't fail the request if notification fails
+
+      if (notificationCreated) {
+        console.log('✅ Evaluation completed notification created successfully for player:', {
+          player_id: evaluation.player_id,
+          evaluation_id: evaluationId,
+          type: 'evaluation_completed',
+        })
+      } else {
+        console.error('❌ Failed to create evaluation_completed notification - createNotification returned false')
+        console.error('❌ This means createNotification failed - check logs above for details')
+      }
+    } catch (notificationError: any) {
+      console.error('❌ Error creating completion notification:', notificationError)
+      console.error('❌ Notification error details:', {
+        message: notificationError?.message,
+        stack: notificationError?.stack,
+        error: JSON.stringify(notificationError, Object.getOwnPropertyNames(notificationError)),
+      })
+      // Don't fail the request if notification fails, but log extensively
     }
 
     // TODO: Send email to scout with payout info

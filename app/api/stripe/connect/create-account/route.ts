@@ -1,8 +1,7 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -14,17 +13,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-    
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     // Get scout profile
     const { data: profile, error: profileError } = await supabase
@@ -35,10 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('Error fetching profile:', profileError)
-      return NextResponse.json(
-        { error: 'Failed to fetch profile', details: profileError.message },
-        { status: 500 }
-      )
+      return handleApiError(profileError, 'Failed to fetch profile')
     }
 
     if (!profile) {
@@ -95,25 +86,18 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('Error updating profile with Stripe account ID:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to save account ID', details: updateError.message },
-        { status: 500 }
-      )
+      return handleApiError(updateError, 'Failed to save account ID')
     }
 
     console.log(`✅ Created Stripe Connect account ${account.id} for scout ${session.user.id}`)
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       accountId: account.id,
       message: 'Stripe Connect account created successfully',
       onboardingUrl: null, // Will need to get onboarding link separately
     })
   } catch (error: any) {
-    console.error('Error creating Stripe Connect account:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to create Stripe Connect account' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to create Stripe Connect account')
   }
 }

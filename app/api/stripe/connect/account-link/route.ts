@@ -1,8 +1,7 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -21,18 +20,12 @@ export async function POST(request: NextRequest) {
   try {
     console.log('📧 Creating Stripe account link...')
     
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-    
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      console.error('❌ No session found')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     console.log('📧 User ID:', session.user.id)
 
@@ -45,10 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('❌ Error fetching profile:', profileError)
-      return NextResponse.json(
-        { error: 'Failed to fetch profile', details: profileError.message },
-        { status: 500 }
-      )
+      return handleApiError(profileError, 'Failed to fetch profile')
     }
 
     if (!profile) {
@@ -91,9 +81,11 @@ export async function POST(request: NextRequest) {
     let requirementsDue: string[] = []
     let requirementsPastDue: string[] = []
     let requirementsReason: string | null = null
+    let accountExists = false
 
     try {
       const account = await stripe.accounts.retrieve(profile.stripe_account_id)
+      accountExists = true
       chargesEnabled = account.charges_enabled === true
       payoutsEnabled = account.payouts_enabled === true
       const detailsSubmitted = account.details_submitted === true
@@ -109,21 +101,77 @@ export async function POST(request: NextRequest) {
       console.log('📧 Needs onboarding:', needsOnboarding)
     } catch (stripeError: any) {
       console.error('❌ Error retrieving account:', stripeError)
-      // Assume onboarding is needed if we can't retrieve account
+      
+      // If account doesn't exist or isn't connected, clear the invalid account ID
+      if (stripeError.code === 'resource_missing' || stripeError.statusCode === 404 || 
+          stripeError.message?.includes('not connected') || stripeError.message?.includes('does not exist')) {
+        console.log('📧 Account does not exist or is not connected, clearing invalid account ID...')
+        
+        // Clear the invalid account ID from profile
+        await supabase
+          .from('profiles')
+          .update({ stripe_account_id: null })
+          .eq('user_id', session.user.id)
+        
+        return NextResponse.json(
+          { 
+            error: 'Stripe account not found. Please create a new Stripe Connect account.',
+            accountNotFound: true
+          },
+          { status: 404 }
+        )
+      }
+      
+      // For other errors, assume onboarding is needed but don't try to create link
       needsOnboarding = true
       onboardingComplete = false
+      accountExists = false
+    }
+
+    // Only create account links if the account actually exists
+    if (!accountExists) {
+      return NextResponse.json(
+        { 
+          error: 'Unable to access Stripe account. Please try creating a new account.',
+          accountNotFound: true
+        },
+        { status: 404 }
+      )
     }
 
     // Create an account link for onboarding (if needed)
     if (needsOnboarding) {
       console.log('📧 Creating onboarding link...')
-      accountLink = await stripe.accountLinks.create({
-        account: profile.stripe_account_id,
-        refresh_url: `${baseUrl}/profile?stripe=refresh`,
-        return_url: `${baseUrl}/profile?stripe=success`,
-        type: 'account_onboarding',
-      })
-      console.log('✅ Onboarding link created:', accountLink.url)
+      try {
+        accountLink = await stripe.accountLinks.create({
+          account: profile.stripe_account_id,
+          refresh_url: `${baseUrl}/profile?stripe=refresh`,
+          return_url: `${baseUrl}/profile?stripe=success`,
+          type: 'account_onboarding',
+        })
+        console.log('✅ Onboarding link created:', accountLink.url)
+      } catch (linkError: any) {
+        console.error('❌ Error creating account link:', linkError)
+        
+        // If account link creation fails because account doesn't exist, clear it
+        if (linkError.code === 'resource_missing' || linkError.message?.includes('not connected')) {
+          await supabase
+            .from('profiles')
+            .update({ stripe_account_id: null })
+            .eq('user_id', session.user.id)
+          
+          return NextResponse.json(
+            { 
+              error: 'Stripe account not found. Please create a new Stripe Connect account.',
+              accountNotFound: true
+            },
+            { status: 404 }
+          )
+        }
+        
+        // Re-throw other errors
+        throw linkError
+      }
     }
 
     // Only create a login link if onboarding is complete (charges enabled OR details submitted)
@@ -141,7 +189,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       onboardingUrl: accountLink?.url || null, // Use this for first-time onboarding
       dashboardUrl: loginLink?.url || null,    // Use this to access dashboard after onboarding
@@ -155,11 +203,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('❌ Error creating Stripe account link:', error)
-    console.error('❌ Error stack:', error.stack)
-    return NextResponse.json(
-      { error: error.message || 'Failed to create account link' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to create account link')
   }
 }
 
@@ -168,17 +212,12 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-    
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     // Get scout's profile
     const { data: profile } = await supabase
@@ -230,6 +269,25 @@ export async function GET(request: NextRequest) {
       })
     } catch (stripeError: any) {
       console.error('❌ Error retrieving Stripe account:', stripeError)
+      
+      // If account doesn't exist or isn't connected, clear the invalid account ID
+      if (stripeError.code === 'resource_missing' || stripeError.statusCode === 404 || 
+          stripeError.message?.includes('not connected') || stripeError.message?.includes('does not exist')) {
+        console.log('📧 Account does not exist (GET), clearing invalid account ID...')
+        
+        // Clear the invalid account ID from profile
+        await supabase
+          .from('profiles')
+          .update({ stripe_account_id: null })
+          .eq('user_id', session.user.id)
+        
+        return NextResponse.json({
+          hasAccount: false,
+          onboardingComplete: false,
+          accountNotFound: true,
+        })
+      }
+      
       return NextResponse.json({
         hasAccount: true,
         onboardingComplete: false,
@@ -237,11 +295,7 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error: any) {
-    console.error('Error checking Stripe account status:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to check account status' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to check account status')
   }
 }
 

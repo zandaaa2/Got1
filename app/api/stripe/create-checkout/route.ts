@@ -1,8 +1,7 @@
-import { createRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -10,17 +9,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient(() => cookieStore)
-    
-    // Check authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require authentication
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
     }
+    const { session, supabase } = authResult
 
     const body = await request.json()
     const { scoutId, price } = body
@@ -28,6 +22,15 @@ export async function POST(request: NextRequest) {
     if (!scoutId || !price) {
       return NextResponse.json(
         { error: 'Missing scoutId or price' },
+        { status: 400 }
+      )
+    }
+
+    // Validate price is a positive number
+    const priceNum = typeof price === 'number' ? price : parseFloat(price)
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid price' },
         { status: 400 }
       )
     }
@@ -44,11 +47,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Get player profile
-    const { data: player } = await supabase
+    const { data: player, error: playerError } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', session.user.id)
-      .single()
+      .maybeSingle()
+
+    if (playerError) {
+      console.error('Error fetching player profile:', playerError)
+      return NextResponse.json(
+        { error: 'Failed to fetch player profile' },
+        { status: 500 }
+      )
+    }
 
     if (!player || player.role !== 'player') {
       return NextResponse.json({ error: 'Invalid player' }, { status: 400 })
@@ -87,10 +98,7 @@ export async function POST(request: NextRequest) {
 
     if (evalError || !evaluation) {
       console.error('Error creating evaluation:', evalError)
-      return NextResponse.json(
-        { error: 'Failed to create evaluation', details: evalError?.message },
-        { status: 500 }
-      )
+      return handleApiError(evalError, 'Failed to create evaluation')
     }
 
     // Create Stripe Checkout Session
@@ -104,7 +112,7 @@ export async function POST(request: NextRequest) {
               name: `Evaluation from ${scout.full_name || 'Scout'}`,
               description: `Football player evaluation service`,
             },
-            unit_amount: Math.round(price * 100), // Convert to cents
+            unit_amount: Math.round(priceNum * 100), // Convert to cents
           },
           quantity: 1,
         },
@@ -119,13 +127,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ sessionId: checkoutSession.id })
+    return successResponse({ sessionId: checkoutSession.id })
   } catch (error: any) {
-    console.error('Error creating checkout session:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Failed to create checkout session')
   }
 }
 

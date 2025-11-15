@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { requireAdmin, handleApiError, successResponse } from '@/lib/api-helpers'
+import { createNotification } from '@/lib/notifications'
 
 /**
- * API route to revoke a scout's verification status by changing their role back to 'player'.
+ * API route to revoke a scout's verification status by changing their role back to 'user'.
  */
 export async function POST(
   request: NextRequest,
@@ -69,14 +70,14 @@ export async function POST(
       }
     }
 
-    // Revoke scout status by changing role to 'player'
+    // Revoke scout status by changing role to 'user' (basic user, not player)
     console.log('Attempting to update profile with user_id:', userId)
     console.log('Profile before update:', profile)
     
     const { data: updatedProfiles, error: updateError } = await supabase
       .from('profiles')
       .update({
-        role: 'player',
+        role: 'user',  // Changed to 'user' (basic user) instead of 'player'
         organization: null,
         price_per_eval: null,
         social_link: null,
@@ -122,6 +123,38 @@ export async function POST(
     }
 
     console.log('✅ Scout status revoked successfully:', updatedProfiles[0])
+
+    // Create notification for the user that their scout status was revoked
+    try {
+      console.log('📧 Creating scout_status_revoked notification for user:', userId)
+      
+      const notificationCreated = await createNotification({
+        userId: userId,
+        type: 'scout_status_revoked',
+        title: 'Scout Status Revoked',
+        message: 'Your scout status has been revoked. You can reapply to become a scout from your profile page.',
+        link: '/profile',
+        metadata: {
+          revoked_by: session.user.id,
+          revoked_at: new Date().toISOString(),
+        },
+      })
+
+      if (notificationCreated) {
+        console.log('✅ Notification created for revoked scout:', userId)
+      } else {
+        console.error('❌ Failed to create revocation notification - createNotification returned false')
+      }
+    } catch (notificationError: any) {
+      console.error('❌ Error creating revocation notification:', notificationError)
+      console.error('❌ Notification error details:', {
+        message: notificationError?.message,
+        stack: notificationError?.stack,
+        error: JSON.stringify(notificationError, Object.getOwnPropertyNames(notificationError)),
+      })
+      // Don't fail the request if notification fails
+    }
+
     return successResponse({ success: true, profile: updatedProfiles[0] })
   } catch (error: any) {
     console.error('Error revoking scout status:', error)

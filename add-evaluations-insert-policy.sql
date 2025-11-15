@@ -1,8 +1,9 @@
 -- Add RLS policy to allow players to create evaluations
 -- Run this in your Supabase SQL Editor
 
--- Drop the existing restrictive policy
+-- Drop existing policies first (if they exist)
 DROP POLICY IF EXISTS "Scouts can create evaluations" ON evaluations;
+DROP POLICY IF EXISTS "Players can create evaluations" ON evaluations;
 
 -- Allow authenticated users to create evaluations where they are the player
 -- This allows players to request evaluations from scouts

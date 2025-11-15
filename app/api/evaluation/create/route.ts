@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
-import { sendEvaluationRequestEmail } from '@/lib/email'
-import { getUserEmail, createAdminClient } from '@/lib/supabase-admin'
+import { getUserEmail } from '@/lib/supabase-admin'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -104,6 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if evaluation already exists in requested/confirmed/in_progress state
+    // This prevents duplicate requests even if user tries to pay multiple times
     const { data: existingEvaluation } = await supabase
       .from('evaluations')
       .select('id, status')
@@ -123,53 +123,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const adminSupabase = createAdminClient()
-    if (!adminSupabase) {
-      return NextResponse.json({ error: 'Server not configured for payments' }, { status: 500 })
-    }
-
-    const { data: evaluation, error: evalError } = await adminSupabase
-      .from('evaluations')
-      .insert({
-        scout_id: scout.user_id,
-        player_id: player.user_id,
-        status: 'requested',
-        price: scoutPrice,
-        payment_status: 'pending', // Will be updated to 'paid' by webhook
-      })
-      .select()
-      .maybeSingle()
-
-    if (evalError) {
-      console.error('Error creating evaluation:', evalError)
-      console.error('Error code:', evalError.code)
-      console.error('Error message:', evalError.message)
-      console.error('Error details:', JSON.stringify(evalError, null, 2))
-      console.error('Scout user_id:', scout.user_id)
-      console.error('Player user_id:', player.user_id)
-      console.error('Price:', typeof price === 'string' ? parseFloat(price) : price)
-      return NextResponse.json(
-        { 
-          error: 'Failed to create evaluation', 
-          details: evalError.message,
-          code: evalError.code,
-          hint: evalError.hint || 'Check RLS policies for evaluations table'
-        },
-        { status: 500 }
-      )
-    }
-
-    if (!evaluation) {
-      return NextResponse.json(
-        { error: 'Failed to create evaluation - no data returned' },
-        { status: 500 }
-      )
-    }
-
+    // DO NOT create evaluation here - evaluation will be created in webhook after payment succeeds
+    // This ensures evaluation is only created if payment is successful
+    
     // Get player email for Stripe checkout
     const playerEmail = await getUserEmail(player.user_id)
 
-    // Create Stripe Checkout Session for immediate payment
+    // Create Stripe Checkout Session with evaluation data in metadata
+    // Evaluation will be created in webhook when payment succeeds
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer_email: playerEmail || undefined,
@@ -187,22 +148,22 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${request.nextUrl.origin}/evaluations/${evaluation.id}?payment=success`,
+      success_url: `${request.nextUrl.origin}/evaluations/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/profile/${scoutId}`,
       metadata: {
-        evaluation_id: evaluation.id,
+        // Store all evaluation data in metadata - evaluation will be created in webhook
         scout_id: scout.user_id,
         player_id: player.user_id,
+        price: scoutPrice.toString(),
+        scout_profile_id: scout.id, // Store profile ID for redirect
         action: 'upfront_payment', // Flag to indicate upfront payment flow
       },
     })
 
-    console.log('✅ Evaluation created successfully:', evaluation.id)
-    console.log('✅ Stripe checkout session created:', checkoutSession.id)
+    console.log('✅ Stripe checkout session created (evaluation will be created after payment):', checkoutSession.id)
     
     return successResponse({ 
       success: true, 
-      evaluationId: evaluation.id,
       sessionId: checkoutSession.id
     })
   } catch (error: any) {

@@ -66,7 +66,7 @@ function NotificationIconFallback({ userId }: { userId?: string | null }) {
     }
   }, [])
   
-  // Load unread count if userId is available
+  // Load unread count if userId is available and subscribe to real-time updates
   useEffect(() => {
     if (!userId || typeof window === 'undefined') {
       return
@@ -78,28 +78,70 @@ function NotificationIconFallback({ userId }: { userId?: string | null }) {
         const { createClient } = await import('@/lib/supabase-client')
         const supabase = createClient()
         
-        const { count, error } = await supabase
-          .from('notifications')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('read', false)
-        
-        if (error) {
-          // Silently fail if table doesn't exist
-          if (error.code !== '42P01' && !error.message?.includes('does not exist')) {
-            console.error('Error loading notification count:', error)
+        // Load initial count
+        const loadCount = async () => {
+          const { count, error } = await supabase
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('read', false)
+          
+          if (error) {
+            // Silently fail if table doesn't exist
+            if (error.code !== '42P01' && !error.message?.includes('does not exist')) {
+              console.error('Error loading notification count:', error)
+            }
+            setUnreadCount(0)
+            return
           }
-          setUnreadCount(0)
-          return
+          setUnreadCount(count || 0)
         }
-        setUnreadCount(count || 0)
+        
+        // Load initial count
+        await loadCount()
+        
+        // Subscribe to real-time changes for notifications
+        const channel = supabase
+          .channel(`notifications:${userId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`,
+            },
+            (payload) => {
+              console.log('Notification change detected:', payload.eventType, payload.new || payload.old)
+              // Reload count when any change happens
+              loadCount()
+            }
+          )
+          .subscribe()
+        
+        // Also listen for auth state changes to refresh when user signs in
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+          loadCount()
+        })
+        
+        return () => {
+          channel.unsubscribe()
+          subscription.unsubscribe()
+        }
       } catch (error) {
         // Ignore errors
+        console.error('Error setting up notification subscription:', error)
         setUnreadCount(0)
       }
     }
     
-    loadUnreadCount()
+    const cleanup = loadUnreadCount()
+    
+    return () => {
+      cleanup?.then(cleanupFn => {
+        if (cleanupFn) cleanupFn()
+      })
+    }
   }, [userId])
   
   // Handle navigation manually to avoid Link errors

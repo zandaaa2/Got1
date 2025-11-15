@@ -25,7 +25,10 @@ const getStripeKey = () => {
   return key
 }
 
-const stripePromise = getStripeKey() ? loadStripe(getStripeKey()!) : null
+// Initialize Stripe with locale disabled to prevent localization errors
+const stripePromise = getStripeKey() 
+  ? loadStripe(getStripeKey()!, { locale: 'auto' }) 
+  : null
 
 /**
  * Component for purchasing an evaluation from a scout.

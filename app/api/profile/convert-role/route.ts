@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
+import { createNotification } from '@/lib/notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -111,6 +112,40 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       return handleApiError(updateError, 'Failed to update role')
+    }
+
+    // Create notifications for role conversions
+    try {
+      if (newRole === 'player' && profile.role === 'user') {
+        // New user converting to player
+        await createNotification({
+          userId: session.user.id,
+          type: 'user_converted_to_player',
+          title: 'Account Updated',
+          message: 'Your account has been updated to Player. Start browsing scouts!',
+          link: '/browse',
+          metadata: {
+            previous_role: profile.role,
+            new_role: 'player',
+          },
+        })
+      } else if (newRole === 'user' && profile.role !== 'user') {
+        // Existing user converting to basic user
+        await createNotification({
+          userId: session.user.id,
+          type: 'user_converted_to_basic',
+          title: 'Account Updated',
+          message: 'Your account has been updated to a basic user account.',
+          link: '/profile',
+          metadata: {
+            previous_role: profile.role,
+            new_role: 'user',
+          },
+        })
+      }
+    } catch (notificationError) {
+      console.error('Error creating role conversion notification:', notificationError)
+      // Don't fail role conversion if notification fails
     }
 
     // If converting to player or scout, redirect to setup page

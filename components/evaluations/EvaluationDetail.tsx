@@ -163,9 +163,10 @@ export default function EvaluationDetail({
 
       if (error) throw error
 
-      // Send email notification to player
+      // Send email notification to player and create in-app notification
       try {
-        await fetch('/api/evaluation/complete', {
+        console.log('📧 Calling /api/evaluation/complete for evaluation:', evaluation.id)
+        const response = await fetch('/api/evaluation/complete', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -174,8 +175,20 @@ export default function EvaluationDetail({
             evaluationId: evaluation.id,
           }),
         })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('❌ Failed to complete evaluation processing:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+          })
+        } else {
+          const data = await response.json()
+          console.log('✅ Evaluation completion processing successful:', data)
+        }
       } catch (emailError) {
-        console.error('Error sending completion email:', emailError)
+        console.error('❌ Error calling completion API:', emailError)
         // Don't block the redirect if email fails
       }
 
@@ -212,7 +225,7 @@ export default function EvaluationDetail({
         {/* Header with back button and share button */}
         <div className="mb-4 md:mb-6 flex items-center justify-between">
           <button
-            onClick={() => router.push('/evaluations')}
+            onClick={() => router.push('/my-evals')}
             className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
           >
             <svg
@@ -336,7 +349,7 @@ export default function EvaluationDetail({
                 </p>
               </div>
               <button
-                onClick={() => router.push('/evaluations')}
+                onClick={() => router.push('/my-evals')}
                 className="inline-flex items-center justify-center px-4 py-2 bg-black text-white rounded-md text-sm font-semibold hover:bg-gray-900 transition-colors"
               >
                 Got it
@@ -596,6 +609,64 @@ export default function EvaluationDetail({
   }
 
   // Scout view
+  // Handle cancelled evaluations first
+  if (isScout && evaluation.status === 'cancelled') {
+    const player = evaluation.player
+    
+    return (
+      <div className="max-w-4xl mx-auto">
+        {/* Header with back button */}
+        <div className="mb-4 md:mb-6 flex items-center justify-between">
+          <button
+            onClick={() => router.push('/my-evals')}
+            className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
+          >
+            <svg
+              className="w-5 h-5 md:w-6 md:h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span className="md:hidden">Back</span>
+          </button>
+        </div>
+
+        {/* Cancelled Evaluation Message */}
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-black mb-3 md:mb-4">Evaluation Cancelled</h2>
+          <div className="p-4 md:p-6 bg-red-50 rounded-lg border border-red-200">
+            <p className="text-black mb-2">
+              <strong>{player?.full_name || 'The player'}</strong> has cancelled their evaluation request.
+            </p>
+            {evaluation.payment_status === 'refunded' && (
+              <p className="text-sm text-green-700 mt-2">
+                ✅ Payment has been automatically refunded.
+              </p>
+            )}
+            {evaluation.cancelled_reason && (
+              <p className="text-black text-sm mt-2">
+                <strong>Reason:</strong> {evaluation.cancelled_reason}
+              </p>
+            )}
+            <button
+              onClick={() => router.push('/my-evals')}
+              className="mt-4 inline-flex items-center justify-center px-4 py-2 bg-black text-white rounded-md text-sm font-semibold hover:bg-gray-900 transition-colors"
+            >
+              Back to My Evals
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
   // If completed, show it like ProfileView. If confirmed/in_progress, show form.
   if (evaluation.status === 'completed' && evaluation.notes) {
     // Completed evaluation - show scout's own profile card and the evaluation

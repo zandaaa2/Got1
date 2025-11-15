@@ -56,13 +56,19 @@ export async function POST(request: NextRequest) {
 
     const hasPaid = evaluation.payment_status === 'paid' && !!evaluation.payment_intent_id
 
+    let refund: Stripe.Refund | null = null
     if (hasPaid) {
       try {
-        const refund = await stripe.refunds.create({
+        refund = await stripe.refunds.create({
           payment_intent: evaluation.payment_intent_id!,
           reason: 'requested_by_customer',
         })
-        console.log('✅ Refund issued for cancellation:', refund.id, 'Amount:', refund.amount / 100)
+        console.log('✅ Refund created for cancellation:', {
+          refund_id: refund.id,
+          amount: refund.amount / 100,
+          status: refund.status,
+          charge: refund.charge,
+        })
       } catch (error: any) {
         console.error('❌ Error issuing refund during cancellation:', error)
         return NextResponse.json(
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
         type: 'evaluation_cancelled',
         title: 'Evaluation Cancelled',
         message: `${playerProfile?.full_name || 'A player'} has cancelled their evaluation request.${hasPaid ? ' Payment has been refunded.' : ''}`,
-        link: `/evaluations/${evaluationId}`,
+        link: `/my-evals`,
         metadata: {
           evaluation_id: evaluationId,
           player_id: evaluation.player_id,
@@ -128,6 +134,70 @@ export async function POST(request: NextRequest) {
     } catch (notificationError) {
       console.error('Error creating cancellation notification:', notificationError)
       // Don't fail the request if notification fails
+    }
+
+    // Create in-app notification for player about refund (if payment was made and refund was successfully created)
+    if (hasPaid) {
+      if (!refund) {
+        console.error('⚠️ WARNING: hasPaid is true but refund is null - refund may have failed silently')
+      } else {
+        try {
+          console.log('📧 Attempting to create refund notification for player:', {
+            player_id: evaluation.player_id,
+            refund_id: refund.id,
+            refund_status: refund.status,
+            amount: evaluation.price,
+          })
+
+          // Determine refund message based on Stripe refund status
+          // Stripe refund status can be: pending, succeeded, failed, or canceled
+          let refundMessage = ''
+          if (refund.status === 'succeeded') {
+            refundMessage = `Your refund of $${evaluation.price.toFixed(2)} has been processed and will appear in your account within 5-10 business days.`
+          } else if (refund.status === 'pending') {
+            refundMessage = `Your refund of $${evaluation.price.toFixed(2)} has been initiated and is processing. The funds will be returned to your original payment method within 5-10 business days.`
+          } else {
+            // Failed or canceled - should be rare, but handle gracefully
+            refundMessage = `Your refund of $${evaluation.price.toFixed(2)} has been requested. If you don't see the refund in 5-10 business days, please contact support.`
+          }
+
+          const notificationResult = await createNotification({
+            userId: evaluation.player_id,
+            type: 'payment_refunded',
+            title: 'Payment Refunded',
+            message: refundMessage,
+            link: `/evaluations/${evaluationId}`,
+            metadata: {
+              evaluation_id: evaluationId,
+              amount: evaluation.price,
+              refund_id: refund.id,
+              refund_status: refund.status,
+              refund_reason: 'cancelled_by_player',
+            },
+          })
+
+          if (notificationResult) {
+            console.log('✅ Refund notification created successfully for player:', {
+              player_id: evaluation.player_id,
+              refund_id: refund.id,
+              refund_status: refund.status,
+            })
+          } else {
+            console.error('❌ Refund notification creation returned false for player:', evaluation.player_id)
+            console.error('❌ This means createNotification returned false - check notification creation logic')
+          }
+        } catch (playerNotificationError: any) {
+          console.error('❌ Error creating player refund notification:', playerNotificationError)
+          console.error('❌ Notification error details:', {
+            message: playerNotificationError?.message,
+            stack: playerNotificationError?.stack,
+            error: JSON.stringify(playerNotificationError, Object.getOwnPropertyNames(playerNotificationError)),
+          })
+          // Don't fail the request if notification fails
+        }
+      }
+    } else {
+      console.log('⏭️ Skipping refund notification - no payment was made (hasPaid: false)')
     }
 
     return successResponse({

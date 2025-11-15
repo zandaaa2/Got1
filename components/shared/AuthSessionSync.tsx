@@ -12,6 +12,7 @@ export default function AuthSessionSync() {
   const router = useRouter()
   const pathname = usePathname()
   const hasChecked = useRef(false)
+  const hasAttemptedNotification = useRef(false)
 
   useEffect(() => {
     // Only check once on mount
@@ -29,6 +30,7 @@ export default function AuthSessionSync() {
         // Check if we're on a page with ?v= timestamp (indicates recent auth redirect)
         const urlParams = new URLSearchParams(window.location.search)
         const hasVersionParam = urlParams.has('v')
+        const isNewAuth = hasVersionParam || urlParams.has('refresh')
         
         // Wait a moment to let server-side rendering complete
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -46,6 +48,86 @@ export default function AuthSessionSync() {
           window.location.href = newUrl
           hasChecked.current = true
           return
+        }
+        
+        // Create sign-in/sign-up notification - FALLBACK ONLY
+        // The createNotification function will handle duplicate prevention at the database level
+        // This ensures a notification is created even if /auth/sync didn't run (e.g., OAuth error)
+        if (!hasAttemptedNotification.current) {
+          try {
+            // Check if we should create one as fallback
+            // Create if: 1) Has refresh/v params (new auth), OR 2) URL has error=auth_failed (OAuth callback failed but session exists)
+            const urlParams = new URLSearchParams(window.location.search)
+            const hasAuthError = urlParams.get('error') === 'auth_failed'
+            const shouldCreate = isNewAuth || hasAuthError
+            
+            if (shouldCreate) {
+              hasAttemptedNotification.current = true // Mark as attempted immediately
+              
+              // Determine if this is a new signup by checking when the auth user was created
+              let isNewSignup = false
+              let timeSinceCreation: number | null = null
+              
+              if (session.user.created_at) {
+                const userCreatedAt = new Date(session.user.created_at)
+                if (!isNaN(userCreatedAt.getTime())) {
+                  const now = Date.now()
+                  timeSinceCreation = now - userCreatedAt.getTime()
+                  // Use 10 minutes window to match /auth/sync logic
+                  isNewSignup = timeSinceCreation < 10 * 60 * 1000 // 10 minutes
+                }
+              }
+              
+              const notificationType = isNewSignup ? 'user_signed_up' : 'user_signed_in'
+              
+              console.log('🔔 AuthSessionSync: Creating notification (fallback)...', {
+                notificationType,
+                isNewSignup,
+                isNewAuth,
+                hasAuthError,
+                userCreatedAt: session.user.created_at,
+                timeSinceCreationSeconds: timeSinceCreation ? Math.round(timeSinceCreation / 1000) + 's' : 'N/A',
+              })
+              
+              const response = await fetch('/api/notifications/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: notificationType,
+                  title: isNewSignup ? 'Welcome to Got1!' : 'Welcome Back!',
+                  message: isNewSignup 
+                    ? 'Thanks for signing up! Complete your profile to get started.'
+                    : 'You have successfully signed in.',
+                  link: isNewSignup ? '/profile/user-setup' : '/',
+                  metadata: {
+                    signup_method: session.user.app_metadata?.provider || 'email',
+                    fallback: true, // Always mark as fallback since this is the fallback handler
+                    source: 'auth_session_sync',
+                    user_created_at: session.user.created_at,
+                  },
+                }),
+              })
+              
+              if (response.ok) {
+                console.log(`✅ ${notificationType} notification created (fallback)`)
+                // Clean up error param from URL
+                if (hasAuthError) {
+                  const cleanUrl = window.location.pathname
+                  window.history.replaceState({}, '', cleanUrl)
+                }
+              } else {
+                const error = await response.json().catch(() => ({}))
+                console.error(`Failed to create ${notificationType} notification:`, error)
+                hasAttemptedNotification.current = false // Reset on error
+              }
+            } else {
+              console.log('⏭️ Skipping notification - not a fresh auth event')
+            }
+          } catch (error) {
+            console.error('Error creating auth notification:', error)
+            hasAttemptedNotification.current = false // Reset on error
+            // Don't block auth flow if notification fails
+          }
         }
         
         // If we just came from auth callback (has version param), do a router refresh

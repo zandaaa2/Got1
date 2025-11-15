@@ -1,7 +1,7 @@
 'use client'
 
 // Status comparison fix: Using === for proper type checking
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -56,11 +56,12 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
   const [refreshKey, setRefreshKey] = useState(0)
   const supabase = createClient()
 
+
   /**
    * Loads evaluations and manually joins profile data.
    * Since evaluations reference auth.users, we need to manually join with profiles.
    */
-  const loadEvaluations = async () => {
+  const loadEvaluations = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -90,9 +91,28 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
 
         query = query.order('created_at', { ascending: false })
 
+        console.log('🔍 Loading evaluations with filters:', {
+          role,
+          userId,
+          activeTab,
+          statusFilter: activeTab === 'in_progress' ? ['requested', 'confirmed', 'in_progress'] : ['completed'],
+        })
+
         const result = await query
         evaluationsData = result.data
         evaluationsError = result.error
+
+        console.log('📦 Evaluation query result:', {
+          count: evaluationsData?.length || 0,
+          evaluations: evaluationsData?.map(e => ({
+            id: e.id,
+            status: e.status,
+            scout_id: e.scout_id,
+            player_id: e.player_id,
+            created_at: e.created_at,
+          })),
+          error: evaluationsError,
+        })
 
         // If error is due to share_token column not existing, try without it
         if (evaluationsError && (evaluationsError.code === '42703' || evaluationsError.message?.includes('column "share_token" does not exist'))) {
@@ -136,7 +156,15 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
         throw evaluationsError
       }
       
-      console.log('✅ Loaded evaluations from database:', evaluationsData?.length || 0)
+      console.log('✅ Loaded evaluations from database:', {
+        count: evaluationsData?.length || 0,
+        evaluations: evaluationsData?.map(e => ({
+          id: e.id,
+          status: e.status,
+          scout_id: e.scout_id,
+          player_id: e.player_id,
+        })),
+      })
 
       if (!evaluationsData || evaluationsData.length === 0) {
         setEvaluations([])
@@ -197,12 +225,65 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeTab, role, userId, refreshKey, supabase])
 
   useEffect(() => {
     loadEvaluations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, role, userId, refreshKey])
+  }, [loadEvaluations])
+
+  // Subscribe to real-time changes for evaluations
+  useEffect(() => {
+    if (!userId) return
+
+    console.log('🔔 Setting up real-time subscription for evaluations...', {
+      userId,
+      role,
+      filter: role === 'scout' ? `scout_id=eq.${userId}` : `player_id=eq.${userId}`,
+    })
+
+    const channel = supabase
+      .channel(`evaluations:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'evaluations',
+          filter: role === 'scout' 
+            ? `scout_id=eq.${userId}` 
+            : `player_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('🔄 Real-time evaluation change detected:', {
+            eventType: payload.eventType,
+            evaluationId: payload.new?.id || payload.old?.id,
+            status: payload.new?.status || payload.old?.status,
+            player_id: payload.new?.player_id || payload.old?.player_id,
+            scout_id: payload.new?.scout_id || payload.old?.scout_id,
+          })
+          // Force reload evaluations when any change happens
+          loadEvaluations()
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔔 Real-time subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active for evaluations')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error - channel error')
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Real-time subscription error - timed out')
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Real-time subscription closed')
+        }
+      })
+
+    return () => {
+      console.log('🔕 Unsubscribing from real-time channel')
+      channel.unsubscribe()
+    }
+  }, [userId, role, loadEvaluations, supabase])
+
 
   return (
     <div className="mx-auto w-full max-w-5xl">

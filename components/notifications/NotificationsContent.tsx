@@ -36,7 +36,8 @@ export default function NotificationsContent({ userId }: { userId: string }) {
           .from('notifications')
           .select('*')
           .eq('user_id', userId)
-          .order('created_at', { ascending: false })
+          .order('read', { ascending: true }) // Unread first (false comes before true)
+          .order('created_at', { ascending: false }) // Then by date within each group
           .limit(50)
 
         if (!isMounted) return
@@ -184,7 +185,8 @@ export default function NotificationsContent({ userId }: { userId: string }) {
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('read', { ascending: true }) // Unread first (false comes before true)
+        .order('created_at', { ascending: false }) // Then by date within each group
         .limit(50)
       
       if (!reloadError && data) {
@@ -226,7 +228,8 @@ export default function NotificationsContent({ userId }: { userId: string }) {
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('read', { ascending: true }) // Unread first (false comes before true)
+        .order('created_at', { ascending: false }) // Then by date within each group
         .limit(50)
       
       if (!reloadError && data) {
@@ -270,7 +273,8 @@ export default function NotificationsContent({ userId }: { userId: string }) {
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('read', { ascending: true }) // Unread first (false comes before true)
+        .order('created_at', { ascending: false }) // Then by date within each group
         .limit(50)
       
       if (!reloadError && data) {
@@ -313,39 +317,74 @@ export default function NotificationsContent({ userId }: { userId: string }) {
       case 'evaluation_confirmed':
       case 'evaluation_completed':
         return (
-          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         )
       case 'evaluation_denied':
       case 'evaluation_cancelled':
         return (
-          <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         )
       case 'scout_application_approved':
         return (
-          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         )
       case 'scout_application_denied':
         return (
-          <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         )
+      case 'scout_application_received':
+        return (
+          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        )
+      case 'scout_status_revoked':
+        return (
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        )
       case 'payment_received':
+      case 'payment_refunded':
+      case 'refund_started':
       case 'payment_failed':
         return (
-          <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )
+      case 'user_signed_up':
+      case 'user_signed_in':
+      case 'user_converted_to_player':
+      case 'user_converted_to_basic':
+        return (
+          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        )
+      case 'stripe_account_issue':
+        return (
+          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        )
+      case 'scout_ready_to_earn':
+        return (
+          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         )
       default:
         return (
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
         )
@@ -395,65 +434,86 @@ export default function NotificationsContent({ userId }: { userId: string }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-3 md:space-y-4">
-          {notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-lg transition-colors ${
-                notification.read
-                  ? 'bg-white border border-gray-200 hover:bg-gray-50'
-                  : 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
-              }`}
-            >
-              <div className="flex-shrink-0 mt-1">
-                {getNotificationIcon(notification.type)}
-              </div>
-              <div
-                className="flex-1 min-w-0 cursor-pointer"
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-black text-base md:text-lg mb-1">
-                      {notification.title}
-                    </h3>
-                    <p className="text-black text-sm md:text-base mb-2">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatTime(notification.created_at)}
-                    </p>
+        <>
+          {/* Unread Notifications Section */}
+          {notifications.filter(n => !n.read).length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                New
+              </h2>
+              <div className="space-y-2">
+                {notifications.filter(n => !n.read).map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-start gap-2 p-2 rounded-lg transition-colors bg-blue-50 hover:bg-blue-100"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-black text-sm mb-0.5">
+                            {notification.title}
+                          </h3>
+                          <p className="text-black text-xs mb-1 line-clamp-2">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatTime(notification.created_at)}
+                          </p>
+                        </div>
+                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
+                      </div>
+                    </div>
                   </div>
-                  {!notification.read && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-2" />
-                  )}
-                </div>
+                ))}
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  deleteNotification(notification.id)
-                }}
-                className="flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
-                aria-label="Delete notification"
-              >
-                <svg
-                  className="w-4 h-4 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Read Notifications Section */}
+          {notifications.filter(n => n.read).length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                Viewed
+              </h2>
+              <div className="space-y-2">
+                {notifications.filter(n => n.read).map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-start gap-2 p-2 rounded-lg transition-colors bg-white hover:bg-gray-50"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-black text-sm mb-0.5">
+                            {notification.title}
+                          </h3>
+                          <p className="text-black text-xs mb-1 line-clamp-2">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatTime(notification.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
