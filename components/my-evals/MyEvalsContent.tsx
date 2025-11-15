@@ -253,13 +253,13 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
             ? `scout_id=eq.${userId}` 
             : `player_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: any) => {
           console.log('🔄 Real-time evaluation change detected:', {
             eventType: payload.eventType,
-            evaluationId: payload.new?.id || payload.old?.id,
-            status: payload.new?.status || payload.old?.status,
-            player_id: payload.new?.player_id || payload.old?.player_id,
-            scout_id: payload.new?.scout_id || payload.old?.scout_id,
+            evaluationId: (payload.new as any)?.id || (payload.old as any)?.id,
+            status: (payload.new as any)?.status || (payload.old as any)?.status,
+            player_id: (payload.new as any)?.player_id || (payload.old as any)?.player_id,
+            scout_id: (payload.new as any)?.scout_id || (payload.old as any)?.scout_id,
           })
           // Force reload evaluations when any change happens
           loadEvaluations()
