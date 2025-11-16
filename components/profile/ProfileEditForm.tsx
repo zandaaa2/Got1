@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
+import Cropper from 'react-easy-crop'
+import type { Area } from 'react-easy-crop/types'
 
 interface HudlLink {
   link: string
@@ -39,6 +40,11 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   const [uploading, setUploading] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null)
   const [showAgeRestrictionModal, setShowAgeRestrictionModal] = useState(false)
+  const [cropModalOpen, setCropModalOpen] = useState(false)
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const router = useRouter()
   const supabase = createClient()
   
@@ -118,12 +124,143 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Helper function to create an image element from URL
+  const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const image = new Image()
+      image.addEventListener('load', () => resolve(image))
+      image.addEventListener('error', error => reject(error))
+      image.src = url
+    })
+
+  // Get cropped image as blob
+  const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    const image = await createImage(imageSrc)
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) throw new Error('No 2d context')
+
+    canvas.width = pixelCrop.width
+    canvas.height = pixelCrop.height
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    )
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Canvas is empty'))
+          return
+        }
+        resolve(blob)
+      }, 'image/jpeg', 0.95)
+    })
+  }
+
+  const onCropComplete = (croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels)
+  }
+
+  const handleCropConfirm = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      // Get cropped image as blob directly
+      const blob = await getCroppedImg(imageToCrop, croppedAreaPixels)
+      const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      // Create a unique filename using user ID and timestamp
+      const fileName = `${session.user.id}-${Date.now()}.jpg`
+      const filePath = fileName
+
+      // Upload file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        if (uploadError.message.includes('Bucket') || uploadError.message.includes('not found')) {
+          throw new Error('Storage bucket not configured. Please create an "avatars" bucket in Supabase Storage.')
+        }
+        throw uploadError
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update form state and preview
+      setFormData(prev => ({ ...prev, avatar_url: publicUrl }))
+      setAvatarPreview(publicUrl)
+
+      // Immediately save the avatar to the database so it updates across the platform
+      try {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq('user_id', session.user.id)
+
+        if (updateError) {
+          console.error('Failed to update avatar in database:', updateError)
+          // Don't throw - we still want to update the form state
+        } else {
+          // Force refresh the router to update all cached data
+          router.refresh()
+          
+          // Also trigger a window location refresh as a fallback to ensure all parts update
+          // Use a small delay to let router.refresh() happen first
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.location.reload()
+            }
+          }, 500)
+        }
+      } catch (updateErr) {
+        console.error('Error updating avatar:', updateErr)
+        // Continue anyway - form state is updated
+      }
+
+      // Clean up blob URL
+      if (imageToCrop.startsWith('blob:')) {
+        URL.revokeObjectURL(imageToCrop)
+      }
+
+      setCropModalOpen(false)
+      setImageToCrop(null)
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedAreaPixels(null)
+    } catch (err: any) {
+      setError(err.message || 'Failed to crop and upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   /**
-   * Handles profile picture file selection and upload to Supabase Storage.
-   * Uploads the image to the 'avatars' bucket and updates the avatar URL.
+   * Handles profile picture file selection and opens crop modal.
    *
    * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event
-   * @returns {Promise<void>}
    */
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -141,50 +278,16 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
       return
     }
 
-    setUploading(true)
+    // Create preview URL and open crop modal
+    const imageUrl = URL.createObjectURL(file)
+    setImageToCrop(imageUrl)
+    setCropModalOpen(true)
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
     setError(null)
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
-
-      // Create a unique filename using user ID and timestamp
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`
-      // File path is just the filename since we're uploading to the 'avatars' bucket
-      const filePath = fileName
-
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        // If bucket doesn't exist or upload fails, provide helpful error
-        if (uploadError.message.includes('Bucket') || uploadError.message.includes('not found')) {
-          throw new Error('Storage bucket not configured. Please create an "avatars" bucket in Supabase Storage.')
-        }
-        throw uploadError
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath)
-
-      // Update form state and preview
-      setFormData(prev => ({ ...prev, avatar_url: publicUrl }))
-      setAvatarPreview(publicUrl)
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload image')
-    } finally {
-      setUploading(false)
-      // Reset file input so same file can be selected again
-      e.target.value = ''
-    }
+    // Reset file input so same file can be selected again
+    e.target.value = ''
   }
 
   /**
@@ -917,6 +1020,66 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
           </button>
         </div>
       </Modal>
+
+      {/* Crop Modal */}
+      {cropModalOpen && imageToCrop && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-black mb-4">Crop Your Photo</h3>
+            <div className="relative w-full mb-4" style={{ height: '400px', background: '#333' }}>
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                cropShape="round"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-2">
+                Zoom: {Math.round(zoom * 100)}%
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setCropModalOpen(false)
+                  if (imageToCrop.startsWith('blob:')) {
+                    URL.revokeObjectURL(imageToCrop)
+                  }
+                  setImageToCrop(null)
+                  setCrop({ x: 0, y: 0 })
+                  setZoom(1)
+                  setCroppedAreaPixels(null)
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-black font-medium"
+                disabled={uploading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCropConfirm}
+                disabled={uploading || !croppedAreaPixels}
+                className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? 'Uploading...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

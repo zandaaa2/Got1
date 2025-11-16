@@ -6,7 +6,7 @@ export default function AuthButtons() {
   const { openSignIn, openSignUp } = useAuthModal()
 
   return (
-    <div data-auth-buttons>
+    <div data-auth-buttons className="flex items-center gap-3">
       <button
         onClick={openSignIn}
         className="interactive-press inline-flex items-center justify-center h-10 px-4 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"

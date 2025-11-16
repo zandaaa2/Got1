@@ -63,7 +63,7 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
           {/* Help button sits to the left of Feature Request on desktop */}
           <HelpMeetingButton />
           <FeatureRequest />
-          <NotificationIconWrapper userId={userId} />
+          {userId && <NotificationIconWrapper userId={userId} />}
           {header ? (
             <div className="flex items-center gap-2 md:gap-3">
               {header}
