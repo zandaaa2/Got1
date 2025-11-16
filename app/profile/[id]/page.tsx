@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import dynamic from 'next/dynamic'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
@@ -79,6 +80,17 @@ export default async function ProfilePage({
 
   if (!profile) {
     notFound()
+  }
+
+  // Hide "ella k" from production (keep visible on localhost)
+  // Check the hostname from the request headers for reliable detection
+  // Only show "ella k" on localhost - hide on all other domains (got1.app, gotone.app, vercel.app, etc.)
+  const headersList = headers()
+  const hostname = headersList.get('host') || headersList.get('x-forwarded-host') || ''
+  const isProduction = !hostname.includes('localhost') && !hostname.includes('127.0.0.1')
+  
+  if (isProduction && profile.full_name?.toLowerCase() === 'ella k') {
+    notFound() // Returns 404 in production
   }
 
   const isOwnProfile = session?.user?.id === profile.user_id

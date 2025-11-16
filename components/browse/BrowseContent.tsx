@@ -105,7 +105,18 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Filter client-side: exclude suspended scouts (not players)
       // Note: suspended_until column may not exist yet - check for it before filtering
       const now = new Date()
+      // Check if we're in production (not localhost)
+      // Only show "ella k" on localhost - hide on all other domains (got1.app, gotone.app, vercel.app, etc.)
+      const isProduction = typeof window !== 'undefined' && 
+        !window.location.hostname.includes('localhost') && 
+        !window.location.hostname.includes('127.0.0.1')
+      
       const activeProfiles = (data || []).filter(p => {
+        // Hide "ella k" in production (keep visible on localhost)
+        if (isProduction && p.full_name?.toLowerCase() === 'ella k') {
+          return false
+        }
+        
         // If it's a scout and suspended, exclude it
         if (p.role === 'scout') {
           const suspendedUntil = p.suspended_until
@@ -196,7 +207,18 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   const trimmedQuery = searchQuery.trim().toLowerCase()
 
+  // Check if we're in production (not localhost)
+  // Only show "ella k" on localhost - hide on all other domains (got1.app, gotone.app, vercel.app, etc.)
+  const isProduction = typeof window !== 'undefined' && 
+    !window.location.hostname.includes('localhost') && 
+    !window.location.hostname.includes('127.0.0.1')
+
   const filteredProfiles = profiles.filter((profile) => {
+    // Hide "ella k" in production (keep visible on localhost)
+    if (isProduction && profile.full_name?.toLowerCase() === 'ella k') {
+      return false
+    }
+    
     // Search query filter
     const query = trimmedQuery
     const matchesSearch = (

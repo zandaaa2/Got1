@@ -855,63 +855,65 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         )}
       </div>
 
-      {/* Pricing & Purchase Section - Show for all scout profiles */}
-      <div className="surface-card mb-6 md:mb-8 p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-4 md:gap-6">
-            <div>
-              <p className="text-xs text-gray-500 mb-0.5">Price</p>
-              <p className="text-lg font-bold text-blue-600">${profile.price_per_eval || '99'}</p>
+      {/* Pricing & Purchase Section - Show only for scout profiles */}
+      {profile.role === 'scout' && (
+        <div className="surface-card mb-6 md:mb-8 p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-4 md:gap-6">
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">Price</p>
+                <p className="text-lg font-bold text-blue-600">${profile.price_per_eval || '99'}</p>
+              </div>
+              <div className="h-8 w-px bg-gray-200"></div>
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">Turnaround</p>
+                <p className="text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+              </div>
             </div>
-            <div className="h-8 w-px bg-gray-200"></div>
-            <div>
-              <p className="text-xs text-gray-500 mb-0.5">Turnaround</p>
-              <p className="text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
-            </div>
-          </div>
-          {isOwnProfile ? (
-            <div className="ml-auto w-full max-w-xs px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-medium text-sm text-center cursor-not-allowed">
-              Your Profile
-            </div>
-          ) : (
-            <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-3 md:gap-4 sm:w-auto">
-              <button
-                onClick={() => setShowHowItWorks(true)}
-                className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
-              >
-                Read payment flow
-              </button>
-              <button
-                onClick={() => setShowHowItWorks(true)}
-                className="interactive-press flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black md:hidden"
-                aria-label="Read payment flow"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
+            {isOwnProfile ? (
+              <div className="ml-auto w-full max-w-xs px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-medium text-sm text-center cursor-not-allowed">
+                Your Profile
+              </div>
+            ) : (
+              <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-3 md:gap-4 sm:w-auto">
+                <button
+                  onClick={() => setShowHowItWorks(true)}
+                  className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={handleRequestEvaluation}
-                disabled={requesting}
-                className="interactive-press w-full sm:w-auto px-8 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm transition-colors text-center shadow-sm disabled:active:scale-100"
-              >
-                {requesting ? 'Processing...' : 'Request & Pay Now'}
-              </button>
-            </div>
-          )}
+                  Read payment flow
+                </button>
+                <button
+                  onClick={() => setShowHowItWorks(true)}
+                  className="interactive-press flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black md:hidden"
+                  aria-label="Read payment flow"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleRequestEvaluation}
+                  disabled={requesting}
+                  className="interactive-press w-full sm:w-auto px-8 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm transition-colors text-center shadow-sm disabled:active:scale-100"
+                >
+                  {requesting ? 'Processing...' : 'Request & Pay Now'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Edit Profile Button - Only for own profile */}
       {isOwnProfile && (
@@ -1010,7 +1012,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </div>
             
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              {!isOwnProfile && (
+              {!isOwnProfile && profile.role === 'scout' && (
                 <button
                   onClick={() => {
                     setShowMoreInfo(false)
