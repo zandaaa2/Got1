@@ -9,8 +9,7 @@ import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
-import Cropper from 'react-easy-crop'
-import type { Area } from 'react-easy-crop/types'
+import Cropper, { type Area } from 'react-easy-crop'
 
 interface HudlLink {
   link: string
