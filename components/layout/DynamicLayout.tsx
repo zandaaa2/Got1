@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import FeatureRequest from '@/components/shared/FeatureRequest'
+import HelpMeetingButton from '@/components/shared/HelpMeetingButton'
 import NotificationIconWrapper from '@/components/shared/NotificationIconWrapper'
 import { createClient } from '@/lib/supabase-client'
 
@@ -59,6 +60,8 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
         style={isMobile ? {} : { left: `${sidebarWidth}px` }}
       >
         <div className="flex w-full items-center justify-end gap-3">
+          {/* Help button sits to the left of Feature Request on desktop */}
+          <HelpMeetingButton />
           <FeatureRequest />
           <NotificationIconWrapper userId={userId} />
           {header ? (

@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { getGradientForId } from '@/lib/gradients'
 import { getProfilePath } from '@/lib/profile-url'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import { openCalendly30Min } from '@/lib/calendly'
 
 interface ProfileContentProps {
   profile: any
@@ -1458,6 +1459,23 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       <div className="mt-8">
         <h2 className="text-lg font-bold text-black mb-4">General Info</h2>
         <div className="space-y-3 md:space-y-2">
+          {/* Help / 1:1 Support with Founder */}
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Need help?</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">
+                Schedule a 15-minute call with the founder to walk through anything you’re stuck on.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openCalendly30Min}
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+            >
+              Schedule
+            </button>
+          </div>
+
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
             <div className="flex-1 min-w-0 pr-2">
               <h3 className="font-bold text-black mb-1 text-sm md:text-base">Stripe</h3>

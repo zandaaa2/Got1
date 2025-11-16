@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import AuthModalProvider from '@/components/providers/AuthModalProvider'
@@ -61,6 +62,12 @@ export default function RootLayout({
           {children}
         </AuthModalProvider>
         <Analytics />
+        {/* Calendly popup widget script (for 30-min founder meetings) */}
+        <Script
+          src="https://assets.calendly.com/assets/external/widget.js"
+          async
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   )
