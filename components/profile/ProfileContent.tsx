@@ -223,38 +223,51 @@ function MoneyDashboard({ profile }: { profile: any }) {
               const linkData = await linkResponse.json()
               
               if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
-                window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
+                setLoading(false) // Clear loading before redirect
+                setTimeout(() => {
+                  window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
+                }, 0)
                 return
               }
             }
             alert('Failed to create new account. Please try again.')
             return
           }
+          return // User cancelled
         }
         throw new Error(data.error || 'Failed to get account link')
       }
       
       if (data.success) {
+        let redirectUrl = null
+        
         if (data.dashboardUrl) {
           console.log('📧 Opening dashboard:', data.dashboardUrl)
-          // Use window.location.href for mobile compatibility (popup blockers block window.open)
-          window.location.href = data.dashboardUrl
+          redirectUrl = data.dashboardUrl
         } else if (data.onboardingUrl) {
-          // If no dashboard URL but onboarding URL exists, account might need more setup
           console.log('📧 No dashboard URL, but onboarding URL available. Opening onboarding...')
-          // Use window.location.href for mobile compatibility
-          window.location.href = data.onboardingUrl
+          redirectUrl = data.onboardingUrl
         } else {
           throw new Error('Your Stripe account may need additional verification. Please try again in a few minutes or contact support.')
         }
+        
+        // Clear loading state BEFORE redirect
+        setLoading(false)
+        
+        // Use setTimeout(0) to ensure redirect happens in next event loop
+        // This helps mobile browsers recognize it as user-initiated
+        setTimeout(() => {
+          window.location.href = redirectUrl
+        }, 0)
+        
+        return
       } else {
         throw new Error(data.error || 'No dashboard URL available')
       }
     } catch (error: any) {
       console.error('❌ Error getting account link:', error)
+      setLoading(false) // Ensure loading is cleared on error
       alert(`Failed to access Stripe account: ${error.message || 'Please try again.'}`)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -785,38 +798,54 @@ function StripeConnectSection({ profile }: { profile: any }) {
               const linkData = await linkResponse.json()
               
               if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
-                window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
+                setLoading(false) // Clear loading before redirect
+                setTimeout(() => {
+                  window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
+                }, 0)
                 return
               }
             }
             alert('Failed to create new account. Please try again.')
             return
           }
+          return // User cancelled
         }
         throw new Error(data.error || 'Failed to get account link')
       }
       
       if (data.success) {
+        let redirectUrl = null
+        
         // If onboarding is complete, open dashboard; otherwise open onboarding
-        // Open in a new tab instead of redirecting in the same tab
         if (data.onboardingComplete && data.dashboardUrl) {
           console.log('📧 Opening dashboard in new tab:', data.dashboardUrl)
-          window.open(data.dashboardUrl, '_blank', 'noopener,noreferrer')
+          redirectUrl = data.dashboardUrl
         } else if (data.onboardingUrl) {
           console.log('📧 Opening onboarding in new tab:', data.onboardingUrl)
-          window.open(data.onboardingUrl, '_blank', 'noopener,noreferrer')
+          redirectUrl = data.onboardingUrl
         } else {
           console.error('❌ No onboarding or dashboard URL returned')
           alert('Failed to get account link. Please try again.')
+          return
         }
+        
+        // Clear loading state BEFORE redirect
+        setLoading(false)
+        
+        // Use setTimeout(0) to ensure redirect happens in next event loop
+        // This helps mobile browsers recognize it as user-initiated
+        setTimeout(() => {
+          window.open(redirectUrl, '_blank', 'noopener,noreferrer')
+        }, 0)
+        
+        return
       } else {
         throw new Error(data.error || 'Failed to get account link')
       }
     } catch (error: any) {
       console.error('❌ Error getting account link:', error)
+      setLoading(false) // Ensure loading is cleared on error
       alert(`Failed to access Stripe account: ${error.message || 'Please try again.'}`)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -942,6 +971,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [isEditingPricing, setIsEditingPricing] = useState(false)
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
+  const [hasHighSchool, setHasHighSchool] = useState<boolean | null>(null) // null = checking, true = has school, false = no school
   const [refreshKey, setRefreshKey] = useState(0)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
@@ -991,6 +1021,33 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       console.error('Failed to persist monetization checklist state:', error)
     }
   }, [moneyChecklist, checklistStorageKey])
+
+  // Check if user has a high school
+  useEffect(() => {
+    const checkHighSchool = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user?.id) {
+          setHasHighSchool(false)
+          return
+        }
+
+        // Check if user is an admin of a school
+        const { data: adminData } = await supabase
+          .from('high_school_admins')
+          .select('high_school_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+
+        setHasHighSchool(!!adminData)
+      } catch (error) {
+        console.error('Error checking high school:', error)
+        setHasHighSchool(false)
+      }
+    }
+
+    checkHighSchool()
+  }, [supabase])
 
   useEffect(() => {
     if (!canMinimizeChecklist && isMoneyChecklistMinimized) {
@@ -1166,27 +1223,37 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               const linkData = await linkResponse.json()
               
               if (linkResponse.ok && linkData.success && linkData.onboardingUrl) {
-                window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
+                setTimeout(() => {
+                  window.open(linkData.onboardingUrl, '_blank', 'noopener,noreferrer')
+                }, 0)
                 return
               }
             }
             alert('Failed to create new account. Please try again.')
             return
           }
+          return // User cancelled
         }
         throw new Error(data.error || 'Failed to get account link')
       }
       
       if (data.success) {
+        let redirectUrl = null
+        
         if (data.dashboardUrl) {
-          // Open dashboard in new tab
-          window.open(data.dashboardUrl, '_blank', 'noopener,noreferrer')
+          redirectUrl = data.dashboardUrl
         } else if (data.onboardingUrl) {
-          // Open onboarding in new tab if no dashboard URL
-          window.open(data.onboardingUrl, '_blank', 'noopener,noreferrer')
+          redirectUrl = data.onboardingUrl
         } else {
           alert('Your Stripe account may need additional verification. Please try again in a few minutes or contact support.')
+          return
         }
+        
+        // Use setTimeout(0) to ensure redirect happens in next event loop
+        // This helps mobile browsers recognize it as user-initiated
+        setTimeout(() => {
+          window.open(redirectUrl, '_blank', 'noopener,noreferrer')
+        }, 0)
       } else {
         throw new Error(data.error || 'No dashboard URL available')
       }
@@ -1475,6 +1542,24 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               Schedule
             </button>
           </div>
+
+          {/* High School Page Creation */}
+          {hasHighSchool === false && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="font-bold text-black mb-1 text-sm md:text-base">High School Page</h3>
+                <p className="text-xs md:text-sm text-gray-600 break-words">
+                  Create a page for your high school to manage your roster and track evaluations.
+                </p>
+              </div>
+              <Link
+                href="/high-school/create"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+              >
+                Create
+              </Link>
+            </div>
+          )}
 
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
             <div className="flex-1 min-w-0 pr-2">
