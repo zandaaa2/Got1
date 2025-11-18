@@ -663,7 +663,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                         <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
                           <ShareButton 
                             evaluationId={evaluation.id} 
-                            userId={currentUserId || undefined}
+                            userId={currentUserId ?? undefined}
                             evaluation={{
                               id: evaluation.id,
                               share_token: evaluation.share_token || null,
@@ -1355,7 +1355,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
                         <ShareButton 
                           evaluationId={evaluation.id} 
-                          userId={currentUserId || undefined}
+                          userId={currentUserId ?? undefined}
                           evaluation={{
                             id: evaluation.id,
                             share_token: evaluation.share_token || null,
