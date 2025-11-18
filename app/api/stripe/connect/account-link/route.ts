@@ -102,20 +102,34 @@ export async function POST(request: NextRequest) {
     } catch (stripeError: any) {
       console.error('❌ Error retrieving account:', stripeError)
       
-      // If account doesn't exist or isn't connected, clear the invalid account ID
+      // If account doesn't exist or isn't connected, check if it's a key mismatch
       if (stripeError.code === 'resource_missing' || stripeError.statusCode === 404 || 
           stripeError.message?.includes('not connected') || stripeError.message?.includes('does not exist')) {
-        console.log('📧 Account does not exist or is not connected, clearing invalid account ID...')
+        console.log('📧 Account retrieval failed - could be missing account or key mismatch')
         
-        // Clear the invalid account ID from profile
-        await supabase
-          .from('profiles')
-          .update({ stripe_account_id: null })
-          .eq('user_id', session.user.id)
+        // Check if we're using test keys (development) - if so, don't clear account ID
+        // as it might be a valid account in a different environment (test vs live)
+        const isTestKey = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')
+        const isDevelopment = process.env.NODE_ENV === 'development' || 
+                             process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')
+        
+        // Only clear account ID in production, and only if we're certain it's invalid
+        // In development, preserve the account ID as it might be valid in a different environment
+        if (!isDevelopment && !isTestKey) {
+          console.log('📧 Production environment - clearing invalid account ID...')
+          await supabase
+            .from('profiles')
+            .update({ stripe_account_id: null })
+            .eq('user_id', session.user.id)
+        } else {
+          console.log('📧 Development/test environment - preserving account ID (may be valid in different environment)')
+        }
         
         return NextResponse.json(
           { 
-            error: 'Stripe account not found. Please create a new Stripe Connect account.',
+            error: isDevelopment 
+              ? 'Stripe account not accessible. This may be due to using test keys with a live account (or vice versa). Please ensure your Stripe keys match your account environment.'
+              : 'Stripe account not found. Please create a new Stripe Connect account.',
             accountNotFound: true
           },
           { status: 404 }
@@ -153,16 +167,26 @@ export async function POST(request: NextRequest) {
       } catch (linkError: any) {
         console.error('❌ Error creating account link:', linkError)
         
-        // If account link creation fails because account doesn't exist, clear it
+        // If account link creation fails because account doesn't exist, check environment
         if (linkError.code === 'resource_missing' || linkError.message?.includes('not connected')) {
-          await supabase
-            .from('profiles')
-            .update({ stripe_account_id: null })
-            .eq('user_id', session.user.id)
+          const isTestKey = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')
+          const isDevelopment = process.env.NODE_ENV === 'development' || 
+                               process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')
+          
+          // Only clear account ID in production
+          if (!isDevelopment && !isTestKey) {
+            console.log('📧 Production environment - clearing invalid account ID from link error...')
+            await supabase
+              .from('profiles')
+              .update({ stripe_account_id: null })
+              .eq('user_id', session.user.id)
+          }
           
           return NextResponse.json(
             { 
-              error: 'Stripe account not found. Please create a new Stripe Connect account.',
+              error: isDevelopment 
+                ? 'Stripe account not accessible. This may be due to using test keys with a live account (or vice versa). Please ensure your Stripe keys match your account environment.'
+                : 'Stripe account not found. Please create a new Stripe Connect account.',
               accountNotFound: true
             },
             { status: 404 }
@@ -270,16 +294,25 @@ export async function GET(request: NextRequest) {
     } catch (stripeError: any) {
       console.error('❌ Error retrieving Stripe account:', stripeError)
       
-      // If account doesn't exist or isn't connected, clear the invalid account ID
+      // If account doesn't exist or isn't connected, check environment
       if (stripeError.code === 'resource_missing' || stripeError.statusCode === 404 || 
           stripeError.message?.includes('not connected') || stripeError.message?.includes('does not exist')) {
-        console.log('📧 Account does not exist (GET), clearing invalid account ID...')
+        console.log('📧 Account retrieval failed (GET) - could be missing account or key mismatch')
         
-        // Clear the invalid account ID from profile
-        await supabase
-          .from('profiles')
-          .update({ stripe_account_id: null })
-          .eq('user_id', session.user.id)
+        const isTestKey = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')
+        const isDevelopment = process.env.NODE_ENV === 'development' || 
+                             process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')
+        
+        // Only clear account ID in production
+        if (!isDevelopment && !isTestKey) {
+          console.log('📧 Production environment - clearing invalid account ID...')
+          await supabase
+            .from('profiles')
+            .update({ stripe_account_id: null })
+            .eq('user_id', session.user.id)
+        } else {
+          console.log('📧 Development/test environment - preserving account ID (may be valid in different environment)')
+        }
         
         return NextResponse.json({
           hasAccount: false,
