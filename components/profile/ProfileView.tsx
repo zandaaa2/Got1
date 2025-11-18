@@ -668,7 +668,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                               id: evaluation.id,
                               share_token: evaluation.share_token || null,
                               status: 'completed',
-                              player_id: evaluation.player_id || undefined,
+                              ...(evaluation.player_id && { player_id: evaluation.player_id }),
                               scout: evaluation.scout ? {
                                 full_name: evaluation.scout.full_name,
                                 organization: evaluation.scout.organization,
@@ -1360,7 +1360,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                             id: evaluation.id,
                             share_token: evaluation.share_token || null,
                             status: 'completed',
-                            player_id: evaluation.player_id || undefined,
+                            ...(evaluation.player_id && { player_id: evaluation.player_id }),
                             scout: profile.role === 'scout' ? {
                               full_name: profile.full_name,
                               organization: profile.organization,
