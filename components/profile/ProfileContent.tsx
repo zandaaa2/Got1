@@ -279,24 +279,47 @@ function MoneyDashboard({ profile }: { profile: any }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
-      const { error: updateError } = await supabase
+      // Validate inputs
+      const price = pricePerEval ? parseFloat(pricePerEval) : null
+      if (price !== null && (isNaN(price) || price <= 0)) {
+        throw new Error('Price must be a positive number')
+      }
+
+      const { data, error: updateError } = await supabase
         .from('profiles')
         .update({
-          price_per_eval: pricePerEval ? parseFloat(pricePerEval) : null,
+          price_per_eval: price,
           turnaround_time: turnaroundTime || null,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', session.user.id)
+        .select() // Return updated data
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('❌ Update error details:', updateError)
+        throw new Error(updateError.message || 'Failed to update profile')
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('Profile not found or update failed')
+      }
 
       setSaveMessage('Saved successfully!')
       setIsEditingPricing(false)
       setTimeout(() => setSaveMessage(null), 3000)
+      
+      // Force refresh
       router.refresh()
+      
+      // Also update local state immediately
+      setPricePerEval(data[0].price_per_eval?.toString() || '99')
+      setTurnaroundTime(data[0].turnaround_time || '72 hrs')
+      
     } catch (error: any) {
-      console.error('Error saving pricing:', error)
-      setSaveMessage('Failed to save. Please try again.')
+      console.error('❌ Error saving pricing:', error)
+      // Show actual error message to help debug
+      setSaveMessage(error.message || 'Failed to save. Please try again.')
+      setTimeout(() => setSaveMessage(null), 5000) // Show error longer
     } finally {
       setSaving(false)
     }
@@ -1171,24 +1194,47 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
-      const { error: updateError } = await supabase
+      // Validate inputs
+      const price = pricePerEval ? parseFloat(pricePerEval) : null
+      if (price !== null && (isNaN(price) || price <= 0)) {
+        throw new Error('Price must be a positive number')
+      }
+
+      const { data, error: updateError } = await supabase
         .from('profiles')
         .update({
-          price_per_eval: pricePerEval ? parseFloat(pricePerEval) : null,
+          price_per_eval: price,
           turnaround_time: turnaroundTime || null,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', session.user.id)
+        .select() // Return updated data
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('❌ Update error details:', updateError)
+        throw new Error(updateError.message || 'Failed to update profile')
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('Profile not found or update failed')
+      }
 
       setSaveMessage('Saved successfully!')
       setIsEditingPricing(false)
       setTimeout(() => setSaveMessage(null), 3000)
+      
+      // Force refresh
       router.refresh()
+      
+      // Also update local state immediately
+      setPricePerEval(data[0].price_per_eval?.toString() || '99')
+      setTurnaroundTime(data[0].turnaround_time || '72 hrs')
+      
     } catch (error: any) {
-      console.error('Error saving pricing:', error)
-      setSaveMessage('Failed to save. Please try again.')
+      console.error('❌ Error saving pricing:', error)
+      // Show actual error message to help debug
+      setSaveMessage(error.message || 'Failed to save. Please try again.')
+      setTimeout(() => setSaveMessage(null), 5000) // Show error longer
     } finally {
       setSaving(false)
     }
