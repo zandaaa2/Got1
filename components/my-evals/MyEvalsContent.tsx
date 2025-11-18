@@ -499,10 +499,12 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                 <div className="flex-shrink-0">
                   <ShareButton 
                     evaluationId={evaluation.id} 
+                    userId={userId}
                     evaluation={{
                       id: evaluation.id,
                       share_token: evaluation.share_token || null,
                       status: evaluation.status,
+                      player_id: evaluation.player_id,
                       scout: evaluation.scout,
                     }}
                   />

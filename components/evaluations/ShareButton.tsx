@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase-client'
 
 interface ShareButtonProps {
   evaluationId: string
@@ -8,17 +9,25 @@ interface ShareButtonProps {
     id: string
     share_token: string | null
     status: string
+    player_id?: string
     scout?: {
       full_name: string | null
       organization: string | null
     } | null
   }
+  userId?: string
 }
 
-export default function ShareButton({ evaluationId, evaluation }: ShareButtonProps) {
+export default function ShareButton({ evaluationId, evaluation, userId }: ShareButtonProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [copied, setCopied] = useState(false)
   const [shareUrl, setShareUrl] = useState<string>('')
+  const [hasSchool, setHasSchool] = useState(false)
+  const [schoolId, setSchoolId] = useState<string | null>(null)
+  const [isSharedWithSchool, setIsSharedWithSchool] = useState(false)
+  const [paidBy, setPaidBy] = useState<'school' | 'player' | null>(null)
+  const [sharingWithSchool, setSharingWithSchool] = useState(false)
+  const supabase = createClient()
 
   // Share button available for ALL evaluations (not just completed)
   // For completed evaluations, use share_token for public link
@@ -43,6 +52,44 @@ export default function ShareButton({ evaluationId, evaluation }: ShareButtonPro
       setShareUrl(`/evaluations/${evaluationId}`)
     }
   }, [evaluationId, evaluation?.share_token, evaluation?.status])
+
+  // Check if user has school and if eval is shared with school
+  useEffect(() => {
+    if (!userId || !evaluation?.player_id) return
+
+    const checkSchoolStatus = async () => {
+      try {
+        // Check if user is a player and has a school
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('high_school_id')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (profile?.high_school_id) {
+          setHasSchool(true)
+          setSchoolId(profile.high_school_id)
+
+          // Check if eval is shared with school
+          const { data: schoolEval } = await supabase
+            .from('high_school_evaluations')
+            .select('paid_by, shared_by_player')
+            .eq('evaluation_id', evaluationId)
+            .eq('high_school_id', profile.high_school_id)
+            .maybeSingle()
+
+          if (schoolEval) {
+            setPaidBy(schoolEval.paid_by as 'school' | 'player')
+            setIsSharedWithSchool(schoolEval.shared_by_player || schoolEval.paid_by === 'school')
+          }
+        }
+      } catch (error) {
+        console.error('Error checking school status:', error)
+      }
+    }
+
+    checkSchoolStatus()
+  }, [userId, evaluationId, evaluation?.player_id, supabase])
 
   // Don't render until we have the share URL (prevents SSR issues)
   if (!shareUrl) {
@@ -124,6 +171,45 @@ export default function ShareButton({ evaluationId, evaluation }: ShareButtonPro
     }
   }
 
+  const handleShareWithSchool = async () => {
+    if (!schoolId || sharingWithSchool) return
+
+    setSharingWithSchool(true)
+    try {
+      const action = isSharedWithSchool ? 'unshare' : 'share'
+      const endpoint = `/api/high-school/${schoolId}/evaluations/${action}`
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ evaluationId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to share with school')
+      }
+
+      setIsSharedWithSchool(!isSharedWithSchool)
+      setShowMenu(false)
+    } catch (error: any) {
+      console.error('Error sharing with school:', error)
+      alert(error.message || 'Failed to share with school')
+    } finally {
+      setSharingWithSchool(false)
+    }
+  }
+
+  // Show school share option only if:
+  // - User is the player (userId === evaluation.player_id)
+  // - Player paid themselves (paidBy === 'player')
+  // - User has a school
+  const isPlayer = userId && evaluation?.player_id && userId === evaluation.player_id
+  const canShareWithSchool = isPlayer && paidBy === 'player' && hasSchool && schoolId
+
   return (
     <div className="relative">
       <button
@@ -190,6 +276,34 @@ export default function ShareButton({ evaluationId, evaluation }: ShareButtonPro
                 </svg>
                 {copied ? 'Copied!' : 'Copy Link'}
               </button>
+              
+              {/* Share/Unshare with School (only for player-paid evals) */}
+              {canShareWithSchool && (
+                <button
+                  onClick={handleShareWithSchool}
+                  disabled={sharingWithSchool}
+                  className="w-full text-left px-4 py-2 text-sm text-black hover:bg-gray-100 flex items-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                  {sharingWithSchool
+                    ? 'Processing...'
+                    : isSharedWithSchool
+                    ? 'Unshare from School'
+                    : 'Share with School'}
+                </button>
+              )}
             </div>
           </div>
         </>

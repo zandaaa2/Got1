@@ -299,6 +299,51 @@ export default function NotificationsContent({ userId }: { userId: string }) {
     }
   }
 
+  const handleRosterRequest = async (notification: Notification, action: 'accept' | 'deny') => {
+    try {
+      const playerId = notification.metadata?.player_id
+      if (!playerId) {
+        console.error('No player_id in notification metadata')
+        return
+      }
+
+      const response = await fetch(`/api/high-school/players/${playerId}/respond-to-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to respond to request')
+      }
+
+      // Mark notification as read and remove it
+      await markAsRead(notification.id)
+      
+      // Reload notifications
+      const supabase = createClient()
+      const { data: updatedNotifications } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('read', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (updatedNotifications) {
+        setNotifications(updatedNotifications)
+        setUnreadCount(updatedNotifications.filter(n => !n.read).length)
+      }
+    } catch (error: any) {
+      console.error('Error responding to roster request:', error)
+      alert(error.message || 'Failed to respond to request')
+    }
+  }
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -382,6 +427,67 @@ export default function NotificationsContent({ userId }: { userId: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         )
+      // High School notifications
+      case 'school_deleted':
+        return (
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        )
+      case 'coach_invited':
+      case 'join_school':
+      case 'school_roster_request':
+      case 'player_school_request':
+        return (
+          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+        )
+      case 'school_roster_accepted':
+        return (
+          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        )
+      case 'school_roster_denied':
+        return (
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )
+      case 'school_payment_requested':
+      case 'school_payment_accepted':
+      case 'school_payment_denied':
+        return (
+          <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )
+      case 'release_from_school':
+      case 'player_release_request':
+        return (
+          <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )
+      case 'admin_accepted':
+        return (
+          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        )
+      case 'admin_denied':
+        return (
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )
+      case 'school_eval_cancelled':
+        return (
+          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )
       default:
         return (
           <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -450,12 +556,16 @@ export default function NotificationsContent({ userId }: { userId: string }) {
                     <div className="flex-shrink-0 mt-0.5">
                       {getNotificationIcon(notification.type)}
                     </div>
-                    <div
-                      className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => handleNotificationClick(notification)}
-                    >
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => {
+                            if (notification.type !== 'school_roster_request' && notification.type !== 'player_school_request') {
+                              handleNotificationClick(notification)
+                            }
+                          }}
+                        >
                           <h3 className="font-medium text-black text-sm mb-0.5">
                             {notification.title}
                           </h3>
@@ -468,6 +578,38 @@ export default function NotificationsContent({ userId }: { userId: string }) {
                         </div>
                         <div className="w-1.5 h-1.5 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
                       </div>
+                      {notification.type === 'school_roster_request' && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handleRosterRequest(notification, 'accept')}
+                            className="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRosterRequest(notification, 'deny')}
+                            className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      )}
+                      {notification.type === 'player_school_request' && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handlePlayerSchoolRequest(notification, 'accept')}
+                            className="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handlePlayerSchoolRequest(notification, 'deny')}
+                            className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -442,10 +442,12 @@ export default function EvaluationDetail({
             <div className="mt-6 flex items-start">
               <ShareButton 
                 evaluationId={evaluation.id} 
+                userId={userId}
                 evaluation={{
                   id: evaluation.id,
                   share_token: evaluation.share_token || null,
                   status: evaluation.status,
+                  player_id: evaluation.player_id,
                   scout: evaluation.scout,
                 }}
               />
@@ -803,10 +805,12 @@ export default function EvaluationDetail({
             <div className="pl-0 md:pl-20 mt-6 flex items-start">
               <ShareButton 
                 evaluationId={evaluation.id} 
+                userId={userId}
                 evaluation={{
                   id: evaluation.id,
                   share_token: evaluation.share_token || null,
                   status: evaluation.status,
+                  player_id: evaluation.player_id,
                   scout: scout || evaluation.scout,
                 }}
               />

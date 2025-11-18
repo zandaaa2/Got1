@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import dynamicImport from 'next/dynamic'
 
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import Sidebar from '@/components/layout/Sidebar'
@@ -12,6 +13,10 @@ import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+
+const TeamMenu = dynamicImport(() => import('@/components/shared/TeamMenu'), {
+  ssr: false,
+})
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -201,7 +206,7 @@ export default async function TeamPage({ params }: PageParams) {
             </Link>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-8 bg-white border border-gray-200 rounded-2xl shadow-sm p-5 sm:p-6 md:p-8">
+          <div className="relative flex flex-col md:flex-row md:items-start gap-6 md:gap-8 bg-white border border-gray-200 rounded-2xl shadow-sm p-5 sm:p-6 md:p-8">
             <div className="w-24 h-24 md:w-32 md:h-32 mx-auto md:mx-0 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center overflow-hidden">
               {team.logo ? (
                 <Image
@@ -218,7 +223,14 @@ export default async function TeamPage({ params }: PageParams) {
                 </span>
               )}
             </div>
-            <div className="flex-1 min-w-0 text-center md:text-left">
+            <div className="flex-1 min-w-0 text-center md:text-left relative">
+              <div className="absolute top-0 right-0">
+                <TeamMenu 
+                  teamSlug={team.slug}
+                  teamName={team.name}
+                  isSignedIn={!!session}
+                />
+              </div>
               <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
                 {team.name}
               </h1>

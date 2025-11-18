@@ -46,7 +46,7 @@ const EMAIL_HEADER = `
  * @param html - Email HTML content
  * @returns Promise that resolves when email is sent or logged
  */
-async function sendEmail(to: string, subject: string, html: string): Promise<string | null> {
+export async function sendEmail(to: string, subject: string, html: string): Promise<string | null> {
   const resend = getResendClient()
   const fromEmail = getFromEmail()
 

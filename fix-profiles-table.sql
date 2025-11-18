@@ -36,3 +36,4 @@ ADD COLUMN IF NOT EXISTS id UUID PRIMARY KEY DEFAULT gen_random_uuid();
 
 
 
+

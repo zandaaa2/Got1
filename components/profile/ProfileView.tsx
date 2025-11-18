@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
+import { checkPlayerRosterStatus } from '@/lib/high-school/roster'
 import AuthModal from '@/components/auth/AuthModal'
 
 
@@ -215,16 +216,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   useEffect(() => {
     if (isOwnProfile && profile.role === 'player' && currentUserId) {
       const checkRoster = async () => {
-        // Check if player is on a roster (accepted request or has joined_at)
-        const { data } = await supabase
-          .from('high_school_players')
-          .select('high_school_id, released_at, request_status, joined_at')
-          .eq('user_id', currentUserId)
-          .is('released_at', null)
-          .or('request_status.eq.accepted,joined_at.not.is.null')
-          .maybeSingle()
+        const { isOnRoster: onRoster } = await checkPlayerRosterStatus(currentUserId)
         
-        if (data) {
+        if (onRoster) {
           setIsOnRoster(true)
         }
       }

@@ -31,6 +31,8 @@ const RESERVED_USERNAMES = new Set([
   'settings',
   'money',
   'marketing',
+  'high-school',
+  'high-schools',
   'favicon.ico',
 ])
 
