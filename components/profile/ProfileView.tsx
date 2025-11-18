@@ -7,12 +7,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
-import ReportProfileMenu from '@/components/profile/ReportProfileMenu'
+import Modal from '@/components/shared/Modal'
 import { getProfilePath } from '@/lib/profile-url'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
+import AuthModal from '@/components/auth/AuthModal'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -121,6 +122,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [minimizedEvals, setMinimizedEvals] = useState<Set<string>>(new Set())
   const [isHydrated, setIsHydrated] = useState(false)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false)
+  const [reportSuccess, setReportSuccess] = useState(false)
+  const [highSchool, setHighSchool] = useState<{ 
+    name: string
+    username: string | null
+  } | null>(null)
+  const [isOnRoster, setIsOnRoster] = useState(false)
+  const [showReleaseRequestModal, setShowReleaseRequestModal] = useState(false)
+  const [isRequestingRelease, setIsRequestingRelease] = useState(false)
+  const [showSignUpModal, setShowSignUpModal] = useState(false)
+  const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
   const router = useRouter()
   const supabase = createClient()
   const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
@@ -156,43 +171,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     }
   }
 
-  const copyButtonLabel =
-    copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Try again' : 'Copy'
-
-  const profileLinkElement = (
-    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-      <a
-        href={fullProfileUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-medium text-blue-600 hover:underline break-all"
-      >
-        {displayProfileUrl}
-      </a>
-      <button
-        type="button"
-        onClick={handleCopyProfileUrl}
-        className="interactive-press inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-        aria-live="polite"
-        aria-label="Copy profile link"
-      >
-        <svg
-          className="h-3.5 w-3.5"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M7 13a3 3 0 010-6h2" />
-          <path d="M11 7a3 3 0 010 6H9" />
-          <rect x="4" y="4" width="12" height="12" rx="3" />
-        </svg>
-        <span>{copyButtonLabel}</span>
-      </button>
-    </div>
-  )
   
   const toggleEvalMinimize = (evalId: string) => {
     setMinimizedEvals(prev => {
@@ -233,9 +211,75 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     return () => cancelAnimationFrame(id)
   }, [])
 
+  // Check if player is on a roster
+  useEffect(() => {
+    if (isOwnProfile && profile.role === 'player' && currentUserId) {
+      const checkRoster = async () => {
+        // Check if player is on a roster (accepted request or has joined_at)
+        const { data } = await supabase
+          .from('high_school_players')
+          .select('high_school_id, released_at, request_status, joined_at')
+          .eq('user_id', currentUserId)
+          .is('released_at', null)
+          .or('request_status.eq.accepted,joined_at.not.is.null')
+          .maybeSingle()
+        
+        if (data) {
+          setIsOnRoster(true)
+        }
+      }
+      checkRoster()
+    }
+  }, [isOwnProfile, profile.role, currentUserId])
+
+  const handleRequestRelease = async () => {
+    try {
+      setIsRequestingRelease(true)
+      const response = await fetch('/api/high-school/players/request-release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to request release')
+      }
+
+      setShowReleaseRequestModal(false)
+      alert('Release request sent to your school admin.')
+      router.refresh()
+    } catch (error: any) {
+      alert(error.message || 'Failed to request release')
+    } finally {
+      setIsRequestingRelease(false)
+    }
+  }
+
   useEffect(() => {
     loadEvaluations()
   }, [profile.id, profile.role])
+
+  useEffect(() => {
+    const loadHighSchool = async () => {
+      if (profile.high_school_id) {
+        try {
+          const { data: schoolData } = await supabase
+            .from('high_schools')
+            .select('name, username')
+            .eq('id', profile.high_school_id)
+            .maybeSingle()
+          
+          if (schoolData) {
+            setHighSchool(schoolData)
+          }
+        } catch (error) {
+          console.error('Error loading high school data:', error)
+        }
+      }
+    }
+    loadHighSchool()
+  }, [profile.high_school_id, supabase])
 
   /**
    * Loads evaluations for the current profile and manually joins profile data.
@@ -362,10 +406,20 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
   /**
    * Handles the request to purchase an evaluation from this scout.
-   * Redirects to the purchase page.
+   * Redirects to the purchase page if signed in, or shows sign-up modal if not.
    */
   const handleRequestEvaluation = async () => {
     if (!profile || profile.role !== 'scout') return
+
+    // Check if user is signed in
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session) {
+      // Show sign-up modal instead of redirecting
+      setAuthMode('signup')
+      setShowSignUpModal(true)
+      return
+    }
 
     setRequesting(true)
     router.push(`/profile/${profile.id}/purchase`)
@@ -414,7 +468,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </button>
 
         {/* Player Profile Section */}
-        <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="flex flex-col items-start gap-2 flex-shrink-0">
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
               {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
@@ -461,30 +515,26 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </button>
               )}
             </div>
-            {profileLinkElement}
-            {(profile.position || profile.school) && (
-              <p className="text-black mb-2">
-                {profile.position && profile.school
-                  ? `${profile.position} at ${profile.school}`
-                  : profile.position
-                  ? profile.position
-                  : profile.school
-                  ? profile.school
-                  : ''}
-                {profile.school && profile.graduation_year && ` (${profile.graduation_year})`}
-              </p>
+            {profile.school && (
+              <div className="mb-2">
+                {highSchool ? (
+                  <Link
+                    href={`/high-school/${highSchool.username || profile.high_school_id}`}
+                    className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span>{highSchool.name}</span>
+                  </Link>
+                ) : (
+                  <p className="text-blue-600">
+                    {profile.school}
+                  </p>
+                )}
+              </div>
             )}
           </div>
-          {!isOwnProfile && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <ReportProfileMenu
-                reportedProfileId={profile.id}
-                reportedName={profile.full_name}
-                reportedRole={profile.role}
-                isSignedIn={isSignedIn}
-              />
-            </div>
-          )}
         </div>
 
         {/* Evaluations Section */}
@@ -613,10 +663,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                         <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
                           <ShareButton 
                             evaluationId={evaluation.id} 
+                            userId={currentUserId || undefined}
                             evaluation={{
                               id: evaluation.id,
                               share_token: evaluation.share_token || null,
                               status: 'completed',
+                              player_id: evaluation.player_id || undefined,
                               scout: evaluation.scout ? {
                                 full_name: evaluation.scout.full_name,
                                 organization: evaluation.scout.organization,
@@ -766,8 +818,76 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         <span className="md:hidden">Back</span>
       </button>
 
-      {/* Scout Profile Section */}
-      <div className="flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
+      {/* Profile Section */}
+      <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
+        {!isOwnProfile && (
+          <div className="absolute top-0 right-0 z-10">
+            <div className="relative">
+              <button
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="More options"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+              {showShareMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowShareMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                    <button
+                      onClick={async () => {
+                        await handleCopyProfileUrl()
+                        setShowShareMenu(false)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                      Share profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!isSignedIn) {
+                          router.push('/auth/signin')
+                          setShowShareMenu(false)
+                          return
+                        }
+                        setShowShareMenu(false)
+                        setShowReportModal(true)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-200"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Report profile
+                    </button>
+                    {isOwnProfile && isOnRoster && (
+                      <button
+                        onClick={() => {
+                          setShowShareMenu(false)
+                          setShowReleaseRequestModal(true)
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-200"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Request Release from School
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex flex-col items-center md:items-start gap-2 flex-shrink-0 mx-auto md:mx-0">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
             {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
@@ -820,7 +940,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </button>
             )}
           </div>
-          {profileLinkElement}
           {(profile.position || profile.organization) && (
             <p className="text-black mb-2">
               {profile.position && profile.organization
@@ -833,24 +952,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </p>
           )}
         </div>
-        {!isOwnProfile && (
+        {!isOwnProfile && profile.role === 'scout' && currentUserId && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <ReportProfileMenu
-              reportedProfileId={profile.id}
-              reportedName={profile.full_name}
-              reportedRole={profile.role}
-              isSignedIn={isSignedIn}
+            <HeaderMenu
+              userId={currentUserId}
+              scoutId={profile.user_id}
+              onCancelled={() => {
+                router.refresh()
+                loadEvaluations()
+              }}
             />
-            {profile.role === 'scout' && currentUserId && (
-              <HeaderMenu
-                userId={currentUserId}
-                scoutId={profile.user_id}
-                onCancelled={() => {
-                  router.refresh()
-                  loadEvaluations()
-                }}
-              />
-            )}
           </div>
         )}
       </div>
@@ -1244,10 +1355,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
                         <ShareButton 
                           evaluationId={evaluation.id} 
+                          userId={currentUserId || undefined}
                           evaluation={{
                             id: evaluation.id,
                             share_token: evaluation.share_token || null,
                             status: 'completed',
+                            player_id: evaluation.player_id || undefined,
                             scout: profile.role === 'scout' ? {
                               full_name: profile.full_name,
                               organization: profile.organization,
@@ -1310,6 +1423,128 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           </div>
         )}
       </div>
+
+      {/* Report Profile Modal */}
+      <Modal 
+        isOpen={showReportModal} 
+        onClose={() => {
+          setShowReportModal(false)
+          setReportReason('')
+          setIsSubmittingReport(false)
+          setReportSuccess(false)
+        }} 
+        title="Report Profile"
+      >
+        {reportSuccess ? (
+          <div className="space-y-4">
+            <p className="text-black leading-relaxed">
+              Thanks for letting us know. Our team will review this profile and take the appropriate action.
+            </p>
+            <button
+              onClick={() => {
+                setShowReportModal(false)
+                setReportSuccess(false)
+                setReportReason('')
+              }}
+              className="interactive-press w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-black leading-relaxed">
+              You are reporting <strong>{profile.full_name || 'this profile'}</strong>{profile.role ? ` (${profile.role})` : ''}. This sends a message to the Got1 team to review their activity.
+            </p>
+            <div className="space-y-2">
+              <label htmlFor="report-reason" className="text-sm font-semibold text-black">Reason (optional)</label>
+              <textarea
+                id="report-reason"
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="Share any details that can help our team review this profile..."
+                className="w-full min-h-[120px] border border-gray-300 rounded-lg p-3 text-black focus:outline-none focus:ring-2 focus:ring-black"
+                maxLength={2000}
+              />
+              <p className="text-xs text-gray-500">Usernames and links are helpful if you have them.</p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  setIsSubmittingReport(true)
+                  const response = await fetch('/api/report/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId: profile.id, reason: reportReason }),
+                  })
+
+                  if (!response.ok) {
+                    const data = await response.json().catch(() => ({}))
+                    throw new Error(data.error || 'Failed to submit report. Please try again.')
+                  }
+
+                  setReportSuccess(true)
+                } catch (error: any) {
+                  alert(error.message || 'Failed to submit report. Please try again.')
+                } finally {
+                  setIsSubmittingReport(false)
+                }
+              }}
+              disabled={isSubmittingReport}
+              className="interactive-press w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:active:scale-100"
+            >
+              {isSubmittingReport ? 'Sending...' : 'Send Report'}
+            </button>
+          </div>
+        )}
+      </Modal>
+
+      {/* Request Release Modal */}
+      <Modal 
+        isOpen={showReleaseRequestModal} 
+        onClose={() => {
+          setShowReleaseRequestModal(false)
+          setIsRequestingRelease(false)
+        }} 
+        title="Request Release from School"
+      >
+        <div className="space-y-4">
+          <p className="text-black leading-relaxed">
+            You are requesting to be released from your current high school roster. This will send a notification to your school's administrators.
+          </p>
+          <p className="text-sm text-gray-600">
+            Once released, you'll be able to update your school information in your profile.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowReleaseRequestModal(false)}
+              className="interactive-press flex-1 px-6 py-3 border border-gray-300 bg-white text-black rounded-lg hover:bg-gray-50 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRequestRelease}
+              disabled={isRequestingRelease}
+              className="interactive-press flex-1 px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:active:scale-100"
+            >
+              {isRequestingRelease ? 'Sending...' : 'Request Release'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Sign Up Modal for non-authenticated users */}
+      <AuthModal
+        isOpen={showSignUpModal}
+        onClose={() => {
+          setShowSignUpModal(false)
+          setAuthMode('signup')
+        }}
+        mode={authMode}
+        onModeChange={(newMode) => {
+          setAuthMode(newMode)
+        }}
+      />
     </div>
   )
 }
