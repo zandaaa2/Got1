@@ -99,8 +99,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
               onClick={() => setActiveTab('player')}
               className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
                 activeTab === 'player'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gray-100 text-black'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               For Players
@@ -109,8 +109,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
               onClick={() => setActiveTab('scout')}
               className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
                 activeTab === 'scout'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gray-100 text-black'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               For Scouts
