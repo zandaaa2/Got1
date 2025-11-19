@@ -1005,11 +1005,19 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
     () => new Array(monetizationSteps.length).fill(false)
   )
   const [isMoneyChecklistMinimized, setIsMoneyChecklistMinimized] = useState(false)
+  const [isMoneyWidgetDismissed, setIsMoneyWidgetDismissed] = useState(false)
+  const [stripeAccountApproved, setStripeAccountApproved] = useState(false)
   const completedSteps = moneyChecklist.filter(Boolean).length
   const canMinimizeChecklist = completedSteps === monetizationSteps.length
   const progressPercent = monetizationSteps.length
     ? Math.round((completedSteps / monetizationSteps.length) * 100)
     : 0
+  
+  // Check if widget has been dismissed
+  const widgetDismissedKey = useMemo(
+    () => `money-widget-dismissed-${profile.user_id || profile.id || profile.username}`,
+    [profile.id, profile.user_id, profile.username]
+  )
   const profilePath = getProfilePath(profile.id, profile.username)
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app').replace(/\/$/, '')
   const fullProfileUrl = `${appUrl}${profilePath}`
@@ -1030,19 +1038,48 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       if (storedMinimized) {
         setIsMoneyChecklistMinimized(storedMinimized === 'true')
       }
+      // Check if widget has been dismissed
+      const dismissed = window.localStorage.getItem(widgetDismissedKey)
+      if (dismissed === 'true') {
+        setIsMoneyWidgetDismissed(true)
+      }
     } catch (error) {
       console.error('Failed to load monetization checklist state:', error)
     }
-  }, [checklistStorageKey])
+  }, [checklistStorageKey, widgetDismissedKey])
+  
+  // Check if Stripe account is fully approved
+  useEffect(() => {
+    if (profile.role !== 'scout') return
+    
+    const checkStripeApproval = async () => {
+      try {
+        const response = await fetch('/api/stripe/connect/account-link')
+        const data = await response.json()
+        if (data.chargesEnabled && data.payoutsEnabled) {
+          setStripeAccountApproved(true)
+        }
+      } catch (error) {
+        console.error('Failed to check Stripe approval:', error)
+      }
+    }
+    
+    checkStripeApproval()
+  }, [profile.role])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
       window.localStorage.setItem(checklistStorageKey, JSON.stringify(moneyChecklist))
+      // If all steps completed, dismiss the widget permanently
+      if (canMinimizeChecklist && completedSteps === monetizationSteps.length) {
+        window.localStorage.setItem(widgetDismissedKey, 'true')
+        setIsMoneyWidgetDismissed(true)
+      }
     } catch (error) {
       console.error('Failed to persist monetization checklist state:', error)
     }
-  }, [moneyChecklist, checklistStorageKey])
+  }, [moneyChecklist, checklistStorageKey, widgetDismissedKey, canMinimizeChecklist, completedSteps])
 
   useEffect(() => {
     if (!canMinimizeChecklist && isMoneyChecklistMinimized) {
@@ -1093,6 +1130,21 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       return next
     })
   }
+  
+  const handleDismissWidget = () => {
+    setIsMoneyWidgetDismissed(true)
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(widgetDismissedKey, 'true')
+      } catch (error) {
+        console.error('Failed to persist widget dismissal:', error)
+      }
+    }
+  }
+  
+  // Find the next incomplete step
+  const nextIncompleteStep = monetizationSteps.find((_, index) => !moneyChecklist[index])
+  const nextStepIndex = monetizationSteps.findIndex((_, index) => !moneyChecklist[index])
 
 
   // Check if returning from Stripe and force refresh
@@ -1417,72 +1469,102 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
       {profile.role === 'scout' && <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />}
 
-      {profile.role === 'scout' && (
-        <div className="surface-card mb-8 p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h3 className="text-lg md:text-xl font-semibold text-black">How to make money</h3>
-              <p className="text-sm md:text-base text-gray-600">
-                Finish these quick steps to drive players to your Got1 profile.
-              </p>
+      {/* Floating "How to make money" widget - only shows once for approved Stripe accounts */}
+      {profile.role === 'scout' && 
+       stripeAccountApproved && 
+       !isMoneyWidgetDismissed && (
+        <div className="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-black">How to make money</h3>
             </div>
             <button
-              type="button"
-              onClick={handleToggleChecklistVisibility}
-              disabled={!canMinimizeChecklist}
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                canMinimizeChecklist
-                  ? 'interactive-press border border-gray-300 text-gray-700 hover:bg-gray-100'
-                  : 'border border-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-              aria-pressed={isMoneyChecklistMinimized}
+              onClick={handleDismissWidget}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
             >
-              {isMoneyChecklistMinimized ? 'Show steps' : 'Hide steps'}
-              {!canMinimizeChecklist && (
-                <span className="text-xs font-normal text-gray-400">(complete all to hide)</span>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
 
-          <div className="mt-5">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>
-                {completedSteps} of {monetizationSteps.length} completed
-              </span>
+          {/* Progress Bar */}
+          <div className="px-4 pt-4">
+            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+              <span>{completedSteps} of {monetizationSteps.length} completed</span>
               <span>{progressPercent}%</span>
             </div>
-            <div className="mt-2 h-2 rounded-full bg-gray-200 overflow-hidden">
+            <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
               <div
                 className="h-full rounded-full bg-blue-600 transition-all duration-300 ease-out"
                 style={{ width: `${progressPercent}%` }}
-                aria-hidden="true"
               />
             </div>
           </div>
 
-          {!isMoneyChecklistMinimized && (
-            <ul className="mt-5 space-y-4">
-              {monetizationSteps.map((step: MonetizationStep, index: number) => (
-                <li key={step.id} className="flex items-start gap-3">
-                  <input
-                    id={`money-step-${step.id}`}
-                    type="checkbox"
-                    checked={moneyChecklist[index] || false}
-                    onChange={() => toggleChecklistStep(index)}
-                    className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <div>
-                    <label
-                      htmlFor={`money-step-${step.id}`}
-                      className="block text-sm font-semibold text-black cursor-pointer"
-                    >
-                      Step {index + 1}: {step.title}
-                    </label>
-                    <p className="text-sm text-gray-600">{step.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          {/* Next Up Section */}
+          {nextIncompleteStep && nextStepIndex !== -1 ? (
+            <div className="p-4">
+              <div className="mb-2">
+                <p className="text-xs text-gray-500">Next Up</p>
+                <p className="text-xs text-gray-400">Estimated: 15 minutes</p>
+              </div>
+              <h4 className="text-sm font-bold text-black mb-1">{nextIncompleteStep.title}</h4>
+              <p className="text-xs text-gray-600 mb-4">{nextIncompleteStep.description}</p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => toggleChecklistStep(nextStepIndex)}
+                  className="w-full px-4 py-2 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                  Mark Complete
+                </button>
+                {nextIncompleteStep.id === 'socials' && (
+                  <button
+                    onClick={() => {
+                      handleCopyProfileUrl()
+                    }}
+                    className="w-full px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Copy Profile Link
+                  </button>
+                )}
+                <button
+                  onClick={handleDismissWidget}
+                  className="text-xs text-gray-500 hover:text-gray-700 text-center py-1 flex items-center justify-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Stuck?
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Completed State */
+            <div className="p-4 text-center">
+              <div className="mb-3">
+                <svg className="w-12 h-12 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-bold text-black mb-2">All steps complete! 🎉</h4>
+              <p className="text-xs text-gray-600 mb-4">You're all set to start earning.</p>
+              <button
+                onClick={handleDismissWidget}
+                className="w-full px-4 py-2 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Got it
+              </button>
+            </div>
           )}
         </div>
       )}
