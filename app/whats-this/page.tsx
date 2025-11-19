@@ -45,6 +45,20 @@ export default async function WhatsThisPage() {
     )
   ).slice(0, 12) // Limit to 12 organizations
 
+  // Fetch up to 5 profiles with avatars for trust section
+  const { data: profileAvatarsRaw } = await supabase
+    .from('profiles')
+    .select('id, avatar_url, full_name')
+    .not('avatar_url', 'is', null)
+    .neq('avatar_url', '')
+    .limit(10)
+  
+  // Filter to only include meaningful avatars (not placeholder URLs)
+  const { isMeaningfulAvatar } = await import('@/lib/avatar')
+  const profileAvatars = profileAvatarsRaw
+    ?.filter((p) => isMeaningfulAvatar(p.avatar_url))
+    .slice(0, 5) || []
+
   const headerContent = session ? (
     profile ? (
       <HeaderUserAvatar
@@ -66,7 +80,11 @@ export default async function WhatsThisPage() {
       <Sidebar activePage="whats-this" />
       <DynamicLayout header={headerContent}>
         <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>
-          <WhatsThisContent organizations={uniqueOrganizations} hasSession={!!session} />
+          <WhatsThisContent 
+            organizations={uniqueOrganizations} 
+            hasSession={!!session}
+            profileAvatars={profileAvatars || []}
+          />
         </Suspense>
       </DynamicLayout>
     </div>
