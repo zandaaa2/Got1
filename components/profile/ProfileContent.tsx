@@ -1500,9 +1500,9 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
        !isMoneyWidgetDismissed && (
         <div className="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-yellow-50">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200" style={{ backgroundColor: '#FFEB3B' }}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFEB3B' }}>
                 <span className="text-lg">💰</span>
               </div>
               <h3 className="text-base font-bold text-black">How to make money</h3>
