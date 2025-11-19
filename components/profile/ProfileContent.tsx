@@ -116,6 +116,8 @@ function MoneyDashboard({ profile }: { profile: any }) {
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [isEditingPricing, setIsEditingPricing] = useState(false)
+  const [offerTitle, setOfferTitle] = useState('Standard Evaluation')
+  const [offerBio, setOfferBio] = useState(profile.bio || '')
   const [pricePerEval, setPricePerEval] = useState(profile.price_per_eval?.toString() || '99')
   const [turnaroundTime, setTurnaroundTime] = useState(profile.turnaround_time || '72 hrs')
   const [saving, setSaving] = useState(false)
@@ -161,7 +163,8 @@ function MoneyDashboard({ profile }: { profile: any }) {
     } else {
       setTurnaroundTime(turnaround)
     }
-  }, [profile.price_per_eval, profile.turnaround_time])
+    setOfferBio(profile.bio || '')
+  }, [profile.price_per_eval, profile.turnaround_time, profile.bio])
 
   const checkAccountStatus = async (options: { suppressSkeleton?: boolean } = {}) => {
     if (!options.suppressSkeleton) {
@@ -290,6 +293,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
         .update({
           price_per_eval: price,
           turnaround_time: turnaroundTime || null,
+          bio: offerBio || null, // Save bio (for now, later it will be per-offer)
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', session.user.id)
@@ -314,6 +318,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
       // Also update local state immediately
       setPricePerEval(data[0].price_per_eval?.toString() || '99')
       setTurnaroundTime(data[0].turnaround_time || '72 hrs')
+      setOfferBio(data[0].bio || '')
       
     } catch (error: any) {
       console.error('❌ Error saving pricing:', error)
@@ -347,7 +352,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
   return (
     <div className="surface-card mb-8 p-4 md:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h3 className="text-lg md:text-xl font-bold text-black">Payouts and Turnaround Time</h3>
+        <h3 className="text-lg md:text-xl font-bold text-black">Evaluation Info</h3>
         <div className="hidden sm:flex flex-row gap-2">
           <button
             onClick={() => setIsEditingPricing(!isEditingPricing)}
@@ -377,58 +382,136 @@ function MoneyDashboard({ profile }: { profile: any }) {
         </div>
       )}
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          <div className="surface-card p-3 md:p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-xs md:text-sm text-gray-600">Price per Evaluation</p>
+        {/* Single offer card */}
+        <div className="surface-card p-4 md:p-6 border border-gray-200 rounded-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              {isEditingPricing ? (
+                <input
+                  type="text"
+                  value={offerTitle}
+                  onChange={(e) => setOfferTitle(e.target.value)}
+                  className="text-lg md:text-xl font-bold text-black border border-gray-300 rounded px-3 py-2 w-full mb-2"
+                  placeholder="Standard Evaluation"
+                />
+              ) : (
+                <h4 className="text-lg md:text-xl font-bold text-black mb-2">
+                  {offerTitle}
+                </h4>
+              )}
+              {isEditingPricing ? (
+                <textarea
+                  value={offerBio}
+                  onChange={(e) => setOfferBio(e.target.value)}
+                  className="text-sm text-gray-600 border border-gray-300 rounded px-3 py-2 w-full min-h-[80px] resize-y"
+                  placeholder="Describe what players will get with this evaluation..."
+                />
+              ) : (
+                <p className="text-sm text-gray-600 mb-4">
+                  {offerBio || 'No description provided.'}
+                </p>
+              )}
+            </div>
+            {!isEditingPricing && (
               <button
-                onClick={() => setInfoModal('price')}
-                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                title="More information"
+                onClick={() => setIsEditingPricing(true)}
+                className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                title="Edit offer"
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-            </div>
-            {isEditingPricing ? (
-              <input
-                type="number"
-                value={pricePerEval}
-                onChange={(e) => setPricePerEval(e.target.value)}
-                className="text-xl md:text-2xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
-                placeholder="99"
-              />
-            ) : (
-              <p className="text-xl md:text-2xl font-bold text-black">${profile.price_per_eval || 99}</p>
             )}
           </div>
-          <div className="surface-card p-3 md:p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-xs md:text-sm text-gray-600">Turnaround Time</p>
-              <button
-                onClick={() => setInfoModal('turnaround')}
-                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                title="More information"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                </svg>
-              </button>
+
+          {/* Price and Turnaround in a row */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs md:text-sm text-gray-600">Price</p>
+                <button
+                  onClick={() => setInfoModal('price')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                  title="More information"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              {isEditingPricing ? (
+                <input
+                  type="number"
+                  value={pricePerEval}
+                  onChange={(e) => setPricePerEval(e.target.value)}
+                  className="text-lg md:text-xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
+                  placeholder="99"
+                />
+              ) : (
+                <p className="text-lg md:text-xl font-bold text-black">${profile.price_per_eval || 99}</p>
+              )}
             </div>
-            {isEditingPricing ? (
-              <input
-                type="text"
-                value={turnaroundTime}
-                onChange={(e) => setTurnaroundTime(e.target.value)}
-                className="text-xl md:text-2xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
-                placeholder="72 hrs"
-              />
-            ) : (
-              <p className="text-xl md:text-2xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
-            )}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs md:text-sm text-gray-600">Turnaround Time</p>
+                <button
+                  onClick={() => setInfoModal('turnaround')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                  title="More information"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              {isEditingPricing ? (
+                <input
+                  type="text"
+                  value={turnaroundTime}
+                  onChange={(e) => setTurnaroundTime(e.target.value)}
+                  className="text-lg md:text-xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
+                  placeholder="72 hrs"
+                />
+              ) : (
+                <p className="text-lg md:text-xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Placeholder sections for positions and college logos */}
+          <div className="pt-4 border-t border-gray-200 space-y-3">
+            {/* Positions placeholder - hidden for now but ready for multiple offers */}
+            <div className="opacity-60">
+              <p className="text-xs text-gray-500 mb-1">Positions</p>
+              <p className="text-sm text-gray-600">All positions</p>
+            </div>
+            {/* College logos placeholder */}
+            <div className="opacity-60">
+              <p className="text-xs text-gray-500 mb-2">College Connections</p>
+              <div className="flex gap-2">
+                <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
+                  <span className="text-xs text-gray-400">🏈</span>
+                </div>
+                <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
+                  <span className="text-xs text-gray-400">+</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Add Offer button - disabled for now */}
+        <button
+          disabled
+          className="w-full py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
+          title="Coming soon: Add multiple offers"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="text-sm font-medium">Add Offer</span>
+        </button>
         {/* Mobile buttons - shown below cards on mobile, hidden on desktop */}
         <div className="flex flex-col gap-2 sm:hidden">
           <button
@@ -459,6 +542,8 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 setIsEditingPricing(false)
                 setPricePerEval(profile.price_per_eval?.toString() || '99')
                 setTurnaroundTime(profile.turnaround_time || '72 hrs')
+                setOfferBio(profile.bio || '')
+                setOfferTitle('Standard Evaluation')
                 setSaveMessage(null)
               }}
               className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
