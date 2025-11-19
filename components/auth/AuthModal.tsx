@@ -83,7 +83,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         onClose() // Close modal on successful signin
         
         // Redirect through sync page to create sign-in notification
-        window.location.href = '/auth/sync?redirect=/'
+        window.location.href = '/auth/sync?redirect=/browse'
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')

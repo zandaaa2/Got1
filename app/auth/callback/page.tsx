@@ -79,7 +79,7 @@ function AuthCallbackContent() {
           // Determine redirect URL
           const finalRedirect = !profile 
             ? '/profile/user-setup'
-            : '/'
+            : '/browse'
 
           console.log('✅ Email verification session verified, redirecting through sync page to:', finalRedirect)
           
@@ -308,7 +308,7 @@ function AuthCallbackContent() {
         // Determine redirect URL
         const finalRedirect = !profile 
           ? '/profile/user-setup'
-          : '/'
+          : '/browse'
 
         console.log('✅ Session verified, redirecting through sync page to:', finalRedirect)
         

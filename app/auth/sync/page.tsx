@@ -24,8 +24,8 @@ function AuthSyncContent() {
         ? localStorage.getItem('postSignUpRedirect') 
         : null
       
-      // Use redirect from localStorage if available, otherwise use query param, otherwise default to '/'
-      const redirect = postSignUpRedirect || searchParams.get('redirect') || '/'
+      // Use redirect from localStorage if available, otherwise use query param, otherwise default to '/browse'
+      const redirect = postSignUpRedirect || searchParams.get('redirect') || '/browse'
       
       // Clear the localStorage redirect after using it
       if (postSignUpRedirect && typeof window !== 'undefined') {
