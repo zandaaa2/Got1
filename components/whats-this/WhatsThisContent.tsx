@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -17,6 +18,7 @@ interface WhatsThisContentProps {
 
 export default function WhatsThisContent({ organizations, hasSession, profileAvatars }: WhatsThisContentProps) {
   const { openSignIn, openSignUp } = useAuthModal()
+  const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8">
@@ -153,71 +155,158 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
         </div>
       </div>
 
-      {/* For Players & Scouts */}
+      {/* For Players & Scouts - Tabbed Section */}
       <div className="mb-12 md:mb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {/* For Players */}
-          <div className="bg-white rounded-2xl p-8 border border-gray-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-black">For Players</h2>
-            </div>
-            <ul className="space-y-4 text-gray-700">
-              <li className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Browse verified college scouts</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Purchase professional evaluations</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Receive detailed written feedback</span>
-              </li>
-            </ul>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Tab Buttons */}
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('player')}
+              className={`flex-1 px-6 py-4 text-center font-semibold transition-colors ${
+                activeTab === 'player'
+                  ? 'text-black border-b-2 border-black bg-gray-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              For Players
+            </button>
+            <button
+              onClick={() => setActiveTab('scout')}
+              className={`flex-1 px-6 py-4 text-center font-semibold transition-colors ${
+                activeTab === 'scout'
+                  ? 'text-black border-b-2 border-black bg-gray-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              For Scouts
+            </button>
           </div>
 
-          {/* For Scouts */}
-          <div className="bg-white rounded-2xl p-8 border border-gray-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          {/* Tab Content */}
+          <div className="p-8">
+            {activeTab === 'player' ? (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-black">How It Works for Players</h2>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">1</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Browse Verified Scouts</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Explore profiles of verified college scouts and evaluators. See their credentials, organizations, and pricing.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">2</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Upload Your Film</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Add your game film links (Hudl, YouTube, etc.) and request an evaluation from a scout.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">3</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Receive Detailed Feedback</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Get comprehensive written evaluations that break down your performance, highlight strengths, and identify areas for improvement.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">4</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Share & Improve</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Share your evaluations with coaches and use the feedback to improve your game and stand out to recruiters.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-black">For Scouts</h2>
-            </div>
-            <ul className="space-y-4 text-gray-700">
-              <li className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Apply to become verified</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Set your pricing and turnaround</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Earn money evaluating film</span>
-              </li>
-            </ul>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-black">How It Works for Scouts</h2>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-green-600 font-bold text-sm">1</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Apply to Become Verified</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Submit your application with your credentials, organization, and experience. We'll verify your background.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-green-600 font-bold text-sm">2</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Set Your Pricing & Turnaround</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Choose how much to charge per evaluation and set your turnaround time. Players can see this when browsing.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-green-600 font-bold text-sm">3</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Evaluate Film</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Review player film and provide detailed written feedback on performance, skills, and potential.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-green-600 font-bold text-sm">4</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black mb-1">Get Paid</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        Earn money for each evaluation. Payments are processed securely through Stripe and deposited directly to your account.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
