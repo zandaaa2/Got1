@@ -92,12 +92,12 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
 
       {/* For Players & Scouts - Tabbed Section */}
       <div className="mb-12 md:mb-16">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
+        <div className="bg-white rounded-2xl w-full p-6 md:p-8">
           {/* Tab Buttons */}
           <div className="flex flex-wrap items-center gap-2 mb-6">
             <button
               onClick={() => setActiveTab('player')}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
                 activeTab === 'player'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -107,7 +107,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
             </button>
             <button
               onClick={() => setActiveTab('scout')}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
                 activeTab === 'scout'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -121,13 +121,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
           <div>
             {activeTab === 'player' ? (
               <div className="space-y-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <h2 className="text-2xl font-bold text-black">How It Works for Players</h2>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-black">Remove the stress to recruiting.</h2>
                 </div>
                 
                 <div className="space-y-6">
@@ -182,13 +177,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h2 className="text-2xl font-bold text-black">How It Works for Scouts</h2>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-black">You're already doing it for free...</h2>
                 </div>
                 
                 <div className="space-y-6">
@@ -248,7 +238,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
 
       {/* Features Section */}
       <div className="mb-12 md:mb-16">
-        <div className="space-y-4">
+        <div className="bg-white rounded-2xl w-full p-6 md:p-8">
+          <div className="space-y-4">
           {/* Feature 1 */}
           <div className="bg-white rounded-xl p-6 flex items-start gap-4 border border-gray-200 shadow-sm">
             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -308,12 +299,13 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
               </p>
             </div>
           </div>
+          </div>
         </div>
       </div>
 
       {/* Call to Action */}
       <div className="mb-8">
-        <div className="bg-gray-50 rounded-2xl p-8 md:p-12 border border-gray-200 text-center">
+        <div className="bg-white rounded-2xl w-full p-8 md:p-12 text-center">
           <h2 className="text-xl md:text-2xl font-bold text-black mb-4">
             Ready to Get Started?
           </h2>
