@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useAuthModal } from '@/contexts/AuthModalContext'
-import Link from 'next/link'
 import Image from 'next/image'
 import { getGradientForId } from '@/lib/gradients'
 
@@ -114,18 +113,18 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
             For Scouts
           </button>
         </div>
-          </div>
+      </div>
 
       {/* For Players & Scouts - Tabbed Section */}
       <div className="mb-12 md:mb-16">
-        <div className="bg-white rounded-2xl w-full p-6 md:p-8">
+        <div className="bg-white rounded-2xl w-full">
           {/* Tab Content */}
-          <div>
+          <div className="p-6 md:p-8">
             {activeTab === 'player' ? (
               <div className="space-y-6">
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-black">Remove the stress to recruiting.</h2>
-      </div>
+                  <h2 className="text-2xl font-bold text-black text-left">Remove the stress to recruiting.</h2>
+                </div>
 
                 <div className="space-y-6">
                   <div className="flex gap-4">
@@ -175,23 +174,23 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                       </p>
                     </div>
                   </div>
-                </div>
+      </div>
 
                 {/* CTA */}
                 <div className="pt-4 mt-6">
-                  <Link
-                    href="/browse"
+                  <button
+                    onClick={openSignUp}
                     className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
                     style={{ backgroundColor: '#233dff' }}
                   >
                     Find a Scout
-                  </Link>
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-6">
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-black">You're already doing it for free...</h2>
+                  <h2 className="text-2xl font-bold text-black text-left">You're already doing it for free...</h2>
                 </div>
                 
                 <div className="space-y-6">
@@ -246,13 +245,13 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
 
                 {/* CTA */}
                 <div className="pt-4 mt-6">
-                  <Link
-                    href="/profile/scout-application"
+                  <button
+                    onClick={openSignUp}
                     className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
                     style={{ backgroundColor: '#233dff' }}
                   >
                     Become a Scout
-                  </Link>
+                  </button>
                 </div>
               </div>
             )}
@@ -262,8 +261,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
 
       {/* Features Section */}
       <div className="mb-12 md:mb-16">
-        <div className="bg-white rounded-2xl w-full p-6 md:p-8">
-          <div className="space-y-4">
+        <div className="bg-white rounded-2xl w-full">
+          <div className="p-6 md:p-8 space-y-4">
           {/* Feature 1 */}
           <div className="bg-white rounded-xl p-6 flex items-start gap-4 border border-gray-200 shadow-sm">
             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -331,26 +330,27 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
       <div className="mb-8">
         <div className="bg-white rounded-2xl w-full p-8 md:p-12 text-center">
           <h2 className="text-xl md:text-2xl font-bold text-black mb-4">
-          Ready to Get Started?
-        </h2>
+            Ready to Get Started?
+          </h2>
           <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
             Whether you're a player seeking feedback or a scout looking to share your expertise, Got1 is the place for you.
-        </p>
+          </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link
-            href="/browse"
-              className="inline-flex items-center justify-center px-8 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-base"
-          >
-            Find a Scout
-          </Link>
-          <Link
-            href="/profile/scout-application"
-              className="inline-flex items-center justify-center px-8 py-3 border-2 border-black text-black rounded-lg font-medium hover:bg-gray-50 transition-colors text-base"
-          >
-            Become a Scout
-          </Link>
+            <button
+              onClick={openSignUp}
+              className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
+              style={{ backgroundColor: '#233dff' }}
+            >
+              Find a Scout
+            </button>
+            <button
+              onClick={openSignUp}
+              className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full border-2 border-gray-300 text-black font-semibold hover:bg-gray-50 transition-colors text-base"
+            >
+              Become a Scout
+            </button>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   )

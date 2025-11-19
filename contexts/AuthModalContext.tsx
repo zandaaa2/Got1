@@ -37,11 +37,25 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
         isOpen={signInOpen}
         onClose={() => setSignInOpen(false)}
         mode="signin"
+        onModeChange={(mode) => {
+          if (mode === 'signup') {
+            openSignUp()
+          } else {
+            openSignIn()
+          }
+        }}
       />
       <AuthModal
         isOpen={signUpOpen}
         onClose={() => setSignUpOpen(false)}
         mode="signup"
+        onModeChange={(mode) => {
+          if (mode === 'signup') {
+            openSignUp()
+          } else {
+            openSignIn()
+          }
+        }}
       />
     </AuthModalContext.Provider>
   )
