@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, MouseEvent } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import VerificationBadge from '@/components/shared/VerificationBadge'
-import { colleges } from '@/lib/colleges'
+import { colleges, getCollegeLogo } from '@/lib/colleges'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getProfilePath } from '@/lib/profile-url'
+import { useAuthModal } from '@/contexts/AuthModalContext'
+import { useRouter } from 'next/navigation'
 
 interface BrowseContentProps {
   session: any
@@ -28,6 +30,7 @@ interface Profile {
   role: string
   price_per_eval: number | null
   suspended_until?: string | null // Optional - may not exist until migration is run
+  turnaround_time?: string | null
 }
 
 interface TeamEntry {
@@ -69,6 +72,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const supabase = createClient()
+  const { openSignUp } = useAuthModal()
+  const router = useRouter()
   
   // Test accounts that should show the badge
   const testAccountNames = ['russell westbrooks', 'ray lewois', 'ella k']
@@ -83,7 +88,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Build query step by step to avoid any construction issues
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until')
+        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until')
         .order('full_name', { ascending: true })
 
       if (error) {
@@ -147,6 +152,133 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
   }, [loadProfiles])
+
+  const handleCardClick = useCallback((profile: Profile) => {
+    router.push(getProfilePath(profile.id, profile.username))
+  }, [router])
+
+  const handlePrimaryAction = useCallback((event: MouseEvent<HTMLButtonElement>, profile: Profile) => {
+    event.stopPropagation()
+    if (!session) {
+      openSignUp()
+      return
+    }
+
+    if (profile.role === 'scout') {
+      router.push(`/profile/${profile.id}/purchase`)
+    } else {
+      router.push(getProfilePath(profile.id, profile.username))
+    }
+  }, [openSignUp, router, session])
+
+  const getProfileSubtitle = useCallback((profile: Profile) => {
+    if (profile.role === 'scout') {
+      if (profile.position && profile.organization) {
+        return `${profile.position} at ${profile.organization}`
+      }
+      if (profile.position) return profile.position
+      if (profile.organization) return profile.organization
+      return 'Scout'
+    }
+
+    if (profile.position && profile.school) {
+      return `${profile.position} at ${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
+    }
+    if (profile.position) return profile.position
+    if (profile.school) {
+      return `${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
+    }
+    if (profile.graduation_year) {
+      return `Class of ${profile.graduation_year}`
+    }
+    return 'Player'
+  }, [])
+
+  const renderProfileCard = useCallback((profile: Profile) => {
+    const avatarUrl =
+      isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(profile.id)
+        ? profile.avatar_url || undefined
+        : undefined
+
+    const isScout = profile.role === 'scout'
+    const price = isScout ? (profile.price_per_eval ?? 99) : null
+    const turnaround = isScout ? (profile.turnaround_time || '72 hrs') : null
+    const collegeMatch = profile.organization ? findCollegeMatch(profile.organization) : null
+    return (
+      <div
+        key={profile.id}
+        onClick={() => handleCardClick(profile)}
+        className="cursor-pointer rounded-2xl bg-white p-6 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center text-center border border-gray-100"
+      >
+        <div className="w-20 h-20 rounded-full overflow-hidden border border-gray-200 mb-4">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={profile.full_name || 'Profile'}
+              width={80}
+              height={80}
+              className="w-full h-full object-cover"
+              onError={() => {
+                setImageErrors((prev) => new Set(prev).add(profile.id))
+              }}
+              unoptimized
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center text-lg font-semibold text-white ${getGradientForId(
+                profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
+              )}`}
+            >
+              {profile.full_name?.charAt(0).toUpperCase() || '?'}
+            </div>
+          )}
+        </div>
+
+        <h3 className="font-bold text-black text-lg flex items-center gap-2 justify-center flex-wrap mb-1">
+          <span>{profile.full_name || 'Unknown'}</span>
+          {isScout && <VerificationBadge className="flex-shrink-0" />}
+          {isTestAccount(profile.full_name) && (
+            <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+              test account
+            </span>
+          )}
+        </h3>
+
+        <p className="text-sm text-gray-600 mb-2">{getProfileSubtitle(profile)}</p>
+
+        {isScout && collegeMatch?.logo && (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+              <Image
+                src={collegeMatch.logo}
+                alt={collegeMatch.name}
+                width={32}
+                height={32}
+                className="object-contain w-full h-full"
+                unoptimized
+              />
+            </div>
+            <p className="text-xs text-gray-500">{collegeMatch.name}</p>
+          </div>
+        )}
+
+        {isScout && (
+          <div className="text-lg font-semibold text-blue-600 mb-4">
+            ${price}
+            <span className="ml-2 text-sm text-gray-500">{turnaround}</span>
+          </div>
+        )}
+
+        <button
+          onClick={(event) => handlePrimaryAction(event, profile)}
+          className="mt-auto inline-flex w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: '#233dff' }}
+        >
+          {isScout ? 'Purchase Eval' : 'View Profile'}
+        </button>
+      </div>
+    )
+  }, [findCollegeMatch, getProfileSubtitle, handleCardClick, handlePrimaryAction, imageErrors, setImageErrors])
 
   const normalizedColleges = useMemo(() =>
     colleges.map((college) => ({
@@ -473,7 +605,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           />
         )
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {showTeamHighlights && (
             <div>
               <div className="space-y-2">
@@ -521,118 +653,15 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             </div>
           )}
 
-          <div className="space-y-2">
-          {filteredProfiles.map((profile) => (
-            <Link
-              key={profile.id}
-              href={getProfilePath(profile.id, profile.username)}
-              className="flex items-center gap-3 md:gap-4 rounded-2xl bg-white p-3 md:p-4 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden flex-shrink-0">
-                {(() => {
-                  const avatarUrl = isMeaningfulAvatar(profile.avatar_url)
-                    ? profile.avatar_url ?? undefined
-                    : undefined
-                  const showAvatar = Boolean(avatarUrl) && !imageErrors.has(profile.id)
-
-                  if (showAvatar) {
-                    return (
-                      <Image
-                        src={avatarUrl!}
-                        alt={profile.full_name || 'Profile'}
-                        width={48}
-                        height={48}
-                        className="w-full h-full object-cover"
-                        onError={() => {
-                          setImageErrors((prev) => new Set(prev).add(profile.id))
-                        }}
-                        unoptimized
-                      />
-                    )
-                  }
-
-                  return (
-                    <div
-                      className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(
-                        profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
-                      )}`}
-                    >
-                      {profile.full_name?.charAt(0).toUpperCase() || '?'}
-                    </div>
-                  )
-                })()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-black text-base md:text-lg flex items-center gap-2 flex-wrap">
-                  <span className="break-words" title={profile.full_name || undefined}>
-                    {profile.full_name || 'Unknown'}
-                  </span>
-                  {profile.role === 'scout' && <VerificationBadge className="flex-shrink-0" />}
-                  {isTestAccount(profile.full_name) && (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0">
-                      test account
-                    </span>
-                  )}
-                </h3>
-                <p
-                  className="text-black text-xs md:text-sm truncate"
-                  title={
-                    profile.role === 'scout'
-                      ? profile.position && profile.organization
-                        ? `${profile.position} at ${profile.organization}`
-                        : profile.position
-                        ? profile.position
-                        : profile.organization
-                        ? profile.organization
-                        : 'Scout'
-                      : profile.position && profile.school
-                      ? `${profile.position} at ${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
-                      : profile.position
-                      ? profile.position
-                      : profile.school
-                      ? `${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
-                      : profile.graduation_year
-                      ? `Class of ${profile.graduation_year}`
-                      : 'Player'
-                  }
-                >
-                  {profile.role === 'scout' ? (
-                    profile.position && profile.organization
-                      ? `${profile.position} at ${profile.organization}`
-                      : profile.position
-                      ? profile.position
-                      : profile.organization
-                      ? profile.organization
-                      : 'Scout'
-                  ) : (
-                    profile.position && profile.school
-                      ? `${profile.position} at ${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
-                      : profile.position
-                      ? profile.position
-                      : profile.school
-                      ? `${profile.school}${profile.graduation_year ? ` (${profile.graduation_year})` : ''}`
-                      : profile.graduation_year
-                      ? `Class of ${profile.graduation_year}`
-                      : 'Player'
-                  )}
-                </p>
-              </div>
-              {profile.role === 'scout' && profile.price_per_eval && (
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-sm md:text-base text-blue-600">
-                    ${profile.price_per_eval}
-                  </p>
-                </div>
-              )}
-            </Link>
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {filteredProfiles.map(renderProfileCard)}
+          </div>
 
           {filteredProfiles.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               No profiles found matching your search.
             </div>
           )}
-          </div>
         </div>
       )}
     </div>
