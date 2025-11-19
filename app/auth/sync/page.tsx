@@ -19,7 +19,19 @@ function AuthSyncContent() {
     
     const syncAuth = async () => {
       console.log('🔵 syncAuth function called')
-      const redirect = searchParams.get('redirect') || '/'
+      // Check localStorage for post-signup redirect (e.g., from "Become a Scout" button)
+      const postSignUpRedirect = typeof window !== 'undefined' 
+        ? localStorage.getItem('postSignUpRedirect') 
+        : null
+      
+      // Use redirect from localStorage if available, otherwise use query param, otherwise default to '/'
+      const redirect = postSignUpRedirect || searchParams.get('redirect') || '/'
+      
+      // Clear the localStorage redirect after using it
+      if (postSignUpRedirect && typeof window !== 'undefined') {
+        localStorage.removeItem('postSignUpRedirect')
+      }
+      
       const supabase = createClient()
       
       // Verify session exists client-side

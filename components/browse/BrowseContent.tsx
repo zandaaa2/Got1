@@ -840,9 +840,32 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
           {/* Show cards for "all" view, rows for filtered views (scouts/players) */}
           {roleFilter === 'all' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {filteredProfiles.map(renderProfileCard)}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                {filteredProfiles.map(renderProfileCard)}
+              </div>
+              
+              {/* Become a Scout CTA for non-signed-in users */}
+              {!session && (
+                <div className="flex flex-col items-center justify-center mt-12 md:mt-16 mb-8 md:mb-12">
+                  <p className="text-sm md:text-base text-gray-600 text-center mb-4 max-w-md">
+                    Want to monetize your scouting expertise? Join our platform and start evaluating talent today.
+                  </p>
+                  <button
+                    onClick={() => {
+                      // Store the intended destination in localStorage
+                      localStorage.setItem('postSignUpRedirect', '/profile/scout-application')
+                      // Open sign-up modal
+                      openSignUp()
+                    }}
+                    className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base md:text-lg"
+                    style={{ backgroundColor: '#233dff' }}
+                  >
+                    Become a Scout
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="space-y-2">
               {filteredProfiles.map(renderProfileRow)}
