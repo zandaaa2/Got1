@@ -46,8 +46,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
 
           {/* Trust Section */}
           {profileAvatars.length > 0 && (
-            <div className="flex flex-col items-center gap-3 pt-6 border-t border-gray-100">
-              <div className="flex items-center justify-center gap-2 -space-x-2">
+            <div className="flex flex-col items-center gap-3 pt-6">
+              <div className="flex items-center justify-center -space-x-3">
                 {profileAvatars.slice(0, 5).map((profile) => (
                   <div
                     key={profile.id}
