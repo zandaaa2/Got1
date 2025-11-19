@@ -194,6 +194,10 @@ function MoneyDashboard({ profile }: { profile: any }) {
   }
 
   const handleGetAccountLink = async () => {
+    if (onboardingDisabled) {
+      alert('Please finish Stripe setup on a desktop device. Mobile onboarding is currently disabled to avoid issues.')
+      return
+    }
     setLoading(true)
     try {
       console.log('📧 Requesting Stripe account link (MoneyDashboard)...')
@@ -535,6 +539,14 @@ function StripeConnectSection({ profile }: { profile: any }) {
   const [stripeIssueNotificationSent, setStripeIssueNotificationSent] = useState(false)
   const [readyNotificationSent, setReadyNotificationSent] = useState(false)
   const [wasFullyEnabled, setWasFullyEnabled] = useState(false)
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileDevice(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     // Check account status on mount
@@ -602,6 +614,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
 
   const isFullyEnabled = !!accountStatus && accountStatus.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
   const needsUpdate = !!accountStatus && accountStatus.onboardingComplete && !(accountStatus.chargesEnabled && accountStatus.payoutsEnabled)
+  const onboardingDisabled = isMobileDevice && !isFullyEnabled
 
   useEffect(() => {
     const sendNotification = async () => {
@@ -903,17 +916,24 @@ function StripeConnectSection({ profile }: { profile: any }) {
               )}
               <button
                 onClick={handleGetAccountLink}
-                disabled={loading}
+                disabled={loading || onboardingDisabled}
                 className={`interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed ${needsUpdate ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
-                {loading
-                  ? 'Loading...'
-                  : needsUpdate
-                    ? 'Resolve Stripe Requirements'
-                    : accountStatus.onboardingComplete
-                      ? 'Open Stripe Dashboard'
-                      : 'Finish Stripe Setup'}
+                {onboardingDisabled
+                  ? 'Desktop Required'
+                  : loading
+                    ? 'Loading...'
+                    : needsUpdate
+                      ? 'Resolve Stripe Requirements'
+                      : accountStatus.onboardingComplete
+                        ? 'Open Stripe Dashboard'
+                        : 'Finish Stripe Setup'}
               </button>
+              {onboardingDisabled && (
+                <p className="text-xs text-gray-500">
+                  Stripe onboarding can only be completed on desktop. Please switch to a laptop or desktop computer.
+                </p>
+              )}
             </>
           ) : (
             <div className="space-y-3">
@@ -923,6 +943,10 @@ function StripeConnectSection({ profile }: { profile: any }) {
               </div>
               <button
                 onClick={async () => {
+                  if (onboardingDisabled) {
+                    alert('Please finish Stripe setup on a desktop device. Mobile onboarding is currently disabled to avoid issues.')
+                    return
+                  }
                   setLoading(true)
                   try {
                     // Step 1: Create the account
@@ -967,11 +991,16 @@ function StripeConnectSection({ profile }: { profile: any }) {
                     setLoading(false)
                   }
                 }}
-                disabled={loading}
+                disabled={loading || onboardingDisabled}
                 className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Start Stripe Setup'}
+                {onboardingDisabled ? 'Desktop Required' : loading ? 'Creating...' : 'Start Stripe Setup'}
               </button>
+              {onboardingDisabled && (
+                <p className="text-xs text-gray-500">
+                  Stripe onboarding can only be completed on desktop. Please switch to a laptop or desktop computer.
+                </p>
+              )}
             </div>
           )}
         </div>
