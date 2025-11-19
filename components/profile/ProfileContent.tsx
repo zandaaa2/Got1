@@ -194,10 +194,6 @@ function MoneyDashboard({ profile }: { profile: any }) {
   }
 
   const handleGetAccountLink = async () => {
-    if (onboardingDisabled) {
-      alert('Please finish Stripe setup on a desktop device. Mobile onboarding is currently disabled to avoid issues.')
-      return
-    }
     setLoading(true)
     try {
       console.log('📧 Requesting Stripe account link (MoneyDashboard)...')
