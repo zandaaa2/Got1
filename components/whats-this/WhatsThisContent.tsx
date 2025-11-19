@@ -92,7 +92,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
 
       {/* Tab Buttons */}
       <div className="mb-6 -mt-6">
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-start gap-2">
           <button
             onClick={() => setActiveTab('player')}
             className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
@@ -103,7 +103,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
           >
             For Players
           </button>
-          <button
+        <button
             onClick={() => setActiveTab('scout')}
             className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
               activeTab === 'scout'
@@ -114,7 +114,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
             For Scouts
           </button>
         </div>
-      </div>
+          </div>
 
       {/* For Players & Scouts - Tabbed Section */}
       <div className="mb-12 md:mb-16">
