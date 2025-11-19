@@ -7,11 +7,9 @@ import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
-import HighSchoolSelector from '@/components/profile/HighSchoolSelector'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
 import Cropper, { type Area } from 'react-easy-crop'
-import { checkPlayerRosterStatus } from '@/lib/high-school/roster'
 
 interface HudlLink {
   link: string
@@ -51,11 +49,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   
   // Check if birthday is already set (locked)
   const isBirthdayLocked = !!profile.birthday
-
-  // Roster status for players
-  const [isOnRoster, setIsOnRoster] = useState(false)
-  const [rosterSchoolId, setRosterSchoolId] = useState<string | null>(null)
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null)
 
   // Initialize hudl_links - migrate from old hudl_link field if needed
   const getInitialHudlLinks = () => {
@@ -107,24 +100,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
       }
     }
   }, [profile.username, profile.full_name])
-
-  // Check if player is on a roster
-  useEffect(() => {
-    if (profile.role === 'player') {
-      const checkRoster = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) return
-
-        const { isOnRoster: onRoster, schoolId } = await checkPlayerRosterStatus(session.user.id)
-        
-        if (onRoster) {
-          setIsOnRoster(true)
-          setRosterSchoolId(schoolId)
-        }
-      }
-      checkRoster()
-    }
-  }, [profile.role, supabase])
 
   /**
    * Handles input field changes and updates form state.
@@ -479,41 +454,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
 
       const sanitizedAvatar = isMeaningfulAvatar(formData.avatar_url) ? formData.avatar_url : null
 
-      // If player selected an existing high school, send notification to admins
-      // Only send notification if:
-      // 1. Player role
-      // 2. selectedSchoolId is set (meaning they selected from dropdown, not typed manually)
-      // 3. School name is provided
-      // 4. School is different from current school
-      if (
-        profile.role === 'player' && 
-        selectedSchoolId && 
-        formData.school && 
-        formData.school.trim() !== '' &&
-        formData.school !== profile.school
-      ) {
-        try {
-          // Send notification to school admins via API
-          const response = await fetch('/api/high-school/player-school-request', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              schoolId: selectedSchoolId,
-              schoolName: formData.school.trim(),
-            }),
-          })
-          
-          // Don't throw if notification fails - just log
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            console.warn('Failed to send school request notification:', errorData.error || 'Unknown error')
-          }
-        } catch (error) {
-          console.error('Error sending school request notification:', error)
-          // Don't block the save if notification fails
-        }
-      }
-
       const updateData: any = {
         full_name: formData.full_name,
         username: normalizedUsername,
@@ -573,22 +513,10 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         // Keep old hudl_link for backward compatibility (use first link if exists)
         updateData.hudl_link = validHudlLinks.length > 0 ? validHudlLinks[0].link : null
         updateData.sport = validHudlLinks.length > 0 ? (validHudlLinks[0].sport || null) : null
-        
-        // If player is on a roster, don't update locked fields (position, school, graduation)
-        if (isOnRoster) {
-          // Keep existing values for locked fields
-          updateData.position = profile.position || null
-          updateData.school = profile.school || null
-          updateData.graduation_year = profile.graduation_year || null
-          updateData.graduation_month = profile.graduation_month || null
-        } else {
-          // Player is not on a roster, allow updates
-          updateData.position = formData.position || null
-          updateData.school = formData.school || null
-          updateData.graduation_year = formData.graduation_year ? parseInt(formData.graduation_year.toString()) : null
-          updateData.graduation_month = formData.graduation_month ? parseInt(formData.graduation_month.toString()) : null
-        }
-        
+        updateData.position = formData.position || null
+        updateData.school = formData.school || null
+        updateData.graduation_year = formData.graduation_year ? parseInt(formData.graduation_year.toString()) : null
+        updateData.graduation_month = formData.graduation_month ? parseInt(formData.graduation_month.toString()) : null
         updateData.parent_name = formData.parent_name || null
         updateData.social_link = formData.social_link || null
         updateData.bio = formData.bio || null
@@ -854,35 +782,20 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                   value={formData.position}
                   onChange={handleChange}
                   required
-                  disabled={isOnRoster}
                   placeholder="e.g., Quarterback, Point Guard"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                {isOnRoster && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    Position is locked. Contact your school admin to request changes.
-                  </p>
-                )}
               </div>
 
               <div>
                 <label htmlFor="school" className="block text-sm font-medium text-black mb-2">
                   School <span className="text-red-500">*</span>
                 </label>
-                <HighSchoolSelector
+                <CollegeSelector
                   value={formData.school}
                   onChange={(value) => setFormData((prev) => ({ ...prev, school: value }))}
-                  placeholder="Search for your high school"
-                  disabled={isOnRoster}
-                  onSchoolSelected={(schoolId, schoolName) => {
-                    setSelectedSchoolId(schoolId)
-                  }}
+                  placeholder="Search for your school"
                 />
-                {isOnRoster && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    School is locked. Contact your school admin to request release.
-                  </p>
-                )}
               </div>
 
               <div>
@@ -897,8 +810,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                       value={formData.graduation_month}
                       onChange={handleChange}
                       required
-                      disabled={isOnRoster}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                     >
                       <option value="">Select Month</option>
                       <option value="1">January</option>
@@ -926,19 +838,13 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                       value={formData.graduation_year}
                       onChange={handleChange}
                       required
-                      disabled={isOnRoster}
                       min={new Date().getFullYear()}
                       max={new Date().getFullYear() + 10}
                       placeholder="2025"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   </div>
                 </div>
-                {isOnRoster && (
-                  <p className="text-xs text-gray-500 -mt-1 leading-tight">
-                    Graduation information is locked. Contact your school admin to request changes.
-                  </p>
-                )}
               </div>
 
               <div>

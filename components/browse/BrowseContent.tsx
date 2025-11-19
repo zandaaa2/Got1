@@ -66,9 +66,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
-  const [viewMode, setViewMode] = useState<'profiles' | 'universities' | 'high-schools'>('profiles')
+  const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
-  const [highSchools, setHighSchools] = useState<any[]>([])
   const supabase = createClient()
   
   // Test accounts that should show the badge
@@ -79,87 +78,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return testAccountNames.includes(fullName.toLowerCase())
   }
 
-  const loadHighSchools = useCallback(async () => {
-    try {
-      // First, try to load high schools with players (using left join so schools without players still show)
-      const { data, error } = await supabase
-        .from('high_schools')
-        .select(`
-          id,
-          username,
-          name,
-          address,
-          logo_url,
-          profile_image_url,
-          players:high_school_players(
-            id,
-            released_at
-          )
-        `)
-        .eq('admin_status', 'approved')
-        .order('name', { ascending: true })
-
-      if (error) {
-        console.error('Error loading high schools:', error)
-        // If table doesn't exist or column doesn't exist, just return empty array
-        if (error.code === '42P01' || error.message?.includes('does not exist') || error.code === '42703') {
-          console.warn('High schools table or columns not found, skipping high schools')
-          setHighSchools([])
-          return
-        }
-        setHighSchools([])
-        return
-      }
-
-      // Transform data to include player count (only count active players)
-      const schoolsWithCounts = (data || []).map((school: any) => ({
-        id: school.id,
-        username: school.username,
-        name: school.name,
-        address: school.address,
-        profile_image_url: school.logo_url || school.profile_image_url, // Use logo_url if available, fallback to profile_image_url
-        playerCount: school.players?.filter((p: any) => !p.released_at).length || 0,
-      }))
-
-      setHighSchools(schoolsWithCounts)
-    } catch (error) {
-      console.error('Error loading high schools:', error)
-      // Silently fail - high schools are optional
-      setHighSchools([])
-    }
-  }, [supabase])
-
   const loadProfiles = useCallback(async () => {
     try {
       // Build query step by step to avoid any construction issues
-      // Note: suspended_until and high_school_id may not exist yet if migration hasn't been run
-      // Try with high_school_id first, fallback if column doesn't exist
-      let query = supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until, high_school_id')
-        
-      // Apply ordering
-      query = query.order('full_name', { ascending: true })
-
-      let { data, error } = await query
-
-      // If error is due to missing column (high_school_id), retry without it
-      if (error && (error.code === '42703' || error.message?.includes('high_school_id'))) {
-        console.warn('high_school_id column not found, retrying without it')
-        query = supabase
-          .from('profiles')
-          .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until')
-          .order('full_name', { ascending: true })
-        
-        const retryResult = await query
-        data = retryResult.data
-        error = retryResult.error
-        
-        // Add high_school_id: null to each profile for consistency
-        if (data) {
-          data = data.map((p: any) => ({ ...p, high_school_id: null }))
-        }
-      }
+        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, suspended_until')
+        .order('full_name', { ascending: true })
 
       if (error) {
         console.error('Error loading profiles:', error)
@@ -212,8 +137,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   useEffect(() => {
     loadProfiles()
-    loadHighSchools()
-  }, [loadProfiles, loadHighSchools])
+  }, [loadProfiles])
 
   // Refresh profiles when window regains focus (helps catch updates)
   useEffect(() => {
@@ -294,35 +218,17 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     // Search query filter
     const query = trimmedQuery
     
-    // Check if profile is associated with a matching high school
-    const matchesHighSchool = profile.high_school_id && 
-      highSchools.some(hs => 
-        hs.id === profile.high_school_id && 
-        hs.name.toLowerCase().includes(query)
-      )
-    
     const matchesSearch = (
       profile.full_name?.toLowerCase().includes(query) ||
       profile.organization?.toLowerCase().includes(query) ||
       profile.school?.toLowerCase().includes(query) ||
-      profile.position?.toLowerCase().includes(query) ||
-      matchesHighSchool // Include if associated high school matches
+      profile.position?.toLowerCase().includes(query)
     )
     
     // Role filter
     const matchesRole = roleFilter === 'all' || profile.role === roleFilter
     
     return matchesSearch && matchesRole
-  })
-
-  // Filter high schools by search query
-  const filteredHighSchools = highSchools.filter((school) => {
-    const query = trimmedQuery
-    return (
-      school.name.toLowerCase().includes(query) ||
-      school.address?.toLowerCase().includes(query || '') ||
-      school.username?.toLowerCase().includes(query || '')
-    )
   })
 
   const filteredTeams = teamEntries.filter((team) => {
@@ -334,11 +240,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     )
   })
 
-  const showTeamHighlights = viewMode !== 'universities' && viewMode !== 'high-schools' && trimmedQuery.length > 0 && filteredTeams.length > 0
-  const showHighSchoolHighlights = viewMode !== 'high-schools' && viewMode !== 'universities' && trimmedQuery.length > 0 && filteredHighSchools.length > 0
+  const showTeamHighlights = viewMode !== 'universities' && trimmedQuery.length > 0 && filteredTeams.length > 0
 
   const handleScoutsClick = () => {
-    if (viewMode === 'universities' || viewMode === 'high-schools') {
+    if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('scout')
       return
@@ -347,7 +252,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }
 
   const handlePlayersClick = () => {
-    if (viewMode === 'universities' || viewMode === 'high-schools') {
+    if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('player')
       return
@@ -362,18 +267,6 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       return
     }
     setViewMode('universities')
-    if (roleFilter !== 'all') {
-      setRoleFilter('all')
-    }
-  }
-
-  const handleHighSchoolsClick = () => {
-    if (viewMode === 'high-schools') {
-      setViewMode('profiles')
-      setRoleFilter('all')
-      return
-    }
-    setViewMode('high-schools')
     if (roleFilter !== 'all') {
       setRoleFilter('all')
     }
@@ -406,7 +299,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           </div>
           <input
             type="text"
-            placeholder="Search people, universities, high schools..."
+            placeholder="Search people, universities..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 md:py-3 bg-gray-100 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm md:text-base"
@@ -445,16 +338,6 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           >
             Universities
           </button>
-          <button
-            onClick={handleHighSchoolsClick}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              viewMode === 'high-schools'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            High Schools
-          </button>
           
           {/* Clear filters button - only show when filters are active */}
           {viewMode === 'profiles' && roleFilter !== 'all' && (
@@ -470,77 +353,6 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
       {loading ? (
         <div className="text-center py-12">Loading...</div>
-      ) : viewMode === 'high-schools' ? (
-        filteredHighSchools.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {filteredHighSchools.map((school) => (
-              <Link
-                key={school.id}
-                href={`/high-school/${school.username}`}
-                className="surface-card flex flex-col p-4 hover:shadow-md transition-shadow rounded-2xl"
-              >
-                {/* School Image */}
-                <div className="w-full h-32 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden mb-4">
-                  {school.profile_image_url ? (
-                    <Image
-                      src={school.profile_image_url}
-                      alt={school.name}
-                      width={128}
-                      height={128}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <div className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(school.id)}`}>
-                      {school.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                
-                {/* School Info */}
-                <div className="flex-1">
-                  <h3 className="font-bold text-black text-lg mb-1 truncate">
-                    {school.name}
-                  </h3>
-                  {school.address && (
-                    <p className="text-sm text-gray-600 truncate mb-2">
-                      {school.address}
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-500">
-                    {school.playerCount} {school.playerCount === 1 ? 'player' : 'players'}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={emptyTeamsIcon}
-            title="No high schools found"
-            description="Try another school name or clear your filters to explore every high school on Got1."
-            action={
-              trimmedQuery
-                ? (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                  >
-                    Clear search
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )
-                : undefined
-            }
-          />
-        )
       ) : viewMode === 'universities' ? (
         filteredTeams.length > 0 ? (
           <div className="space-y-8">
@@ -662,51 +474,6 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         )
       ) : (
         <div className="space-y-4">
-          {showHighSchoolHighlights && (
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-black mb-3">High Schools</h2>
-              <div className="space-y-2">
-                {filteredHighSchools.slice(0, 5).map((school) => (
-                  <Link
-                    key={school.id}
-                    href={`/high-school/${school.username}`}
-                    className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
-                  >
-                    {/* School thumbnail */}
-                    <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      {school.profile_image_url ? (
-                        <Image
-                          src={school.profile_image_url}
-                          alt={school.name}
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(school.id)}`}>
-                          {school.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-black truncate">{school.name}</h3>
-                      {school.address && (
-                        <p className="text-sm text-gray-600 truncate">{school.address}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-sm text-blue-600">
-                        {school.playerCount} {school.playerCount === 1 ? 'player' : 'players'}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
           {showTeamHighlights && (
             <div>
               <div className="space-y-2">

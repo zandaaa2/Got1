@@ -13,7 +13,6 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
-import { checkPlayerRosterStatus } from '@/lib/high-school/roster'
 import AuthModal from '@/components/auth/AuthModal'
 
 
@@ -128,13 +127,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [reportReason, setReportReason] = useState('')
   const [isSubmittingReport, setIsSubmittingReport] = useState(false)
   const [reportSuccess, setReportSuccess] = useState(false)
-  const [highSchool, setHighSchool] = useState<{ 
-    name: string
-    username: string | null
-  } | null>(null)
-  const [isOnRoster, setIsOnRoster] = useState(false)
-  const [showReleaseRequestModal, setShowReleaseRequestModal] = useState(false)
-  const [isRequestingRelease, setIsRequestingRelease] = useState(false)
   const [showSignUpModal, setShowSignUpModal] = useState(false)
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
   const router = useRouter()
@@ -212,68 +204,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     return () => cancelAnimationFrame(id)
   }, [])
 
-  // Check if player is on a roster
-  useEffect(() => {
-    if (isOwnProfile && profile.role === 'player' && currentUserId) {
-      const checkRoster = async () => {
-        const { isOnRoster: onRoster } = await checkPlayerRosterStatus(currentUserId)
-        
-        if (onRoster) {
-          setIsOnRoster(true)
-        }
-      }
-      checkRoster()
-    }
-  }, [isOwnProfile, profile.role, currentUserId])
-
-  const handleRequestRelease = async () => {
-    try {
-      setIsRequestingRelease(true)
-      const response = await fetch('/api/high-school/players/request-release', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to request release')
-      }
-
-      setShowReleaseRequestModal(false)
-      alert('Release request sent to your school admin.')
-      router.refresh()
-    } catch (error: any) {
-      alert(error.message || 'Failed to request release')
-    } finally {
-      setIsRequestingRelease(false)
-    }
-  }
-
   useEffect(() => {
     loadEvaluations()
   }, [profile.id, profile.role])
-
-  useEffect(() => {
-    const loadHighSchool = async () => {
-      if (profile.high_school_id) {
-        try {
-          const { data: schoolData } = await supabase
-            .from('high_schools')
-            .select('name, username')
-            .eq('id', profile.high_school_id)
-            .maybeSingle()
-          
-          if (schoolData) {
-            setHighSchool(schoolData)
-          }
-        } catch (error) {
-          console.error('Error loading high school data:', error)
-        }
-      }
-    }
-    loadHighSchool()
-  }, [profile.high_school_id, supabase])
 
   /**
    * Loads evaluations for the current profile and manually joins profile data.
@@ -511,21 +444,9 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </div>
             {profile.school && (
               <div className="mb-2">
-                {highSchool ? (
-                  <Link
-                    href={`/high-school/${highSchool.username || profile.high_school_id}`}
-                    className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span>{highSchool.name}</span>
-                  </Link>
-                ) : (
-                  <p className="text-blue-600">
-                    {profile.school}
-                  </p>
-                )}
+                <p className="text-blue-600">
+                  {profile.school}
+                </p>
               </div>
             )}
           </div>
@@ -862,20 +783,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                       </svg>
                       Report profile
                     </button>
-                    {isOwnProfile && isOnRoster && (
-                      <button
-                        onClick={() => {
-                          setShowShareMenu(false)
-                          setShowReleaseRequestModal(true)
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-200"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Request Release from School
-                      </button>
-                    )}
                   </div>
                 </>
               )}
@@ -1493,39 +1400,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         )}
       </Modal>
 
-      {/* Request Release Modal */}
-      <Modal 
-        isOpen={showReleaseRequestModal} 
-        onClose={() => {
-          setShowReleaseRequestModal(false)
-          setIsRequestingRelease(false)
-        }} 
-        title="Request Release from School"
-      >
-        <div className="space-y-4">
-          <p className="text-black leading-relaxed">
-            You are requesting to be released from your current high school roster. This will send a notification to your school's administrators.
-          </p>
-          <p className="text-sm text-gray-600">
-            Once released, you'll be able to update your school information in your profile.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowReleaseRequestModal(false)}
-              className="interactive-press flex-1 px-6 py-3 border border-gray-300 bg-white text-black rounded-lg hover:bg-gray-50 font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleRequestRelease}
-              disabled={isRequestingRelease}
-              className="interactive-press flex-1 px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:active:scale-100"
-            >
-              {isRequestingRelease ? 'Sending...' : 'Request Release'}
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Sign Up Modal for non-authenticated users */}
       <AuthModal

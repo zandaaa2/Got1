@@ -994,7 +994,6 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [isEditingPricing, setIsEditingPricing] = useState(false)
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
-  const [hasHighSchool, setHasHighSchool] = useState<boolean | null>(null) // null = checking, true = has school, false = no school
   const [refreshKey, setRefreshKey] = useState(0)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
@@ -1044,33 +1043,6 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       console.error('Failed to persist monetization checklist state:', error)
     }
   }, [moneyChecklist, checklistStorageKey])
-
-  // Check if user has a high school
-  useEffect(() => {
-    const checkHighSchool = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user?.id) {
-          setHasHighSchool(false)
-          return
-        }
-
-        // Check if user is an admin of a school
-        const { data: adminData } = await supabase
-          .from('high_school_admins')
-          .select('high_school_id')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-
-        setHasHighSchool(!!adminData)
-      } catch (error) {
-        console.error('Error checking high school:', error)
-        setHasHighSchool(false)
-      }
-    }
-
-    checkHighSchool()
-  }, [supabase])
 
   useEffect(() => {
     if (!canMinimizeChecklist && isMoneyChecklistMinimized) {
@@ -1588,24 +1560,6 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
               Schedule
             </button>
           </div>
-
-          {/* High School Page Creation */}
-          {hasHighSchool === false && (
-            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="font-bold text-black mb-1 text-sm md:text-base">High School Page</h3>
-                <p className="text-xs md:text-sm text-gray-600 break-words">
-                  Create a page for your high school to manage your roster and track evaluations.
-                </p>
-              </div>
-              <Link
-                href="/high-school/create"
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-              >
-                Create
-              </Link>
-            </div>
-          )}
 
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
             <div className="flex-1 min-w-0 pr-2">

@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 
 interface SidebarProps {
-  activePage?: 'whats-this' | 'browse' | 'my-evals' | 'profile' | 'notifications' | 'high-school-billing'
+  activePage?: 'whats-this' | 'browse' | 'my-evals' | 'profile' | 'notifications'
   onToggle?: (isCollapsed: boolean) => void
 }
 
@@ -21,77 +21,27 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     return false
   })
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [userSchool, setUserSchool] = useState<any>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('user-school')
-        return cached ? JSON.parse(cached) : null
-      } catch (error) {
-        console.error('Failed to read cached user school:', error)
-        return null
-      }
-    }
-    return null
-  })
   const [userId, setUserId] = useState<string | null>(null)
   
   // Check if mobile viewport
   const [isMobile, setIsMobile] = useState(false)
   
-  // Load user's school if they're an admin (client-side)
+  // Get user ID
   useEffect(() => {
-    const loadUserSchool = async () => {
+    const loadUserId = async () => {
       try {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user?.id) {
           setUserId(session.user.id)
-          
-          // Check if user is an admin of a school (client-side query)
-          const { data: adminData } = await supabase
-            .from('high_school_admins')
-            .select(`
-              high_school_id,
-              schools:high_schools (
-                id,
-                username,
-                name,
-                admin_status
-              )
-            `)
-            .eq('user_id', session.user.id)
-            .maybeSingle()
-          
-          if (adminData && adminData.schools) {
-            const school = adminData.schools as any
-            const schoolInfo = {
-              id: school.id,
-              username: school.username,
-              name: school.name,
-              admin_status: school.admin_status,
-            }
-            setUserSchool(schoolInfo)
-            try {
-              sessionStorage.setItem('user-school', JSON.stringify(schoolInfo))
-            } catch (error) {
-              console.error('Failed to cache user school:', error)
-            }
-          } else {
-            setUserSchool(null)
-            try {
-              sessionStorage.removeItem('user-school')
-            } catch (error) {
-              console.error('Failed to clear cached user school:', error)
-            }
-          }
         }
       } catch (error) {
-        console.error('Error loading user school:', error)
+        console.error('Error loading user ID:', error)
       }
     }
     
-    loadUserSchool()
+    loadUserId()
   }, [])
   
   useEffect(() => {
@@ -300,140 +250,6 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
         </nav>
       </div>
       
-      {/* High School Section - Only show if user is an admin */}
-      {userSchool && (
-        <div className="mb-6 mt-8 border-t border-gray-100 pt-6">
-          {(isMobile || !isCollapsed) && (
-            <h2 className="text-sm font-semibold text-black mb-4">High School</h2>
-          )}
-          <nav className="space-y-2">
-            <Link
-              href={`/high-school/${userSchool.username}`}
-              onClick={() => isMobile && setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-                pathname === `/high-school/${userSchool.username}` || activePage === 'high-school'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-black hover:bg-gray-50'
-              } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
-              title={(isMobile || !isCollapsed) ? undefined : 'School Page'}
-            >
-              <svg
-                className="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-              {(isMobile || !isCollapsed) && <span>School Page</span>}
-            </Link>
-            <Link
-              href={`/high-school/${userSchool.username}/roster`}
-              onClick={() => isMobile && setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-                pathname === `/high-school/${userSchool.username}/roster` || activePage === 'high-school-roster'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-black hover:bg-gray-50'
-              } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
-              title={(isMobile || !isCollapsed) ? undefined : 'Roster'}
-            >
-              <svg
-                className="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              {(isMobile || !isCollapsed) && <span>Roster</span>}
-            </Link>
-            <Link
-              href={`/high-school/${userSchool.username}/evaluations`}
-              onClick={() => isMobile && setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-                pathname === `/high-school/${userSchool.username}/evaluations` || activePage === 'high-school-evaluations'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-black hover:bg-gray-50'
-              } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
-              title={(isMobile || !isCollapsed) ? undefined : 'Evaluations'}
-            >
-              <svg
-                className="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              {(isMobile || !isCollapsed) && <span>Evaluations</span>}
-            </Link>
-            <Link
-              href={`/high-school/${userSchool.username}/billing`}
-              onClick={() => isMobile && setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-                pathname === `/high-school/${userSchool.username}/billing` || activePage === 'high-school-billing'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-black hover:bg-gray-50'
-              } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
-              title={(isMobile || !isCollapsed) ? undefined : 'Billing'}
-            >
-              <svg
-                className="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <rect x="3" y="5" width="18" height="14" rx="2" ry="2" strokeWidth={2} />
-                <path strokeLinecap="round" strokeWidth={2} d="M3 10h18" />
-                <path strokeLinecap="round" strokeWidth={2} d="M7 15h2m2 0h4" />
-              </svg>
-              {(isMobile || !isCollapsed) && <span>Billing</span>}
-            </Link>
-            <Link
-              href={`/high-school/${userSchool.username}/referral`}
-              onClick={() => isMobile && setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-                pathname === `/high-school/${userSchool.username}/referral` || activePage === 'high-school-referral'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-black hover:bg-gray-50'
-              } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
-              title={(isMobile || !isCollapsed) ? undefined : 'Referral'}
-            >
-              <svg
-                className="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="12" cy="5" r="2.5" strokeWidth={2} />
-                <circle cx="6" cy="17" r="2.5" strokeWidth={2} />
-                <circle cx="18" cy="17" r="2.5" strokeWidth={2} />
-                <path
-                  strokeLinecap="round"
-                  strokeWidth={2}
-                  d="M11 7.3l-3.2 7.4M13 7.3l3.2 7.4"
-                />
-              </svg>
-              {(isMobile || !isCollapsed) && <span>Referral</span>}
-            </Link>
-          </nav>
-        </div>
-      )}
     </aside>
     
     {/* Mobile hamburger button */}
