@@ -446,11 +446,65 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               <div className="mb-2">
                 <p className="text-blue-600">
                   {profile.school}
+                  {profile.state && `, ${profile.state}`}
+                  {profile.classification && ` (${profile.classification})`}
                 </p>
               </div>
             )}
           </div>
         </div>
+
+        {/* Player Stats Section */}
+        {(profile.gpa || profile.weight || profile.height || profile.forty_yard_dash || 
+          profile.bench_max || profile.squat_max || profile.clean_max) && (
+          <div className="surface-card mb-6 md:mb-8 p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-black mb-4 md:mb-6">Athletic Information</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {profile.gpa && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">GPA</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.gpa.toFixed(2)}</p>
+                </div>
+              )}
+              {profile.height && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Height</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.height}</p>
+                </div>
+              )}
+              {profile.weight && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Weight</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.weight} lbs</p>
+                </div>
+              )}
+              {profile.forty_yard_dash && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">40-Yard Dash</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.forty_yard_dash.toFixed(2)}s</p>
+                </div>
+              )}
+              {profile.bench_max && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Bench Max</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.bench_max} lbs</p>
+                </div>
+              )}
+              {profile.squat_max && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Squat Max</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.squat_max} lbs</p>
+                </div>
+              )}
+              {profile.clean_max && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Clean Max</p>
+                  <p className="text-lg md:text-xl font-semibold text-black">{profile.clean_max} lbs</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Evaluations Section */}
         <div className="mb-6 md:mb-8 relative">

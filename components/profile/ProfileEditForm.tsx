@@ -88,6 +88,16 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     graduation_month: profile.graduation_month?.toString() || '',
     parent_name: profile.parent_name || '',
     sport: profile.sport || '',
+    // Player stats fields
+    gpa: profile.gpa?.toString() || '',
+    weight: profile.weight?.toString() || '',
+    height: profile.height || '',
+    forty_yard_dash: profile.forty_yard_dash?.toString() || '',
+    bench_max: profile.bench_max?.toString() || '',
+    squat_max: profile.squat_max?.toString() || '',
+    clean_max: profile.clean_max?.toString() || '',
+    state: profile.state || '',
+    classification: profile.classification || '',
     // Scout fields
     sports: (Array.isArray(profile.sports) ? profile.sports : []) as string[],
   })
@@ -485,6 +495,16 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.social_link = null
         updateData.work_history = null
         updateData.additional_info = null
+        // Clear player stats fields for USER role
+        updateData.gpa = null
+        updateData.weight = null
+        updateData.height = null
+        updateData.forty_yard_dash = null
+        updateData.bench_max = null
+        updateData.squat_max = null
+        updateData.clean_max = null
+        updateData.state = null
+        updateData.classification = null
       } else if (profile.role === 'scout') {
         updateData.organization = formData.organization || null
         updateData.price_per_eval = formData.price_per_eval ? parseFloat(formData.price_per_eval.toString()) : null
@@ -504,6 +524,16 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.graduation_year = null
         updateData.graduation_month = null
         updateData.parent_name = null
+        // Clear player stats fields for SCOUT role
+        updateData.gpa = null
+        updateData.weight = null
+        updateData.height = null
+        updateData.forty_yard_dash = null
+        updateData.bench_max = null
+        updateData.squat_max = null
+        updateData.clean_max = null
+        updateData.state = null
+        updateData.classification = null
       } else if (profile.role === 'player') {
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
@@ -520,6 +550,16 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.parent_name = formData.parent_name || null
         updateData.social_link = formData.social_link || null
         updateData.bio = formData.bio || null
+        // Player stats fields
+        updateData.gpa = formData.gpa ? parseFloat(formData.gpa.toString()) : null
+        updateData.weight = formData.weight ? parseInt(formData.weight.toString()) : null
+        updateData.height = formData.height || null
+        updateData.forty_yard_dash = formData.forty_yard_dash ? parseFloat(formData.forty_yard_dash.toString()) : null
+        updateData.bench_max = formData.bench_max ? parseInt(formData.bench_max.toString()) : null
+        updateData.squat_max = formData.squat_max ? parseInt(formData.squat_max.toString()) : null
+        updateData.clean_max = formData.clean_max ? parseInt(formData.clean_max.toString()) : null
+        updateData.state = formData.state || null
+        updateData.classification = formData.classification || null
         // Clear scout-specific fields
         updateData.organization = null
         updateData.price_per_eval = null
@@ -860,6 +900,164 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                   placeholder="Parent or guardian name"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
+              </div>
+
+              {/* Player Stats Section */}
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <h3 className="text-lg font-bold text-black mb-4">Athletic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                  <div>
+                    <label htmlFor="gpa" className="block text-sm font-medium text-black mb-2">
+                      GPA
+                    </label>
+                    <input
+                      type="number"
+                      id="gpa"
+                      name="gpa"
+                      value={formData.gpa}
+                      onChange={handleChange}
+                      min="0"
+                      max="4"
+                      step="0.01"
+                      placeholder="3.5"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="weight" className="block text-sm font-medium text-black mb-2">
+                      Weight (lbs)
+                    </label>
+                    <input
+                      type="number"
+                      id="weight"
+                      name="weight"
+                      value={formData.weight}
+                      onChange={handleChange}
+                      min="0"
+                      placeholder="185"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="height" className="block text-sm font-medium text-black mb-2">
+                      Height
+                    </label>
+                    <input
+                      type="text"
+                      id="height"
+                      name="height"
+                      value={formData.height}
+                      onChange={handleChange}
+                      placeholder="6'2 or 74 inches"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="forty_yard_dash" className="block text-sm font-medium text-black mb-2">
+                      40-Yard Dash (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      id="forty_yard_dash"
+                      name="forty_yard_dash"
+                      value={formData.forty_yard_dash}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      placeholder="4.5"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="bench_max" className="block text-sm font-medium text-black mb-2">
+                      Bench Max (lbs)
+                    </label>
+                    <input
+                      type="number"
+                      id="bench_max"
+                      name="bench_max"
+                      value={formData.bench_max}
+                      onChange={handleChange}
+                      min="0"
+                      placeholder="225"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="squat_max" className="block text-sm font-medium text-black mb-2">
+                      Squat Max (lbs)
+                    </label>
+                    <input
+                      type="number"
+                      id="squat_max"
+                      name="squat_max"
+                      value={formData.squat_max}
+                      onChange={handleChange}
+                      min="0"
+                      placeholder="315"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="clean_max" className="block text-sm font-medium text-black mb-2">
+                      Clean Max (lbs)
+                    </label>
+                    <input
+                      type="number"
+                      id="clean_max"
+                      name="clean_max"
+                      value={formData.clean_max}
+                      onChange={handleChange}
+                      min="0"
+                      placeholder="245"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="state" className="block text-sm font-medium text-black mb-2">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      placeholder="Florida"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="classification" className="block text-sm font-medium text-black mb-2">
+                      Classification
+                    </label>
+                    <select
+                      id="classification"
+                      name="classification"
+                      value={formData.classification}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="">Select Classification</option>
+                      <option value="1A">1A</option>
+                      <option value="2A">2A</option>
+                      <option value="3A">3A</option>
+                      <option value="4A">4A</option>
+                      <option value="5A">5A</option>
+                      <option value="6A">6A</option>
+                      <option value="7A">7A</option>
+                      <option value="8A">8A</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div>

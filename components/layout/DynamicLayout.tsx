@@ -5,6 +5,7 @@ import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import FeatureRequest from '@/components/shared/FeatureRequest'
 import NotificationIconWrapper from '@/components/shared/NotificationIconWrapper'
 import PWAInstallButton from '@/components/shared/PWAInstallButton'
+import HelpMeetingButton from '@/components/shared/HelpMeetingButton'
 import { createClient } from '@/lib/supabase-client'
 
 interface DynamicLayoutProps {
@@ -61,6 +62,7 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
       >
         <div className="flex w-full items-center justify-end gap-3">
           <PWAInstallButton />
+          {userId && <HelpMeetingButton />}
           {userId && <FeatureRequest />}
           {userId && <NotificationIconWrapper userId={userId} />}
           {header ? (
