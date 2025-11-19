@@ -252,6 +252,90 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     )
   }, [normalizedColleges])
 
+  const renderProfileRow = useCallback((profile: Profile) => {
+    const avatarUrl =
+      isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(profile.id)
+        ? profile.avatar_url || undefined
+        : undefined
+
+    const isScout = profile.role === 'scout'
+    const collegeMatch = profile.organization ? findCollegeMatch(profile.organization) : null
+    
+    // Remove border when on specific tabs (scouts or players)
+    const shouldRemoveBorder = roleFilter === 'scout' || roleFilter === 'player'
+    
+    return (
+      <Link
+        key={profile.id}
+        href={getProfilePath(profile.id, profile.username)}
+        className={`bg-white ${shouldRemoveBorder ? '' : 'border border-gray-200'} rounded-2xl shadow-sm flex items-center gap-4 p-4 hover:shadow-md transition-shadow`}
+      >
+        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={profile.full_name || 'Profile'}
+              width={56}
+              height={56}
+              className="w-full h-full object-cover"
+              onError={() => {
+                setImageErrors((prev) => new Set(prev).add(profile.id))
+              }}
+              unoptimized
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center text-lg font-semibold text-white ${getGradientForId(
+                profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
+              )}`}
+            >
+              {profile.full_name?.charAt(0).toUpperCase() || '?'}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <h3 className="font-bold text-black text-base md:text-lg truncate flex items-center gap-2">
+            <span className="truncate">{profile.full_name || 'Unknown'}</span>
+            {isScout && <VerificationBadge className="flex-shrink-0" />}
+            {isTestAccount(profile.full_name) && (
+              <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full flex-shrink-0">
+                test account
+              </span>
+            )}
+          </h3>
+          <p className="text-sm text-gray-600 truncate">{getProfileSubtitle(profile)}</p>
+          {isScout && collegeMatch?.logo && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-5 h-5 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+                <Image
+                  src={collegeMatch.logo}
+                  alt={collegeMatch.name}
+                  width={20}
+                  height={20}
+                  className="object-contain w-full h-full"
+                  unoptimized
+                />
+              </div>
+              <p className="text-xs text-gray-500">{collegeMatch.name}</p>
+            </div>
+          )}
+        </div>
+
+        {isScout && roleFilter !== 'scout' && (
+          <div className="flex-shrink-0 text-right">
+            <p className="text-sm md:text-base font-semibold text-blue-600">
+              ${profile.price_per_eval ?? 99}
+            </p>
+            <p className="text-xs text-gray-500">
+              {profile.turnaround_time || '72 hrs'}
+            </p>
+          </div>
+        )}
+      </Link>
+    )
+  }, [findCollegeMatch, getProfileSubtitle, imageErrors, setImageErrors, roleFilter, getProfilePath])
+
   const renderProfileCard = useCallback((profile: Profile) => {
     const avatarUrl =
       isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(profile.id)
@@ -415,31 +499,54 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     !window.location.hostname.includes('localhost') && 
     !window.location.hostname.includes('127.0.0.1')
 
-  const filteredProfiles = profiles.filter((profile) => {
-    // Only show scouts on the browse page
-    if (profile.role !== 'scout') {
-      return false
+  const filteredProfiles = useMemo(() => {
+    const filtered = profiles.filter((profile) => {
+      // Hide "ella k" in production (keep visible on localhost)
+      if (isProduction && profile.full_name?.toLowerCase() === 'ella k') {
+        return false
+      }
+      
+      // On "all" page, only show scouts (not players)
+      if (roleFilter === 'all' && profile.role !== 'scout') {
+        return false
+      }
+      
+      // Search query filter
+      const query = trimmedQuery
+      
+      const matchesSearch = (
+        profile.full_name?.toLowerCase().includes(query) ||
+        profile.organization?.toLowerCase().includes(query) ||
+        profile.school?.toLowerCase().includes(query) ||
+        profile.position?.toLowerCase().includes(query)
+      )
+      
+      // Role filter
+      const matchesRole = roleFilter === 'all' || profile.role === roleFilter
+      
+      return matchesSearch && matchesRole
+    })
+    
+    // Randomize order for scouts when showing all or scouts filter
+    if (roleFilter === 'all' || roleFilter === 'scout') {
+      // Separate scouts and non-scouts
+      const scouts = filtered.filter(p => p.role === 'scout')
+      const nonScouts = filtered.filter(p => p.role !== 'scout')
+      
+      // Shuffle scouts using Fisher-Yates algorithm with a seed based on current time
+      // This ensures different order each time the component renders
+      const shuffledScouts = [...scouts]
+      for (let i = shuffledScouts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledScouts[i], shuffledScouts[j]] = [shuffledScouts[j], shuffledScouts[i]]
+      }
+      
+      // Return scouts first (randomized), then others
+      return [...shuffledScouts, ...nonScouts]
     }
-    // Hide "ella k" in production (keep visible on localhost)
-    if (isProduction && profile.full_name?.toLowerCase() === 'ella k') {
-      return false
-    }
     
-    // Search query filter
-    const query = trimmedQuery
-    
-    const matchesSearch = (
-      profile.full_name?.toLowerCase().includes(query) ||
-      profile.organization?.toLowerCase().includes(query) ||
-      profile.school?.toLowerCase().includes(query) ||
-      profile.position?.toLowerCase().includes(query)
-    )
-    
-    // Role filter (only scouts are shown, so this is always true for scouts)
-    const matchesRole = roleFilter === 'all' || roleFilter === 'scout'
-    
-    return matchesSearch && matchesRole
-  })
+    return filtered
+  }, [profiles, trimmedQuery, roleFilter, isProduction])
 
   const filteredTeams = teamEntries.filter((team) => {
     const query = trimmedQuery
@@ -731,9 +838,16 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {filteredProfiles.map(renderProfileCard)}
-          </div>
+          {/* Show cards for "all" view, rows for filtered views (scouts/players) */}
+          {roleFilter === 'all' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {filteredProfiles.map(renderProfileCard)}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredProfiles.map(renderProfileRow)}
+            </div>
+          )}
 
           {filteredProfiles.length === 0 && (
             <div className="text-center py-12 text-gray-500">
