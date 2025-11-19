@@ -122,17 +122,17 @@ export default function PWAInstallButton() {
         }`}
         style={{ backgroundColor: '#FFEB3B' }}
       >
-        🎉 {isMobile ? 'Install Mobile App' : 'Install Desktop App'}
+        🎉 {isMobile ? 'Install' : 'Install Desktop App'}
       </button>
 
       {/* iOS Instructions Modal */}
       {showIOSInstructions && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
           onClick={() => setShowIOSInstructions(false)}
         >
           <div 
-            className="bg-white rounded-2xl p-6 max-w-sm w-full"
+            className="bg-gray-100 rounded-2xl p-6 max-w-sm w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
