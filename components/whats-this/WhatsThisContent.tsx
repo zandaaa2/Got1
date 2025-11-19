@@ -26,18 +26,13 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
             Got1 connects high school football players with verified scouts. Players get detailed feedback on their game film, and scouts monetize their expertise by evaluating talent. Get seen. Get paid.
           </p>
           {!hasSession && (
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6">
+            <div className="flex justify-center items-center mb-6">
               <button
                 onClick={openSignUp}
-                className="w-full sm:w-auto px-8 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-base md:text-lg"
+                className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base md:text-lg"
+                style={{ backgroundColor: '#233dff' }}
               >
-                Sign Up
-              </button>
-              <button
-                onClick={openSignIn}
-                className="w-full sm:w-auto px-8 py-3 border-2 border-black text-black rounded-lg font-medium hover:bg-gray-50 transition-colors text-base md:text-lg"
-              >
-                Sign In
+                Get Started for Free
               </button>
             </div>
           )}
