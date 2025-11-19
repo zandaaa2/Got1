@@ -72,6 +72,12 @@ export default function PWAInstallButton() {
       return
     }
 
+    // For Android mobile without prompt, show instructions
+    if (isMobile && !deferredPrompt) {
+      setShowIOSInstructions(true) // Reuse the instructions modal
+      return
+    }
+
     // For Android/Desktop, use the install prompt
     if (!deferredPrompt) return
 
@@ -97,12 +103,9 @@ export default function PWAInstallButton() {
   }
 
   // Show button if:
-  // - On mobile with iOS (to show instructions) OR
-  // - On mobile with Android (has deferredPrompt) OR
+  // - On mobile (always show - iOS will show instructions, Android will attempt install) OR
   // - On desktop (has deferredPrompt)
-  const shouldShow = isMobile 
-    ? (isIOS || deferredPrompt)
-    : deferredPrompt
+  const shouldShow = isMobile || deferredPrompt
 
   if (!shouldShow) {
     return null
@@ -144,12 +147,20 @@ export default function PWAInstallButton() {
               </button>
             </div>
             <div className="space-y-4 text-sm text-gray-700">
-              <p>To install Got1 on your iPhone:</p>
-              <ol className="list-decimal list-inside space-y-2 pl-2">
-                <li>Tap the <strong>Share</strong> button <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg> at the bottom of the screen</li>
-                <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-                <li>Tap <strong>"Add"</strong> in the top right corner</li>
-              </ol>
+              <p>To install Got1 on your {isIOS ? 'iPhone' : 'mobile device'}:</p>
+              {isIOS ? (
+                <ol className="list-decimal list-inside space-y-2 pl-2">
+                  <li>Tap the <strong>Share</strong> button <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg> at the bottom of the screen</li>
+                  <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                  <li>Tap <strong>"Add"</strong> in the top right corner</li>
+                </ol>
+              ) : (
+                <ol className="list-decimal list-inside space-y-2 pl-2">
+                  <li>Tap the menu button (three dots) in your browser</li>
+                  <li>Select <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
+                  <li>Confirm by tapping <strong>"Add"</strong> or <strong>"Install"</strong></li>
+                </ol>
+              )}
             </div>
           </div>
         </div>
