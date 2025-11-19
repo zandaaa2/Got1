@@ -71,6 +71,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
   const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const supabase = createClient()
   const { openSignUp } = useAuthModal()
   const router = useRouter()
@@ -144,6 +145,26 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     loadProfiles()
   }, [loadProfiles])
 
+  // Load current user's role
+  useEffect(() => {
+    const loadCurrentUserRole = async () => {
+      if (!session?.user?.id) {
+        setCurrentUserRole(null)
+        return
+      }
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+      
+      setCurrentUserRole(data?.role || null)
+    }
+    
+    loadCurrentUserRole()
+  }, [session, supabase])
+
   // Refresh profiles when window regains focus (helps catch updates)
   useEffect(() => {
     const handleFocus = () => {
@@ -159,17 +180,32 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   const handlePrimaryAction = useCallback((event: MouseEvent<HTMLButtonElement>, profile: Profile) => {
     event.stopPropagation()
+    event.preventDefault()
+    
+    console.log('🔵 Purchase button clicked for profile:', profile.id, profile.full_name)
+    console.log('🔵 Current user role:', currentUserRole)
+    
     if (!session) {
+      console.log('🔵 No session, opening sign up modal')
       openSignUp()
       return
     }
 
     if (profile.role === 'scout') {
+      // Check if user is a player before navigating
+      if (currentUserRole !== 'player') {
+        console.log('🔵 User is not a player, showing alert')
+        alert('Only players can purchase evaluations. Please create a player profile to purchase evaluations.')
+        return
+      }
+      
+      console.log('🔵 Navigating to purchase page:', `/profile/${profile.id}/purchase`)
       router.push(`/profile/${profile.id}/purchase`)
     } else {
+      console.log('🔵 Not a scout, navigating to profile')
       router.push(getProfilePath(profile.id, profile.username))
     }
-  }, [openSignUp, router, session])
+  }, [openSignUp, router, session, currentUserRole, getProfilePath])
 
   const getProfileSubtitle = useCallback((profile: Profile) => {
     if (profile.role === 'scout') {
@@ -194,92 +230,6 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return 'Player'
   }, [])
 
-  const renderProfileCard = useCallback((profile: Profile) => {
-    const avatarUrl =
-      isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(profile.id)
-        ? profile.avatar_url || undefined
-        : undefined
-
-    const isScout = profile.role === 'scout'
-    const price = isScout ? (profile.price_per_eval ?? 99) : null
-    const turnaround = isScout ? (profile.turnaround_time || '72 hrs') : null
-    const collegeMatch = profile.organization ? findCollegeMatch(profile.organization) : null
-    return (
-      <div
-        key={profile.id}
-        onClick={() => handleCardClick(profile)}
-        className="cursor-pointer rounded-2xl bg-white p-6 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center text-center border border-gray-100"
-      >
-        <div className="w-20 h-20 rounded-full overflow-hidden border border-gray-200 mb-4">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={profile.full_name || 'Profile'}
-              width={80}
-              height={80}
-              className="w-full h-full object-cover"
-              onError={() => {
-                setImageErrors((prev) => new Set(prev).add(profile.id))
-              }}
-              unoptimized
-            />
-          ) : (
-            <div
-              className={`w-full h-full flex items-center justify-center text-lg font-semibold text-white ${getGradientForId(
-                profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
-              )}`}
-            >
-              {profile.full_name?.charAt(0).toUpperCase() || '?'}
-            </div>
-          )}
-        </div>
-
-        <h3 className="font-bold text-black text-lg flex items-center gap-2 justify-center flex-wrap mb-1">
-          <span>{profile.full_name || 'Unknown'}</span>
-          {isScout && <VerificationBadge className="flex-shrink-0" />}
-          {isTestAccount(profile.full_name) && (
-            <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
-              test account
-            </span>
-          )}
-        </h3>
-
-        <p className="text-sm text-gray-600 mb-2">{getProfileSubtitle(profile)}</p>
-
-        {isScout && collegeMatch?.logo && (
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
-              <Image
-                src={collegeMatch.logo}
-                alt={collegeMatch.name}
-                width={32}
-                height={32}
-                className="object-contain w-full h-full"
-                unoptimized
-              />
-            </div>
-            <p className="text-xs text-gray-500">{collegeMatch.name}</p>
-          </div>
-        )}
-
-        {isScout && (
-          <div className="text-lg font-semibold text-blue-600 mb-4">
-            ${price}
-            <span className="ml-2 text-sm text-gray-500">{turnaround}</span>
-          </div>
-        )}
-
-        <button
-          onClick={(event) => handlePrimaryAction(event, profile)}
-          className="mt-auto inline-flex w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: '#233dff' }}
-        >
-          {isScout ? 'Purchase Eval' : 'View Profile'}
-        </button>
-      </div>
-    )
-  }, [findCollegeMatch, getProfileSubtitle, handleCardClick, handlePrimaryAction, imageErrors, setImageErrors])
-
   const normalizedColleges = useMemo(() =>
     colleges.map((college) => ({
       ...college,
@@ -301,6 +251,130 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       normalizedColleges.find((college) => normalizedSimple.includes(college.normalizedSimple))
     )
   }, [normalizedColleges])
+
+  const renderProfileCard = useCallback((profile: Profile) => {
+    const avatarUrl =
+      isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(profile.id)
+        ? profile.avatar_url || undefined
+        : undefined
+
+    const isScout = profile.role === 'scout'
+    const price = isScout ? (profile.price_per_eval ?? 99) : null
+    const turnaround = isScout ? (profile.turnaround_time || '72 hrs') : null
+    const collegeMatch = profile.organization ? findCollegeMatch(profile.organization) : null
+    return (
+      <div
+        key={profile.id}
+        onClick={() => handleCardClick(profile)}
+        className="cursor-pointer rounded-2xl bg-white p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center border border-gray-200 relative overflow-hidden group"
+      >
+        {/* Subtle gradient accent at top */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mb-4 shadow-md group-hover:shadow-lg transition-shadow duration-300">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={profile.full_name || 'Profile'}
+              width={96}
+              height={96}
+              className="w-full h-full object-cover"
+              onError={() => {
+                setImageErrors((prev) => new Set(prev).add(profile.id))
+              }}
+              unoptimized
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center text-2xl font-semibold text-white ${getGradientForId(
+                profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
+              )}`}
+            >
+              {profile.full_name?.charAt(0).toUpperCase() || '?'}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 justify-center flex-wrap mb-2">
+          <h3 className="font-bold text-black text-xl">{profile.full_name || 'Unknown'}</h3>
+          {isScout && <VerificationBadge className="flex-shrink-0" />}
+          {isTestAccount(profile.full_name) && (
+            <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full">
+              test account
+            </span>
+          )}
+        </div>
+
+        {/* Position or organization */}
+        {profile.position && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm font-medium text-gray-700">{profile.position}</p>
+          </div>
+        )}
+
+        <p className="text-sm text-gray-600 mb-3 min-h-[1.25rem]">{getProfileSubtitle(profile)}</p>
+
+        {/* College logo section - always render to maintain consistent spacing */}
+        <div className="flex items-center justify-center gap-2 mb-3 min-h-[2rem]">
+          {isScout && collegeMatch?.logo && (
+            <>
+              <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shadow-sm">
+                <Image
+                  src={collegeMatch.logo}
+                  alt={collegeMatch.name}
+                  width={32}
+                  height={32}
+                  className="object-contain w-full h-full"
+                  unoptimized
+                />
+              </div>
+              <p className="text-xs font-medium text-gray-600">{collegeMatch.name}</p>
+            </>
+          )}
+        </div>
+
+        {/* Price and turnaround with icon */}
+        {isScout && (
+          <div className="flex items-center justify-center gap-3 mb-5 px-4 py-2 bg-blue-50 rounded-full border border-blue-100">
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-blue-600">${price}</span>
+            </div>
+            <div className="h-4 w-px bg-blue-200" />
+            <div className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-gray-700">{turnaround}</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={(event) => {
+            console.log('🔵 Button clicked directly')
+            handlePrimaryAction(event, profile)
+          }}
+          className="mt-auto inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg relative z-10"
+          style={{ backgroundColor: '#233dff' }}
+          type="button"
+        >
+          {isScout ? (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              Purchase Eval
+            </>
+          ) : (
+            'View Profile'
+          )}
+        </button>
+      </div>
+    )
+  }, [findCollegeMatch, getProfileSubtitle, handleCardClick, handlePrimaryAction, imageErrors, setImageErrors])
 
   const organizationCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -342,6 +416,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     !window.location.hostname.includes('127.0.0.1')
 
   const filteredProfiles = profiles.filter((profile) => {
+    // Only show scouts on the browse page
+    if (profile.role !== 'scout') {
+      return false
+    }
     // Hide "ella k" in production (keep visible on localhost)
     if (isProduction && profile.full_name?.toLowerCase() === 'ella k') {
       return false
@@ -357,8 +435,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       profile.position?.toLowerCase().includes(query)
     )
     
-    // Role filter
-    const matchesRole = roleFilter === 'all' || profile.role === roleFilter
+    // Role filter (only scouts are shown, so this is always true for scouts)
+    const matchesRole = roleFilter === 'all' || roleFilter === 'scout'
     
     return matchesSearch && matchesRole
   })
