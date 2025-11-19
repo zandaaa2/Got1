@@ -15,10 +15,10 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
     <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8">
       {/* Hero Section */}
       <div className="mb-12 md:mb-16 text-center">
-        <p className="text-sm text-gray-500 mb-1">
+        <p className="text-sm text-gray-500 -mb-1">
           🎉 For football players and college scouts
         </p>
-        <div className="pt-6 md:pt-8 pb-8 bg-white rounded-2xl w-full">
+        <div className="pt-4 md:pt-6 pb-8 bg-white rounded-2xl w-full">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-6 md:mb-8 leading-tight max-w-3xl mx-auto px-4">
             Get professional film evaluations from verified college scouts
           </h1>
