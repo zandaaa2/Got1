@@ -921,63 +921,104 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         )}
       </div>
 
-      {/* Pricing & Purchase Section - Show only for scout profiles */}
+      {/* Evaluation Offers Section - Show only for scout profiles */}
       {profile.role === 'scout' && (
-        <div className="surface-card mb-6 md:mb-8 p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-4 md:gap-6">
-              <div>
-                <p className="text-xs text-gray-500 mb-0.5">Price</p>
-                <p className="text-lg font-bold text-blue-600">${profile.price_per_eval || '99'}</p>
-              </div>
-              <div className="h-8 w-px bg-gray-200"></div>
-              <div>
-                <p className="text-xs text-gray-500 mb-0.5">Turnaround</p>
-                <p className="text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
-              </div>
-            </div>
-            {isOwnProfile ? (
-              <div className="ml-auto w-full max-w-xs px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-medium text-sm text-center cursor-not-allowed">
-                Your Profile
-              </div>
-            ) : (
-              <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-3 md:gap-4 sm:w-auto">
-                <button
-                  onClick={() => setShowHowItWorks(true)}
-                  className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
-                >
-                  Read payment flow
-                </button>
-                <button
-                  onClick={() => setShowHowItWorks(true)}
-                  className="interactive-press flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black md:hidden"
-                  aria-label="Read payment flow"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  onClick={handleRequestEvaluation}
-                  disabled={requesting}
-                  className="interactive-press w-full sm:w-auto px-8 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm transition-colors text-center shadow-sm disabled:active:scale-100"
-                >
-                  {requesting ? 'Processing...' : 'Request & Pay Now'}
-                </button>
-              </div>
+        <div className="mb-6 md:mb-8">
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-black">
+              Evaluation Offers
+            </h2>
+            {!isOwnProfile && (
+              <button
+                onClick={() => setShowHowItWorks(true)}
+                className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
+              >
+                Read payment flow
+              </button>
             )}
           </div>
+
+          {/* Grid layout for multiple offers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {/* Offer card - compact version */}
+            <div className="surface-card p-3 md:p-4 border border-gray-200 rounded-lg">
+              <div className="mb-3">
+                <h4 className="text-base md:text-lg font-bold text-black mb-1.5">
+                  Standard Evaluation
+                </h4>
+                {profile.bio && (
+                  <p className="text-xs md:text-sm text-gray-600 line-clamp-2">
+                    {profile.bio}
+                  </p>
+                )}
+              </div>
+
+              {/* Price and Turnaround in a row */}
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <p className="text-xs text-gray-600 mb-0.5">Price</p>
+                  <p className="text-base md:text-lg font-bold text-blue-600">${profile.price_per_eval || 99}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 mb-0.5">Turnaround</p>
+                  <p className="text-base md:text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+                </div>
+              </div>
+
+              {/* Compact placeholder sections - combined row */}
+              <div className="pt-2 border-t border-gray-200 mb-3">
+                <div className="flex items-center gap-3 text-xs text-gray-500 opacity-60">
+                  <span>All positions</span>
+                  <span>•</span>
+                  <span>College connections</span>
+                </div>
+              </div>
+
+              {/* CTA Section */}
+              <div className="pt-3 border-t border-gray-200">
+                {isOwnProfile ? (
+                  <div className="w-full px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-medium text-sm text-center cursor-not-allowed">
+                    Your Profile
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleRequestEvaluation}
+                    disabled={requesting}
+                    className="interactive-press w-full px-8 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm transition-colors text-center shadow-sm disabled:active:scale-100"
+                  >
+                    {requesting ? 'Processing...' : 'Request & Pay Now'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile "Read payment flow" button */}
+          {!isOwnProfile && (
+            <div className="mt-3 flex items-center justify-center md:hidden">
+              <button
+                onClick={() => setShowHowItWorks(true)}
+                className="interactive-press flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black"
+                aria-label="Read payment flow"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
