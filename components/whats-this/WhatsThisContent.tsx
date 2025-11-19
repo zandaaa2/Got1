@@ -21,7 +21,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
   const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8">
+    <div className="w-full max-w-4xl mx-auto">
       {/* Hero Section */}
       <div className="mt-8 md:mt-12 mb-12 md:mb-16 text-center">
         <p className="text-sm text-gray-500 -mb-1">
