@@ -90,33 +90,35 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
         </div>
       </div>
 
+      {/* Tab Buttons */}
+      <div className="mb-6 -mt-6">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            onClick={() => setActiveTab('player')}
+            className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
+              activeTab === 'player'
+                ? 'bg-gray-100 text-black'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            For Players
+          </button>
+          <button
+            onClick={() => setActiveTab('scout')}
+            className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
+              activeTab === 'scout'
+                ? 'bg-gray-100 text-black'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            For Scouts
+          </button>
+        </div>
+      </div>
+
       {/* For Players & Scouts - Tabbed Section */}
       <div className="mb-12 md:mb-16">
         <div className="bg-white rounded-2xl w-full p-6 md:p-8">
-          {/* Tab Buttons */}
-          <div className="flex flex-wrap items-center gap-2 mb-6">
-            <button
-              onClick={() => setActiveTab('player')}
-              className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
-                activeTab === 'player'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              For Players
-            </button>
-        <button
-              onClick={() => setActiveTab('scout')}
-              className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
-                activeTab === 'scout'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              For Scouts
-            </button>
-          </div>
-
           {/* Tab Content */}
           <div>
             {activeTab === 'player' ? (
@@ -194,8 +196,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                 
                 <div className="space-y-6">
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 font-bold text-sm">1</span>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">1</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-black mb-1">Apply to Become Verified</h3>
@@ -206,8 +208,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 font-bold text-sm">2</span>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">2</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-black mb-1">Set Your Pricing & Turnaround</h3>
@@ -218,8 +220,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 font-bold text-sm">3</span>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">3</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-black mb-1">Evaluate Film</h3>
@@ -230,8 +232,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 font-bold text-sm">4</span>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-sm">4</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-black mb-1">Get Paid</h3>
@@ -240,7 +242,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                       </p>
                     </div>
                   </div>
-                </div>
+            </div>
 
                 {/* CTA */}
                 <div className="pt-4 mt-6">
