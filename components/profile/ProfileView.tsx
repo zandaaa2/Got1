@@ -930,12 +930,36 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               Evaluation Offers
             </h2>
             {!isOwnProfile && (
-              <button
-                onClick={() => setShowHowItWorks(true)}
-                className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
-              >
-                Read payment flow
-              </button>
+              <>
+                {/* Desktop: text link */}
+                <button
+                  onClick={() => setShowHowItWorks(true)}
+                  className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
+                >
+                  Read payment flow
+                </button>
+                {/* Mobile: icon button inline with header */}
+                <button
+                  onClick={() => setShowHowItWorks(true)}
+                  className="interactive-press flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black md:hidden flex-shrink-0"
+                  aria-label="Read payment flow"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+              </>
             )}
           </div>
 
@@ -985,7 +1009,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                   <button
                     onClick={handleRequestEvaluation}
                     disabled={requesting}
-                    className="interactive-press w-full px-8 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm transition-colors text-center shadow-sm disabled:active:scale-100"
+                    className="interactive-press w-full px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm md:text-base transition-colors text-center shadow-sm disabled:active:scale-100"
                   >
                     {requesting ? 'Processing...' : 'Request & Pay Now'}
                   </button>
@@ -993,32 +1017,6 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </div>
             </div>
           </div>
-
-          {/* Mobile "Read payment flow" button */}
-          {!isOwnProfile && (
-            <div className="mt-3 flex items-center justify-center md:hidden">
-              <button
-                onClick={() => setShowHowItWorks(true)}
-                className="interactive-press flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black"
-                aria-label="Read payment flow"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
         </div>
       )}
 
