@@ -105,7 +105,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
             >
               For Players
             </button>
-            <button
+        <button
               onClick={() => setActiveTab('scout')}
               className={`px-4 py-2 rounded-full text-base font-medium transition-colors ${
                 activeTab === 'scout'
@@ -123,8 +123,8 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
               <div className="space-y-6">
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-black">Remove the stress to recruiting.</h2>
-                </div>
-                
+      </div>
+
                 <div className="space-y-6">
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -173,6 +173,17 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* CTA */}
+                <div className="pt-4 mt-6">
+                  <Link
+                    href="/browse"
+                    className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
+                    style={{ backgroundColor: '#233dff' }}
+                  >
+                    Find a Scout
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -230,6 +241,17 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                     </div>
                   </div>
                 </div>
+
+                {/* CTA */}
+                <div className="pt-4 mt-6">
+                  <Link
+                    href="/profile/scout-application"
+                    className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
+                    style={{ backgroundColor: '#233dff' }}
+                  >
+                    Become a Scout
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -245,13 +267,13 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+          </svg>
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-black text-lg mb-2">Verified Scouts</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
+            <p className="text-gray-600 text-sm leading-relaxed">
                 Connect with verified college scouts and evaluators who are actively recruiting talent.
-              </p>
+            </p>
             </div>
           </div>
 
@@ -264,25 +286,25 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-black text-lg mb-2">Detailed Feedback</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
+            <p className="text-gray-600 text-sm leading-relaxed">
                 Receive comprehensive written evaluations that break down your performance and highlight your strengths.
-              </p>
-            </div>
-          </div>
+            </p>
+        </div>
+      </div>
 
           {/* Feature 3 */}
           <div className="bg-white rounded-xl p-6 flex items-start gap-4 border border-gray-200 shadow-sm">
             <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+          </svg>
+        </div>
             <div className="flex-1">
               <h3 className="font-bold text-black text-lg mb-2">Fast Turnaround</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
                 Get your evaluations back quickly with scouts offering fast turnaround times on their reviews.
               </p>
-            </div>
+      </div>
           </div>
 
           {/* Feature 4 */}
@@ -307,26 +329,26 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
       <div className="mb-8">
         <div className="bg-white rounded-2xl w-full p-8 md:p-12 text-center">
           <h2 className="text-xl md:text-2xl font-bold text-black mb-4">
-            Ready to Get Started?
-          </h2>
+          Ready to Get Started?
+        </h2>
           <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
             Whether you're a player seeking feedback or a scout looking to share your expertise, Got1 is the place for you.
-          </p>
+        </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href="/browse"
+          <Link
+            href="/browse"
               className="inline-flex items-center justify-center px-8 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-base"
-            >
-              Find a Scout
-            </Link>
-            <Link
-              href="/profile/scout-application"
+          >
+            Find a Scout
+          </Link>
+          <Link
+            href="/profile/scout-application"
               className="inline-flex items-center justify-center px-8 py-3 border-2 border-black text-black rounded-lg font-medium hover:bg-gray-50 transition-colors text-base"
-            >
-              Become a Scout
-            </Link>
-          </div>
+          >
+            Become a Scout
+          </Link>
         </div>
+      </div>
       </div>
     </div>
   )
