@@ -16,14 +16,14 @@ export default function WhatsThisContent({ organizations, hasSession }: WhatsThi
       {/* Hero Section */}
       <div className="mt-8 md:mt-12 mb-12 md:mb-16 text-center">
         <p className="text-sm text-gray-500 -mb-1">
-          🎉 For football players and college scouts
+          🎉 For high school football players and college evaluators.
         </p>
         <div className="pt-4 md:pt-6 pb-8 bg-white rounded-2xl w-full">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-6 md:mb-8 leading-tight max-w-3xl mx-auto px-4">
             Guarantee your film gets watched.
           </h1>
           <p className="text-base md:text-lg text-gray-700 leading-relaxed max-w-2xl mx-auto mb-6 md:mb-8 px-4">
-            Got1 connects high school football players with verified scouts. Players get detailed feedback on their game film, and scouts monetize their expertise by evaluating talent. Get seen. Get Paid.
+            Got1 connects high school football players with verified scouts. Players get detailed feedback on their game film, and scouts monetize their expertise by evaluating talent. Get seen. Get paid.
           </p>
           {!hasSession && (
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6">
