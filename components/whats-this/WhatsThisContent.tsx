@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import Image from 'next/image'
 import { getGradientForId } from '@/lib/gradients'
@@ -16,8 +17,25 @@ interface WhatsThisContentProps {
 }
 
 export default function WhatsThisContent({ organizations, hasSession, profileAvatars }: WhatsThisContentProps) {
-  const { openSignIn, openSignUp } = useAuthModal()
+  const { openSignUp } = useAuthModal()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
+
+  const handleFindScout = () => {
+    if (hasSession) {
+      router.push('/browse')
+    } else {
+      openSignUp()
+    }
+  }
+
+  const handleBecomeScout = () => {
+    if (hasSession) {
+      router.push('/profile/scout-application')
+    } else {
+      openSignUp()
+    }
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -179,7 +197,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                 {/* CTA */}
                 <div className="pt-4 mt-6">
                   <button
-                    onClick={openSignUp}
+                    onClick={handleFindScout}
                     className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
                     style={{ backgroundColor: '#233dff' }}
                   >
@@ -246,7 +264,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                 {/* CTA */}
                 <div className="pt-4 mt-6">
                   <button
-                    onClick={openSignUp}
+                    onClick={handleBecomeScout}
                     className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
                     style={{ backgroundColor: '#233dff' }}
                   >
@@ -337,14 +355,14 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button
-              onClick={openSignUp}
+              onClick={handleFindScout}
               className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base"
               style={{ backgroundColor: '#233dff' }}
             >
               Find a Scout
             </button>
             <button
-              onClick={openSignUp}
+              onClick={handleBecomeScout}
               className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full border-2 border-gray-300 text-black font-semibold hover:bg-gray-50 transition-colors text-base"
             >
               Become a Scout
