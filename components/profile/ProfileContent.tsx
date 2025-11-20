@@ -9,6 +9,9 @@ import { getGradientForId } from '@/lib/gradients'
 import { getProfilePath } from '@/lib/profile-url'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { openCalendly30Min } from '@/lib/calendly'
+import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
+import CollegeMultiSelect from '@/components/profile/CollegeMultiSelect'
+import { collegeEntries } from '@/lib/college-data'
 
 interface ProfileContentProps {
   profile: any
@@ -120,9 +123,42 @@ function MoneyDashboard({ profile }: { profile: any }) {
   const [offerBio, setOfferBio] = useState(profile.bio || '')
   const [pricePerEval, setPricePerEval] = useState(profile.price_per_eval?.toString() || '99')
   const [turnaroundTime, setTurnaroundTime] = useState(profile.turnaround_time || '72 hrs')
+  // For positions and college connections - temporarily stored as JSONB in profile
+  // Later this will be stored per-offer in scout_offers table
+  const [selectedPositions, setSelectedPositions] = useState<string[]>(() => {
+    try {
+      if (profile.positions && typeof profile.positions === 'string') {
+        return JSON.parse(profile.positions)
+      } else if (Array.isArray(profile.positions)) {
+        return profile.positions
+      }
+      return []
+    } catch {
+      return []
+    }
+  })
+  const [selectedCollegeSlugs, setSelectedCollegeSlugs] = useState<string[]>(() => {
+    try {
+      if (profile.college_connections && typeof profile.college_connections === 'string') {
+        return JSON.parse(profile.college_connections)
+      } else if (Array.isArray(profile.college_connections)) {
+        return profile.college_connections
+      }
+      return []
+    } catch {
+      return []
+    }
+  })
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
+  const [isBioExpanded, setIsBioExpanded] = useState(false)
+  
+  // Truncate bio if longer than 100 characters
+  const shouldTruncateBio = offerBio && offerBio.length > 100 && !isEditingPricing
+  const displayBio = shouldTruncateBio && !isBioExpanded 
+    ? offerBio.substring(0, 100) + '...' 
+    : offerBio
 
   useEffect(() => {
     checkAccountStatus({ suppressSkeleton: Boolean(globalAccountStatus) })
@@ -164,6 +200,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
       setTurnaroundTime(turnaround)
     }
     setOfferBio(profile.bio || '')
+    setIsBioExpanded(false) // Reset bio expansion when profile updates
   }, [profile.price_per_eval, profile.turnaround_time, profile.bio])
 
   const checkAccountStatus = async (options: { suppressSkeleton?: boolean } = {}) => {
@@ -294,6 +331,8 @@ function MoneyDashboard({ profile }: { profile: any }) {
           price_per_eval: price,
           turnaround_time: turnaroundTime || null,
           bio: offerBio || null, // Save bio (for now, later it will be per-offer)
+          positions: selectedPositions.length > 0 ? JSON.stringify(selectedPositions) : null,
+          college_connections: selectedCollegeSlugs.length > 0 ? JSON.stringify(selectedCollegeSlugs) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', session.user.id)
@@ -381,122 +420,192 @@ function MoneyDashboard({ profile }: { profile: any }) {
           <p className="text-sm">{saveMessage}</p>
         </div>
       )}
-      <div className="space-y-4">
-        {/* Single offer card */}
-        <div className="surface-card p-4 md:p-6 border border-gray-200 rounded-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              {isEditingPricing ? (
-                <input
-                  type="text"
-                  value={offerTitle}
-                  onChange={(e) => setOfferTitle(e.target.value)}
-                  className="text-lg md:text-xl font-bold text-black border border-gray-300 rounded px-3 py-2 w-full mb-2"
-                  placeholder="Standard Evaluation"
-                />
-              ) : (
-                <h4 className="text-lg md:text-xl font-bold text-black mb-2">
-                  {offerTitle}
-                </h4>
-              )}
-              {isEditingPricing ? (
-                <textarea
-                  value={offerBio}
-                  onChange={(e) => setOfferBio(e.target.value)}
-                  className="text-sm text-gray-600 border border-gray-300 rounded px-3 py-2 w-full min-h-[80px] resize-y"
-                  placeholder="Describe what players will get with this evaluation..."
-                />
-              ) : (
-                <p className="text-sm text-gray-600 mb-4">
-                  {offerBio || 'No description provided.'}
-                </p>
-              )}
-            </div>
-            {!isEditingPricing && (
-              <button
-                onClick={() => setIsEditingPricing(true)}
-                className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
-                title="Edit offer"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Price and Turnaround in a row */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-xs md:text-sm text-gray-600">Price</p>
+      <div className="space-y-3 md:space-y-4">
+        {/* Offer cards - grid layout for multiple offers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          {/* Single offer card - compact version */}
+          <div className="surface-card p-3 md:p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                {isEditingPricing ? (
+                  <input
+                    type="text"
+                    value={offerTitle}
+                    onChange={(e) => setOfferTitle(e.target.value)}
+                    className="text-base md:text-lg font-bold text-black border border-gray-300 rounded px-2 py-1.5 w-full mb-2"
+                    placeholder="Standard Evaluation"
+                  />
+                ) : (
+                  <h4 className="text-base md:text-lg font-bold text-black mb-1.5">
+                    {offerTitle}
+                  </h4>
+                )}
+                {isEditingPricing ? (
+                  <textarea
+                    value={offerBio}
+                    onChange={(e) => setOfferBio(e.target.value)}
+                    className="text-xs md:text-sm text-gray-600 border border-gray-300 rounded px-2 py-1.5 w-full min-h-[70px] resize-y"
+                    placeholder="Describe what players will get with this evaluation..."
+                  />
+                ) : (
+                  <div>
+                    {displayBio ? (
+                      <p className="text-xs md:text-sm text-gray-600 mb-0">
+                        {displayBio}
+                        {shouldTruncateBio && (
+                          <button
+                            onClick={() => setIsBioExpanded(!isBioExpanded)}
+                            className="ml-1 text-blue-600 hover:text-blue-700 underline"
+                          >
+                            {isBioExpanded ? 'Show less' : 'Show more'}
+                          </button>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-xs md:text-sm text-gray-400 italic">No description provided.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!isEditingPricing && (
                 <button
-                  onClick={() => setInfoModal('price')}
-                  className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                  title="More information"
+                  onClick={() => setIsEditingPricing(true)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors ml-2 flex-shrink-0"
+                  title="Edit offer"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-              </div>
-              {isEditingPricing ? (
-                <input
-                  type="number"
-                  value={pricePerEval}
-                  onChange={(e) => setPricePerEval(e.target.value)}
-                  className="text-lg md:text-xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
-                  placeholder="99"
-                />
-              ) : (
-                <p className="text-lg md:text-xl font-bold text-black">${profile.price_per_eval || 99}</p>
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-xs md:text-sm text-gray-600">Turnaround Time</p>
-                <button
-                  onClick={() => setInfoModal('turnaround')}
-                  className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                  title="More information"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              {isEditingPricing ? (
-                <input
-                  type="text"
-                  value={turnaroundTime}
-                  onChange={(e) => setTurnaroundTime(e.target.value)}
-                  className="text-lg md:text-xl font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
-                  placeholder="72 hrs"
-                />
-              ) : (
-                <p className="text-lg md:text-xl font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
-              )}
-            </div>
-          </div>
 
-          {/* Placeholder sections for positions and college logos */}
-          <div className="pt-4 border-t border-gray-200 space-y-3">
-            {/* Positions placeholder - hidden for now but ready for multiple offers */}
-            <div className="opacity-60">
-              <p className="text-xs text-gray-500 mb-1">Positions</p>
-              <p className="text-sm text-gray-600">All positions</p>
-            </div>
-            {/* College logos placeholder */}
-            <div className="opacity-60">
-              <p className="text-xs text-gray-500 mb-2">College Connections</p>
-              <div className="flex gap-2">
-                <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
-                  <span className="text-xs text-gray-400">🏈</span>
+            {/* Price and Turnaround in a row */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <p className="text-xs text-gray-600">Price</p>
+                  <button
+                    onClick={() => setInfoModal('price')}
+                    className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                    title="More information"
+                  >
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
-                  <span className="text-xs text-gray-400">+</span>
-                </div>
+                {isEditingPricing ? (
+                  <input
+                    type="number"
+                    value={pricePerEval}
+                    onChange={(e) => setPricePerEval(e.target.value)}
+                    className="text-base md:text-lg font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
+                    placeholder="99"
+                  />
+                ) : (
+                  <p className="text-base md:text-lg font-bold text-black">${profile.price_per_eval || 99}</p>
+                )}
               </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <p className="text-xs text-gray-600">Turnaround</p>
+                  <button
+                    onClick={() => setInfoModal('turnaround')}
+                    className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                    title="More information"
+                  >
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+                {isEditingPricing ? (
+                  <input
+                    type="text"
+                    value={turnaroundTime}
+                    onChange={(e) => setTurnaroundTime(e.target.value)}
+                    className="text-base md:text-lg font-bold text-black border border-gray-300 rounded px-2 py-1 w-full"
+                    placeholder="72 hrs"
+                  />
+                ) : (
+                  <p className="text-base md:text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Positions and College Connections */}
+            <div className="pt-3 border-t border-gray-200 space-y-3">
+              {isEditingPricing ? (
+                <>
+                  <PositionMultiSelect
+                    selectedPositions={selectedPositions}
+                    onChange={setSelectedPositions}
+                    label="Position(s)"
+                    disabled={false}
+                  />
+                  <CollegeMultiSelect
+                    selectedColleges={selectedCollegeSlugs}
+                    onChange={setSelectedCollegeSlugs}
+                    label="College Connections"
+                    disabled={false}
+                    maxSelections={7}
+                  />
+                </>
+              ) : (
+                <div className="space-y-2">
+                  {/* Display Positions */}
+                  {selectedPositions.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPositions.map((pos) => (
+                          <span
+                            key={pos}
+                            className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                          >
+                            {pos}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No positions specified</p>
+                  )}
+                  {/* Display College Connections */}
+                  {selectedCollegeSlugs.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1.5 font-medium">Connections:</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedCollegeSlugs.slice(0, 5).map((slug) => {
+                          const college = collegeEntries.find((c) => c.slug === slug)
+                          if (!college) return null
+                          return (
+                            <div
+                              key={slug}
+                              className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-md border border-gray-200"
+                            >
+                              {college.logo && (
+                                <Image
+                                  src={college.logo}
+                                  alt={college.name}
+                                  width={20}
+                                  height={20}
+                                  className="object-contain"
+                                  unoptimized
+                                />
+                              )}
+                              <span className="text-xs text-gray-700">{college.name}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No college connections specified</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -544,7 +653,31 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 setTurnaroundTime(profile.turnaround_time || '72 hrs')
                 setOfferBio(profile.bio || '')
                 setOfferTitle('Standard Evaluation')
+                setIsBioExpanded(false)
                 setSaveMessage(null)
+                // Reset positions and colleges to saved values
+                try {
+                  if (profile.positions && typeof profile.positions === 'string') {
+                    setSelectedPositions(JSON.parse(profile.positions))
+                  } else if (Array.isArray(profile.positions)) {
+                    setSelectedPositions(profile.positions)
+                  } else {
+                    setSelectedPositions([])
+                  }
+                } catch {
+                  setSelectedPositions([])
+                }
+                try {
+                  if (profile.college_connections && typeof profile.college_connections === 'string') {
+                    setSelectedCollegeSlugs(JSON.parse(profile.college_connections))
+                  } else if (Array.isArray(profile.college_connections)) {
+                    setSelectedCollegeSlugs(profile.college_connections)
+                  } else {
+                    setSelectedCollegeSlugs([])
+                  }
+                } catch {
+                  setSelectedCollegeSlugs([])
+                }
               }}
               className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
             >

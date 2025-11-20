@@ -31,6 +31,8 @@ interface Profile {
   price_per_eval: number | null
   suspended_until?: string | null // Optional - may not exist until migration is run
   turnaround_time?: string | null
+  positions?: string[] | string | null // JSONB array or JSON string
+  college_connections?: string[] | string | null // JSONB array or JSON string
 }
 
 interface TeamEntry {
@@ -419,6 +421,57 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             </>
           )}
         </div>
+
+        {/* College connections display - new format */}
+        {isScout && (() => {
+          let collegeSlugs: string[] = []
+          try {
+            if (profile.college_connections && typeof profile.college_connections === 'string') {
+              collegeSlugs = JSON.parse(profile.college_connections)
+            } else if (Array.isArray(profile.college_connections)) {
+              collegeSlugs = profile.college_connections
+            }
+          } catch {
+            collegeSlugs = []
+          }
+          return collegeSlugs.length > 0 ? (
+            <div className="mb-3 px-2">
+              <p className="text-xs text-gray-600 mb-2 text-center">
+                This scout's connections include people at:
+              </p>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {collegeSlugs.slice(0, 3).map((slug) => {
+                  const college = normalizedColleges.find((c) => c.slug === slug)
+                  if (!college) return null
+                  return (
+                    <div
+                      key={slug}
+                      className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 overflow-hidden flex items-center justify-center shadow-sm"
+                    >
+                      {college.logo ? (
+                        <Image
+                          src={college.logo}
+                          alt={college.name}
+                          width={32}
+                          height={32}
+                          className="object-contain w-full h-full"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs font-semibold bg-gray-100 text-gray-600">
+                          {college.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {collegeSlugs.length > 3 && (
+                  <span className="text-xs text-gray-500 font-medium">and more</span>
+                )}
+              </div>
+            </div>
+          ) : null
+        })()}
 
         {/* Price and turnaround with icon */}
         {isScout && (

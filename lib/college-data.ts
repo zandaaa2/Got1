@@ -3,7 +3,7 @@ export interface CollegeEntry {
   name: string
   slug: string
   conference: string
-  division: "FBS" | "FCS" | "Other"
+  division: "FBS" | "FCS" | "D2" | "D3" | "NAIA" | "NFL" | "Other"
   logo: string
 }
 

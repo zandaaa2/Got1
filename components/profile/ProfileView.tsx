@@ -14,6 +14,7 @@ import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
 import AuthModal from '@/components/auth/AuthModal'
+import { collegeEntries } from '@/lib/college-data'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -990,13 +991,79 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
               </div>
 
-              {/* Compact placeholder sections - combined row */}
-              <div className="pt-2 border-t border-gray-200 mb-3">
-                <div className="flex items-center gap-3 text-xs text-gray-500 opacity-60">
-                  <span>All positions</span>
-                  <span>•</span>
-                  <span>College connections</span>
-                </div>
+              {/* Positions display - if positions are selected, show them */}
+              {(() => {
+                let positions: string[] = []
+                try {
+                  if (profile.positions && typeof profile.positions === 'string') {
+                    positions = JSON.parse(profile.positions)
+                  } else if (Array.isArray(profile.positions)) {
+                    positions = profile.positions
+                  }
+                } catch {
+                  positions = []
+                }
+                return positions.length > 0 ? (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {positions.map((pos) => (
+                        <span
+                          key={pos}
+                          className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                        >
+                          {pos}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
+              {/* College Connections */}
+              <div className="pt-3 border-t border-gray-200 mb-3 space-y-2">
+                {/* Display College Connections */}
+                {(() => {
+                  let collegeSlugs: string[] = []
+                  try {
+                    if (profile.college_connections && typeof profile.college_connections === 'string') {
+                      collegeSlugs = JSON.parse(profile.college_connections)
+                    } else if (Array.isArray(profile.college_connections)) {
+                      collegeSlugs = profile.college_connections
+                    }
+                  } catch {
+                    collegeSlugs = []
+                  }
+                  return collegeSlugs.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1.5 font-medium">Connections:</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {collegeSlugs.map((slug) => {
+                          const college = collegeEntries.find((c) => c.slug === slug)
+                          if (!college) return null
+                          return (
+                            <div
+                              key={slug}
+                              className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-md border border-gray-200"
+                            >
+                              {college.logo && (
+                                <Image
+                                  src={college.logo}
+                                  alt={college.name}
+                                  width={20}
+                                  height={20}
+                                  className="object-contain"
+                                  unoptimized
+                                />
+                              )}
+                              <span className="text-xs text-gray-700">{college.name}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : null
+                })()}
               </div>
 
               {/* CTA Section */}
