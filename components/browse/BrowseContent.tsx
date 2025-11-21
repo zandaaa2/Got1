@@ -123,13 +123,45 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           return false
         }
         
+        // Hide basic users (role = 'user')
+        if (p.role === 'user') {
+          return false
+        }
+        
+        // Hide incomplete player profiles
+        if (p.role === 'player') {
+          // Check if profile is incomplete - needs at least name and position
+          const hasName = p.full_name && p.full_name.trim().length > 0
+          const hasPosition = p.position && p.position.trim().length > 0
+          
+          // Also check positions array if position field is empty
+          let hasPositionsArray = false
+          try {
+            if (p.positions) {
+              if (typeof p.positions === 'string') {
+                const positions = JSON.parse(p.positions)
+                hasPositionsArray = Array.isArray(positions) && positions.length > 0
+              } else if (Array.isArray(p.positions)) {
+                hasPositionsArray = p.positions.length > 0
+              }
+            }
+          } catch {
+            hasPositionsArray = false
+          }
+          
+          // Hide if missing essential info
+          if (!hasName || (!hasPosition && !hasPositionsArray)) {
+            return false
+          }
+        }
+        
         // If it's a scout and suspended, exclude it
         if (p.role === 'scout') {
           const suspendedUntil = p.suspended_until
           if (!suspendedUntil || typeof suspendedUntil !== 'string') return true
           return new Date(suspendedUntil) <= now
         }
-        // Players are always included
+        
         return true
       })
       
