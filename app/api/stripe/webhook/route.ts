@@ -577,10 +577,10 @@ export async function POST(request: NextRequest) {
         
         if (hasPastDue || hasCurrentlyDue) {
           issueType = 'restricted'
-          if (hasPastDue) {
+          if (hasPastDue && account.requirements.past_due) {
             issues.push(`Past due requirements: ${account.requirements.past_due.join(', ')}`)
           }
-          if (hasCurrentlyDue) {
+          if (hasCurrentlyDue && account.requirements.currently_due) {
             issues.push(`Required information needed: ${account.requirements.currently_due.join(', ')}`)
           }
         }
