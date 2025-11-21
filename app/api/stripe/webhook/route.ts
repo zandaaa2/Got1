@@ -334,12 +334,12 @@ export async function POST(request: NextRequest) {
       // Extract failure details
       const errorCode = paymentIntent.last_payment_error?.code || 'unknown'
       const errorMessage = paymentIntent.last_payment_error?.message || 'Unknown error'
-      const errorType = paymentIntent.last_payment_error?.type || 'unknown'
+      const errorType = (paymentIntent.last_payment_error?.type || 'unknown') as string
       
       // Categorize failure type
       const isCardIssue = ['card_declined', 'insufficient_funds', 'expired_card', 'incorrect_cvc', 
                            'incorrect_number', 'generic_decline', 'lost_card', 'stolen_card'].includes(errorCode)
-      const isSystemIssue = errorType === 'api_error' || errorType === 'rate_limit_error' || errorCode === 'processing_error'
+      const isSystemIssue = (errorType === 'api_error' || errorType === 'rate_limit_error' || errorCode === 'processing_error')
       const category = isSystemIssue ? 'SYSTEM_ERROR' : isCardIssue ? 'CARD_ISSUE' : 'UNKNOWN'
       
       console.log('❌ PAYMENT INTENT FAILED:', {
@@ -471,11 +471,11 @@ export async function POST(request: NextRequest) {
           const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent)
           errorCode = paymentIntent.last_payment_error?.code || 'unknown'
           errorMessage = paymentIntent.last_payment_error?.message || 'Unknown error'
-          errorType = paymentIntent.last_payment_error?.type || 'unknown'
+          errorType = (paymentIntent.last_payment_error?.type || 'unknown') as string
           
           isCardIssue = ['card_declined', 'insufficient_funds', 'expired_card', 'incorrect_cvc', 
                         'incorrect_number', 'generic_decline', 'lost_card', 'stolen_card'].includes(errorCode)
-          isSystemIssue = errorType === 'api_error' || errorType === 'rate_limit_error' || errorCode === 'processing_error'
+          isSystemIssue = (errorType === 'api_error' || errorType === 'rate_limit_error' || errorCode === 'processing_error')
           category = isSystemIssue ? 'SYSTEM_ERROR' : isCardIssue ? 'CARD_ISSUE' : 'UNKNOWN'
         } catch (piError) {
           console.error('Error retrieving payment intent for failed checkout:', piError)
