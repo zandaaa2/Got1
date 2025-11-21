@@ -106,7 +106,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     birthday: profile.birthday || '', // Date in YYYY-MM-DD format - locked once set
     // Scout application fields
     position: profile.position || '',
-    positionArray: profile.position ? (typeof profile.position === 'string' && profile.position.includes(',') ? profile.position.split(',').map(p => p.trim()) : [profile.position].filter(Boolean)) : [],
+    positionArray: profile.position ? (typeof profile.position === 'string' && profile.position.includes(',') ? profile.position.split(',').map((p: string) => p.trim()) : [profile.position].filter(Boolean)) : [],
     work_history: profile.work_history || '',
     additional_info: profile.additional_info || '',
     // Player fields
