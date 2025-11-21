@@ -131,6 +131,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
   const [reportSuccess, setReportSuccess] = useState(false)
   const [showSignUpModal, setShowSignUpModal] = useState(false)
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
+  const [bioExpanded, setBioExpanded] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
@@ -1055,11 +1056,45 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 <h4 className="text-base md:text-lg font-bold text-black mb-1.5">
                   Standard Evaluation
                 </h4>
-                {profile.bio && (
-                  <p className="text-xs md:text-sm text-gray-600 line-clamp-2">
-                    {profile.bio}
-                  </p>
-                )}
+                {profile.bio && (() => {
+                  const bioText = profile.bio
+                  const shouldTruncate = bioText.length > 100 // Show "see more" if bio is longer than 100 chars
+                  const displayText = shouldTruncate && !bioExpanded 
+                    ? bioText.substring(0, 100).trim()
+                    : bioText
+                  
+                  return (
+                    <div className="text-xs md:text-sm text-gray-600 leading-relaxed">
+                      {shouldTruncate && !bioExpanded ? (
+                        <>
+                          <span>{displayText}</span>
+                          <span className="text-gray-400">... </span>
+                          <button
+                            onClick={() => setBioExpanded(!bioExpanded)}
+                            className="text-blue-600 hover:text-blue-700 font-medium inline cursor-pointer"
+                          >
+                            see more
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span>{displayText}</span>
+                          {shouldTruncate && (
+                            <>
+                              {' '}
+                              <button
+                                onClick={() => setBioExpanded(!bioExpanded)}
+                                className="text-blue-600 hover:text-blue-700 font-medium inline cursor-pointer"
+                              >
+                                see less
+                              </button>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Price and Turnaround in a row */}
