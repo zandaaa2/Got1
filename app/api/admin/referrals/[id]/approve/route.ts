@@ -6,12 +6,12 @@ import { createAdminClient } from '@/lib/supabase-admin'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/admin/referrals/[referralId]/approve
+ * POST /api/admin/referrals/[id]/approve
  * Admin endpoint to approve a referral (changes status from pending to approved)
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { referralId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const authResult = await requireAuth(request)
@@ -45,7 +45,7 @@ export async function POST(
         status: 'approved',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.referralId)
+      .eq('id', params.id)
       .select()
       .single()
 
