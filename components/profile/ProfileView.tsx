@@ -15,6 +15,7 @@ import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
 import AuthModal from '@/components/auth/AuthModal'
 import { collegeEntries } from '@/lib/college-data'
+import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -452,6 +453,42 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </p>
               </div>
             )}
+            {/* Player positions */}
+            {(() => {
+              let positions: string[] = []
+              try {
+                // Try to load from positions JSONB array first (new format)
+                if (profile.positions && typeof profile.positions === 'string') {
+                  positions = JSON.parse(profile.positions)
+                } else if (Array.isArray(profile.positions)) {
+                  positions = profile.positions
+                } else if (profile.position) {
+                  // Fall back to single position field (backward compatibility)
+                  positions = [profile.position]
+                }
+              } catch {
+                // If parsing fails, fall back to single position
+                if (profile.position) {
+                  positions = [profile.position]
+                }
+              }
+              
+              if (positions.length > 0) {
+                return (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {positions.map((pos) => (
+                      <span
+                        key={pos}
+                        className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                      >
+                        {pos}
+                      </span>
+                    ))}
+                  </div>
+                )
+              }
+              return null
+            })()}
           </div>
         </div>
 
@@ -506,6 +543,15 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
             </div>
           </div>
         )}
+
+        {/* College Offers Section */}
+        <div className="mb-6 md:mb-8">
+          <PlayerOffersSection
+            profileId={profile.id}
+            userId={profile.user_id}
+            isOwnProfile={isOwnProfile}
+          />
+        </div>
 
         {/* Evaluations Section */}
         <div className="mb-6 md:mb-8 relative">
@@ -896,7 +942,8 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
               </button>
             )}
           </div>
-          {(profile.position || profile.organization) && (
+          {/* For scouts: show position at organization */}
+          {profile.role === 'scout' && (profile.position || profile.organization) && (
             <p className="text-black mb-2">
               {profile.position && profile.organization
                 ? `${profile.position} at ${profile.organization}`
@@ -907,6 +954,42 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 : ''}
             </p>
           )}
+          {/* For players: show multiple positions if available, otherwise show single position */}
+          {profile.role === 'player' && (() => {
+            let positions: string[] = []
+            try {
+              // Try to load from positions JSONB array first (new format)
+              if (profile.positions && typeof profile.positions === 'string') {
+                positions = JSON.parse(profile.positions)
+              } else if (Array.isArray(profile.positions)) {
+                positions = profile.positions
+              } else if (profile.position) {
+                // Fall back to single position field (backward compatibility)
+                positions = [profile.position]
+              }
+            } catch {
+              // If parsing fails, fall back to single position
+              if (profile.position) {
+                positions = [profile.position]
+              }
+            }
+            
+            if (positions.length > 0) {
+              return (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {positions.map((pos) => (
+                    <span
+                      key={pos}
+                      className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                    >
+                      {pos}
+                    </span>
+                  ))}
+                </div>
+              )
+            }
+            return null
+          })()}
         </div>
         {!isOwnProfile && profile.role === 'scout' && currentUserId && (
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -991,7 +1074,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </div>
               </div>
 
-              {/* Positions display - if positions are selected, show them */}
+              {/* Positions display - show "All positions" if none selected */}
               {(() => {
                 let positions: string[] = []
                 try {
@@ -1003,21 +1086,27 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 } catch {
                   positions = []
                 }
-                return positions.length > 0 ? (
+                return (
                   <div className="mb-3">
                     <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
                     <div className="flex flex-wrap gap-2">
-                      {positions.map((pos) => (
-                        <span
-                          key={pos}
-                          className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
-                        >
-                          {pos}
+                      {positions.length > 0 ? (
+                        positions.map((pos) => (
+                          <span
+                            key={pos}
+                            className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                          >
+                            {pos}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                          All positions
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
-                ) : null
+                )
               })()}
 
               {/* College Connections */}

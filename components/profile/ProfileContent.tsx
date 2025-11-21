@@ -12,6 +12,7 @@ import { openCalendly30Min } from '@/lib/calendly'
 import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
 import CollegeMultiSelect from '@/components/profile/CollegeMultiSelect'
 import { collegeEntries } from '@/lib/college-data'
+import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 
 interface ProfileContentProps {
   profile: any
@@ -552,26 +553,28 @@ function MoneyDashboard({ profile }: { profile: any }) {
                     maxSelections={7}
                   />
                 </>
-              ) : (
+                ) : (
                 <div className="space-y-2">
                   {/* Display Positions */}
-                  {selectedPositions.length > 0 ? (
-                    <div>
-                      <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedPositions.map((pos) => (
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPositions.length > 0 ? (
+                        selectedPositions.map((pos) => (
                           <span
                             key={pos}
                             className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
                           >
                             {pos}
                           </span>
-                        ))}
-                      </div>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                          All positions
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 italic">No positions specified</p>
-                  )}
+                  </div>
                   {/* Display College Connections */}
                   {selectedCollegeSlugs.length > 0 ? (
                     <div>
@@ -1736,6 +1739,17 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
 
       {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
       {profile.role === 'scout' && <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />}
+
+      {/* College Offers Section - Only show for players */}
+      {profile.role === 'player' && (
+        <div className="mb-8">
+          <PlayerOffersSection
+            profileId={profile.id}
+            userId={profile.user_id}
+            isOwnProfile={true}
+          />
+        </div>
+      )}
 
       {/* Floating "How to make money" widget - only shows once for approved Stripe accounts */}
       {profile.role === 'scout' && 

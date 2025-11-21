@@ -7,6 +7,8 @@ import Modal from '@/components/shared/Modal'
 import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
+import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
+import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
 import Cropper, { type Area } from 'react-easy-crop'
@@ -44,6 +46,32 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
+  // Player position state (array for PositionMultiSelect component)
+  const [playerPositions, setPlayerPositions] = useState<string[]>(() => {
+    if (profile.role === 'player') {
+      // Try to load from positions JSONB array first (new format)
+      try {
+        if (profile.positions && typeof profile.positions === 'string') {
+          const parsed = JSON.parse(profile.positions)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed
+          }
+        } else if (Array.isArray(profile.positions) && profile.positions.length > 0) {
+          return profile.positions
+        }
+        // Fall back to single position field (backward compatibility)
+        if (profile.position) {
+          return [profile.position]
+        }
+      } catch {
+        // If parsing fails, fall back to single position field
+        if (profile.position) {
+          return [profile.position]
+        }
+      }
+    }
+    return []
+  })
   const router = useRouter()
   const supabase = createClient()
   
@@ -78,6 +106,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     birthday: profile.birthday || '', // Date in YYYY-MM-DD format - locked once set
     // Scout application fields
     position: profile.position || '',
+    positionArray: profile.position ? (typeof profile.position === 'string' && profile.position.includes(',') ? profile.position.split(',').map(p => p.trim()) : [profile.position].filter(Boolean)) : [],
     work_history: profile.work_history || '',
     additional_info: profile.additional_info || '',
     // Player fields
@@ -543,7 +572,10 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         // Keep old hudl_link for backward compatibility (use first link if exists)
         updateData.hudl_link = validHudlLinks.length > 0 ? validHudlLinks[0].link : null
         updateData.sport = validHudlLinks.length > 0 ? (validHudlLinks[0].sport || null) : null
-        updateData.position = formData.position || null
+        // Save positions as JSONB array (new format for multiple positions)
+        updateData.positions = playerPositions.length > 0 ? JSON.stringify(playerPositions) : null
+        // Keep position field with first position for backward compatibility
+        updateData.position = playerPositions.length > 0 ? playerPositions[0] : null
         updateData.school = formData.school || null
         updateData.graduation_year = formData.graduation_year ? parseInt(formData.graduation_year.toString()) : null
         updateData.graduation_month = formData.graduation_month ? parseInt(formData.graduation_month.toString()) : null
@@ -812,18 +844,14 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
               </div>
 
               <div>
-                <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
-                  Position <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="position"
-                  name="position"
-                  value={formData.position}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g., Quarterback, Point Guard"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                <PositionMultiSelect
+                  selectedPositions={playerPositions}
+                  onChange={(positions) => {
+                    setPlayerPositions(positions)
+                    // Update formData.position with first selected position for backward compatibility
+                    setFormData((prev) => ({ ...prev, position: positions.length > 0 ? positions[0] : '' }))
+                  }}
+                  label="Position"
                 />
               </div>
 
@@ -1075,6 +1103,17 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* College Offers Section - Only for players */}
+        {profile.role === 'player' && (
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <PlayerOffersSection
+              profileId={profile.id}
+              userId={profile.user_id}
+              isOwnProfile={true}
+            />
           </div>
         )}
 

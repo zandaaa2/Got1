@@ -74,6 +74,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  const [currentUserPosition, setCurrentUserPosition] = useState<string | null>(null)
+  const [playerOffers, setPlayerOffers] = useState<Map<string, Array<{ school: string; school_slug: string | null }>>>(new Map())
   const supabase = createClient()
   const { openSignUp } = useAuthModal()
   const router = useRouter()
@@ -91,7 +93,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Build query step by step to avoid any construction issues
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until')
+        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until, positions, college_connections')
         .order('full_name', { ascending: true })
 
       if (error) {
@@ -147,21 +149,60 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     loadProfiles()
   }, [loadProfiles])
 
+  // Load player offers for search functionality
+  useEffect(() => {
+    const loadPlayerOffers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('player_offers')
+          .select('profile_id, school, school_slug')
+
+        if (error) {
+          console.error('Error loading player offers:', error)
+          return
+        }
+
+        // Create a map of profile_id -> offers
+        const offersMap = new Map<string, Array<{ school: string; school_slug: string | null }>>()
+        
+        if (data) {
+          data.forEach((offer) => {
+            const existing = offersMap.get(offer.profile_id) || []
+            existing.push({
+              school: offer.school,
+              school_slug: offer.school_slug,
+            })
+            offersMap.set(offer.profile_id, existing)
+          })
+        }
+
+        console.log('✅ Loaded player offers:', offersMap.size, 'players with offers')
+        setPlayerOffers(offersMap)
+      } catch (error) {
+        console.error('Error loading player offers:', error)
+      }
+    }
+
+    loadPlayerOffers()
+  }, [supabase])
+
   // Load current user's role
   useEffect(() => {
     const loadCurrentUserRole = async () => {
       if (!session?.user?.id) {
         setCurrentUserRole(null)
+        setCurrentUserPosition(null)
         return
       }
       
       const { data } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, position')
         .eq('user_id', session.user.id)
         .maybeSingle()
       
       setCurrentUserRole(data?.role || null)
+      setCurrentUserPosition(data?.position || null)
     }
     
     loadCurrentUserRole()
@@ -232,13 +273,16 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return 'Player'
   }, [])
 
-  const normalizedColleges = useMemo(() =>
-    colleges.map((college) => ({
+  const normalizedColleges = useMemo(() => {
+    if (!colleges || !Array.isArray(colleges)) {
+      return []
+    }
+    return colleges.map((college) => ({
       ...college,
       normalizedName: college.name.toLowerCase(),
       normalizedSimple: college.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
-    })),
-  [])
+    }))
+  }, [])
 
   const findCollegeMatch = useCallback((organization: string) => {
     const normalized = organization.toLowerCase().trim()
@@ -348,6 +392,48 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     const price = isScout ? (profile.price_per_eval ?? 99) : null
     const turnaround = isScout ? (profile.turnaround_time || '72 hrs') : null
     const collegeMatch = profile.organization ? findCollegeMatch(profile.organization) : null
+    
+    // Check if this scout is recommended for the current player
+    const isRecommended = (() => {
+      if (currentUserRole !== 'player' || !currentUserPosition || !isScout) return false
+      
+      let scoutPositions: string[] = []
+      try {
+        if (profile.positions && typeof profile.positions === 'string') {
+          scoutPositions = JSON.parse(profile.positions)
+        } else if (Array.isArray(profile.positions)) {
+          scoutPositions = profile.positions
+        }
+      } catch {
+        scoutPositions = []
+      }
+      
+      // Only recommend if scout has specific positions selected (not "All") AND player's position matches
+      // If scout has no positions selected (means "All"), don't recommend
+      if (scoutPositions.length === 0) return false
+      
+      // Check if player's position matches any scout position
+      return scoutPositions.some(pos => 
+        pos.toLowerCase() === currentUserPosition.toLowerCase() ||
+        currentUserPosition.toLowerCase().includes(pos.toLowerCase()) ||
+        pos.toLowerCase().includes(currentUserPosition.toLowerCase())
+      )
+    })()
+    
+    // Get scout's positions for display
+    let scoutPositions: string[] = []
+    if (isScout) {
+      try {
+        if (profile.positions && typeof profile.positions === 'string') {
+          scoutPositions = JSON.parse(profile.positions)
+        } else if (Array.isArray(profile.positions)) {
+          scoutPositions = profile.positions
+        }
+      } catch {
+        scoutPositions = []
+      }
+    }
+    
     return (
       <div
         key={profile.id}
@@ -356,6 +442,19 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       >
         {/* Subtle gradient accent at top */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Recommended for you tag */}
+        {isRecommended && (
+          <div className="absolute top-3 left-3 z-10">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold shadow-sm border border-green-200">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              Recommended for you
+            </span>
+          </div>
+        )}
         
         <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mb-4 shadow-md group-hover:shadow-lg transition-shadow duration-300">
           {avatarUrl ? (
@@ -391,101 +490,97 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           )}
         </div>
 
-        {/* Position or organization */}
-        {profile.position && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <p className="text-sm font-medium text-gray-700">{profile.position}</p>
-          </div>
-        )}
+        <p className="text-sm text-gray-600 mb-3">{getProfileSubtitle(profile)}</p>
 
-        <p className="text-sm text-gray-600 mb-3 min-h-[1.25rem]">{getProfileSubtitle(profile)}</p>
-
-        {/* College logo section - always render to maintain consistent spacing */}
-        <div className="flex items-center justify-center gap-2 mb-3 min-h-[2rem]">
-          {isScout && collegeMatch?.logo && (
-            <>
-              <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shadow-sm">
-                <Image
-                  src={collegeMatch.logo}
-                  alt={collegeMatch.name}
-                  width={32}
-                  height={32}
-                  className="object-contain w-full h-full"
-                  unoptimized
-                />
-              </div>
-              <p className="text-xs font-medium text-gray-600">{collegeMatch.name}</p>
-            </>
-          )}
-        </div>
-
-        {/* College connections display - new format */}
-        {isScout && (() => {
-          let collegeSlugs: string[] = []
-          try {
-            if (profile.college_connections && typeof profile.college_connections === 'string') {
-              collegeSlugs = JSON.parse(profile.college_connections)
-            } else if (Array.isArray(profile.college_connections)) {
-              collegeSlugs = profile.college_connections
-            }
-          } catch {
-            collegeSlugs = []
-          }
-          return collegeSlugs.length > 0 ? (
-            <div className="mb-3 px-2">
-              <p className="text-xs text-gray-600 mb-2 text-center">
-                This scout's connections include people at:
-              </p>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                {collegeSlugs.slice(0, 3).map((slug) => {
-                  const college = normalizedColleges.find((c) => c.slug === slug)
-                  if (!college) return null
-                  return (
-                    <div
-                      key={slug}
-                      className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 overflow-hidden flex items-center justify-center shadow-sm"
-                    >
-                      {college.logo ? (
-                        <Image
-                          src={college.logo}
-                          alt={college.name}
-                          width={32}
-                          height={32}
-                          className="object-contain w-full h-full"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs font-semibold bg-gray-100 text-gray-600">
-                          {college.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-                {collegeSlugs.length > 3 && (
-                  <span className="text-xs text-gray-500 font-medium">and more</span>
+        {/* Positions and Connections */}
+        {isScout && (
+          <div className="mb-4 w-full space-y-2.5">
+            {/* Positions */}
+            <div className="text-center">
+              <p className="text-xs text-gray-500 mb-1">Positions</p>
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                {scoutPositions.length > 0 ? (
+                  <>
+                    {scoutPositions.slice(0, 3).map((pos) => (
+                      <span
+                        key={pos}
+                        className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                      >
+                        {pos}
+                      </span>
+                    ))}
+                    {scoutPositions.length > 3 && (
+                      <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                        +{scoutPositions.length - 3}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                    All positions
+                  </span>
                 )}
               </div>
             </div>
-          ) : null
-        })()}
+            
+            {/* Connections */}
+            {(() => {
+              let collegeSlugs: string[] = []
+              try {
+                if (profile.college_connections && typeof profile.college_connections === 'string') {
+                  collegeSlugs = JSON.parse(profile.college_connections)
+                } else if (Array.isArray(profile.college_connections)) {
+                  collegeSlugs = profile.college_connections
+                }
+              } catch {
+                collegeSlugs = []
+              }
+              return collegeSlugs.length > 0 ? (
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Connections with</p>
+                  <div className="flex items-center justify-center gap-1 -space-x-1">
+                    {collegeSlugs.slice(0, 3).map((slug) => {
+                      const college = normalizedColleges.find((c) => c.slug === slug)
+                      if (!college) return null
+                      return (
+                        <div
+                          key={slug}
+                          className="w-7 h-7 rounded-full bg-white border-2 border-white overflow-hidden flex items-center justify-center shadow-sm"
+                          title={college.name}
+                        >
+                          {college.logo ? (
+                            <Image
+                              src={college.logo}
+                              alt={college.name}
+                              width={28}
+                              height={28}
+                              className="object-contain w-full h-full"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-semibold bg-gray-100 text-gray-600">
+                              {college.name.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {collegeSlugs.length > 3 && (
+                      <span className="text-xs text-gray-500 font-medium ml-1">+{collegeSlugs.length - 3}</span>
+                    )}
+                  </div>
+                </div>
+              ) : null
+            })()}
+          </div>
+        )}
 
-        {/* Price and turnaround with icon */}
+        {/* Simplified Price and Turnaround */}
         {isScout && (
-          <div className="flex items-center justify-center gap-3 mb-5 px-4 py-2 bg-blue-50 rounded-full border border-blue-100">
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-blue-600">${price}</span>
-            </div>
-            <div className="h-4 w-px bg-blue-200" />
-            <div className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm font-semibold text-gray-700">{turnaround}</span>
-            </div>
+          <div className="flex items-center justify-center gap-2 mb-4 text-sm text-gray-600">
+            <span className="font-semibold text-black">${price}</span>
+            <span>•</span>
+            <span>{turnaround}</span>
           </div>
         )}
 
@@ -567,12 +662,125 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Search query filter
       const query = trimmedQuery
       
-      const matchesSearch = (
+      // If no query, don't filter (show all that match role)
+      if (!query) {
+        const matchesRole = roleFilter === 'all' || profile.role === roleFilter
+        return matchesRole
+      }
+      
+      // Basic profile search
+      const matchesBasicSearch = (
         profile.full_name?.toLowerCase().includes(query) ||
         profile.organization?.toLowerCase().includes(query) ||
         profile.school?.toLowerCase().includes(query) ||
         profile.position?.toLowerCase().includes(query)
       )
+      
+      // Check if search matches any college/university (for connections and offers)
+      let matchesCollegeConnection = false
+      
+      // For players: check if they have offers from the searched university
+      if (profile.role === 'player' && query) {
+        const offers = playerOffers.get(profile.id) || []
+        if (offers.length > 0) {
+          matchesCollegeConnection = offers.some((offer) => {
+            if (!offer.school) return false
+            
+            const offerSchoolLower = offer.school.toLowerCase().trim()
+            const queryLower = query.toLowerCase().trim()
+            
+            // Check if the offer's school name matches the search query directly
+            if (offerSchoolLower.includes(queryLower) || queryLower.includes(offerSchoolLower)) {
+              return true
+            }
+            
+            // If we have normalized colleges, check against college database
+            if (normalizedColleges && normalizedColleges.length > 0) {
+              // Check if the school slug matches any college that matches the search
+              if (offer.school_slug) {
+                const college = normalizedColleges.find((c) => c.slug === offer.school_slug)
+                if (college) {
+                  return (
+                    college.name.toLowerCase().includes(queryLower) ||
+                    (college.conference && college.conference.toLowerCase().includes(queryLower)) ||
+                    college.slug.toLowerCase().includes(queryLower)
+                  )
+                }
+              }
+              
+              // Try to match the school name to a college in the database
+              for (const college of normalizedColleges) {
+                const collegeNameLower = college.name.toLowerCase()
+                
+                // Check if offer school name matches or contains college name (or vice versa)
+                if (collegeNameLower === offerSchoolLower || 
+                    offerSchoolLower.includes(collegeNameLower) || 
+                    collegeNameLower.includes(offerSchoolLower)) {
+                  // If we found a match between offer school and a college, check if that college matches the search
+                  const collegeMatchesSearch = (
+                    college.name.toLowerCase().includes(queryLower) ||
+                    (college.conference && college.conference.toLowerCase().includes(queryLower)) ||
+                    college.slug.toLowerCase().includes(queryLower)
+                  )
+                  if (collegeMatchesSearch) {
+                    return true
+                  }
+                }
+              }
+            }
+            
+            return false
+          })
+        }
+      }
+      
+      // For scouts: check if they have connections with the searched university
+      if (profile.role === 'scout' && query && normalizedColleges && normalizedColleges.length > 0) {
+        // Check if profile has connections that match the search
+        let collegeSlugs: string[] = []
+        try {
+          if (profile.college_connections && typeof profile.college_connections === 'string') {
+            collegeSlugs = JSON.parse(profile.college_connections)
+          } else if (Array.isArray(profile.college_connections)) {
+            collegeSlugs = profile.college_connections
+          }
+        } catch {
+          collegeSlugs = []
+        }
+        
+        // Check if any connected college matches the search query
+        if (collegeSlugs.length > 0) {
+          matchesCollegeConnection = collegeSlugs.some(slug => {
+            if (!slug) return false
+            const college = normalizedColleges.find(c => c && c.slug === slug)
+            if (!college || !college.name) return false
+            return (
+              college.name.toLowerCase().includes(query) ||
+              (college.conference && college.conference.toLowerCase().includes(query)) ||
+              slug.toLowerCase().includes(query)
+            )
+          })
+        }
+        
+        // Also check if the organization (college they work for) matches
+        if (!matchesCollegeConnection && profile.organization) {
+          try {
+            const orgMatch = findCollegeMatch(profile.organization)
+            if (orgMatch && orgMatch.name) {
+              matchesCollegeConnection = (
+                orgMatch.name.toLowerCase().includes(query) ||
+                (orgMatch.conference && orgMatch.conference.toLowerCase().includes(query)) ||
+                (orgMatch.slug && orgMatch.slug.toLowerCase().includes(query))
+              )
+            }
+          } catch (error) {
+            // Silently fail if there's an error matching
+            console.error('Error matching college:', error)
+          }
+        }
+      }
+      
+      const matchesSearch = matchesBasicSearch || matchesCollegeConnection
       
       // Role filter
       const matchesRole = roleFilter === 'all' || profile.role === roleFilter
@@ -586,27 +794,73 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       const scouts = filtered.filter(p => p.role === 'scout')
       const nonScouts = filtered.filter(p => p.role !== 'scout')
       
-      // Shuffle scouts using Fisher-Yates algorithm with a seed based on current time
-      // This ensures different order each time the component renders
-      const shuffledScouts = [...scouts]
-      for (let i = shuffledScouts.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledScouts[i], shuffledScouts[j]] = [shuffledScouts[j], shuffledScouts[i]]
+      // Helper function to shuffle array
+      const shuffleArray = <T,>(array: T[]): T[] => {
+        const shuffled = [...array]
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        }
+        return shuffled
       }
       
-      // Return scouts first (randomized), then others
-      return [...shuffledScouts, ...nonScouts]
+      // Check if current user is a player with a position
+      if (currentUserRole === 'player' && currentUserPosition) {
+        // Separate recommended and non-recommended scouts
+        const recommended: Profile[] = []
+        const notRecommended: Profile[] = []
+        
+        scouts.forEach(scout => {
+          let scoutPositions: string[] = []
+          try {
+            if (scout.positions && typeof scout.positions === 'string') {
+              scoutPositions = JSON.parse(scout.positions)
+            } else if (Array.isArray(scout.positions)) {
+              scoutPositions = scout.positions
+            }
+          } catch {
+            scoutPositions = []
+          }
+          
+          // Only recommend if scout has specific positions selected (not "All") AND player's position matches
+          // If scout has no positions selected (means "All"), don't recommend
+          if (scoutPositions.length === 0) {
+            notRecommended.push(scout)
+          } else {
+            // Check if player's position matches any scout position
+            const isRecommended = scoutPositions.some(pos => 
+              pos.toLowerCase() === currentUserPosition.toLowerCase() ||
+              currentUserPosition.toLowerCase().includes(pos.toLowerCase()) ||
+              pos.toLowerCase().includes(currentUserPosition.toLowerCase())
+            )
+            
+            if (isRecommended) {
+              recommended.push(scout)
+            } else {
+              notRecommended.push(scout)
+            }
+          }
+        })
+        
+        // Shuffle both groups separately and return recommended first
+        return [...shuffleArray(recommended), ...shuffleArray(notRecommended), ...nonScouts]
+      } else {
+        // No player position to match against, just randomize all scouts
+        return [...shuffleArray(scouts), ...nonScouts]
+      }
     }
     
     return filtered
-  }, [profiles, trimmedQuery, roleFilter, isProduction])
+  }, [profiles, trimmedQuery, roleFilter, isProduction, currentUserRole, currentUserPosition, normalizedColleges, findCollegeMatch, playerOffers])
 
   const filteredTeams = teamEntries.filter((team) => {
     const query = trimmedQuery
+    if (!query) return true
     return (
       team.name.toLowerCase().includes(query) ||
-      team.conference?.toLowerCase().includes(query || '') ||
-      team.division?.toLowerCase().includes(query || '')
+      team.conference?.toLowerCase().includes(query) ||
+      team.division?.toLowerCase().includes(query) ||
+      team.slug.toLowerCase().includes(query)
     )
   })
 
