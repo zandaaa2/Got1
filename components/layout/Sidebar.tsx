@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import Modal from '@/components/shared/Modal'
-import { openCalendly30Min } from '@/lib/calendly'
+import { openCalendly15Min } from '@/lib/calendly'
 
 interface SidebarProps {
-  activePage?: 'whats-this' | 'browse' | 'my-evals' | 'profile' | 'notifications' | 'make-money'
+  activePage?: 'whats-this' | 'browse' | 'my-evals' | 'profile' | 'notifications' | 'make-money' | 'help'
   onToggle?: (isCollapsed: boolean) => void
 }
 
@@ -35,6 +35,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     pathname === '/profile' ? 'profile' :
     pathname === '/notifications' ? 'notifications' :
     pathname === '/make-money' ? 'make-money' :
+    pathname === '/help' ? 'help' :
     undefined
   )
   
@@ -278,38 +279,37 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Make Money and Talk to Us Buttons - Bottom left */}
+      {/* Bottom left buttons - Book call, Talk to us, Help */}
       <div className={`flex-shrink-0 p-4 md:p-6 pt-0 ${isMobile ? '' : isCollapsed ? 'px-2' : ''}`}>
         <nav className="space-y-2">
-          {/* REFERRAL PROCESS TEMPORARILY DISABLED */}
-          {/* Only show Make Money link if user is not a player */}
-          {/* {userRole !== 'player' && (
-            <Link
-              href="/make-money"
-              onClick={() => isMobile && setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-                currentActivePage === 'make-money'
-                  ? 'bg-gray-100 text-black'
-                  : 'text-black hover:bg-gray-50'
-              } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
-              title={(isMobile || !isCollapsed) ? undefined : 'Make Money'}
+          {/* Book a 15 min call */}
+          <button
+            onClick={() => {
+              openCalendly15Min()
+              if (isMobile) setIsMobileOpen(false)
+            }}
+            className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal text-black hover:bg-gray-50 ${
+              (isMobile || !isCollapsed) ? '' : 'justify-center'
+            }`}
+            title={(isMobile || !isCollapsed) ? undefined : 'Book a 15 min call'}
+          >
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {(isMobile || !isCollapsed) && <span>Make Money</span>}
-            </Link>
-          )} */}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            {(isMobile || !isCollapsed) && <span>Book a 15 min call</span>}
+          </button>
+
+          {/* Talk to us */}
           <button
             onClick={() => setShowTalkToUsModal(true)}
             className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal text-black hover:bg-gray-50 ${
@@ -332,6 +332,33 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
             </svg>
             {(isMobile || !isCollapsed) && <span>Talk to us</span>}
           </button>
+
+          {/* Help */}
+          <Link
+            href="/help"
+            onClick={() => isMobile && setIsMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
+              currentActivePage === 'help'
+                ? 'bg-gray-100 text-black'
+                : 'text-black hover:bg-gray-50'
+            } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
+            title={(isMobile || !isCollapsed) ? undefined : 'Help'}
+          >
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
+            </svg>
+            {(isMobile || !isCollapsed) && <span>Help</span>}
+          </Link>
         </nav>
       </div>
     </aside>
@@ -341,51 +368,22 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
       <Modal isOpen={showTalkToUsModal} onClose={() => setShowTalkToUsModal(false)} title="Talk to us">
         <div className="space-y-4">
           <p className="text-gray-600 text-sm">
-            Choose how you'd like to get help:
+            Get instant help with our chatbot:
           </p>
           
           <button
             onClick={() => {
-              openCalendly30Min()
+              // Open chatbot widget (Crisp, Intercom, etc.)
+              if (typeof window !== 'undefined' && (window as any).$crisp) {
+                (window as any).$crisp.push(['do', 'chat:open'])
+              } else {
+                alert('Chatbot coming soon! For now, please use the "Book a 15 min call" option.')
+              }
               setShowTalkToUsModal(false)
             }}
             className="w-full interactive-press flex items-center gap-3 p-4 rounded-lg border-2 border-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
           >
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-black">Set up a call</h3>
-              <p className="text-sm text-gray-600">Schedule a 30-minute call to discuss your needs</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => {
-              // TODO: Open chatbot widget (Crisp, Intercom, etc.)
-              // For now, this is a placeholder
-              if (typeof window !== 'undefined' && (window as any).$crisp) {
-                (window as any).$crisp.push(['do', 'chat:open'])
-              } else {
-                alert('Chatbot coming soon! For now, please use the "Set up a call" option.')
-              }
-              setShowTalkToUsModal(false)
-            }}
-            className="w-full interactive-press flex items-center gap-3 p-4 rounded-lg border-2 border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-          >
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center">
               <svg
                 className="w-5 h-5 text-white"
                 fill="none"
