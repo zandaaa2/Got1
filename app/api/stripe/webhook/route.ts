@@ -628,7 +628,7 @@ export async function POST(request: NextRequest) {
       console.log('🔔 Stripe Capability Updated:', {
         account_id: accountId,
         capability_id: capability.id,
-        capability_type: capability.type,
+        capability_type: capability.id, // Capability.id contains the type (e.g., 'card_payments', 'transfers')
         status: capability.status,
         requirements: capability.requirements ? {
           currently_due: capability.requirements.currently_due,
@@ -653,7 +653,7 @@ export async function POST(request: NextRequest) {
         }
         
         let issueType = 'capability_disabled'
-        let issueDetails = `The ${capability.type} capability on your Stripe Connect account is ${capability.status}.`
+        let issueDetails = `The ${capability.id} capability on your Stripe Connect account is ${capability.status}.`
         
         if (capability.requirements) {
           if (capability.requirements.past_due && capability.requirements.past_due.length > 0) {
@@ -680,11 +680,11 @@ export async function POST(request: NextRequest) {
               userId: profile.user_id,
               type: 'stripe_account_issue',
               title: 'Stripe Account Capability Issue',
-              message: `The ${capability.type} capability on your Stripe account needs attention.`,
+              message: `The ${capability.id} capability on your Stripe account needs attention.`,
               link: '/profile',
               metadata: {
                 stripe_account_id: accountId,
-                capability_type: capability.type,
+                capability_type: capability.id, // Capability.id contains the type (e.g., 'card_payments', 'transfers')
                 capability_status: capability.status,
                 issue_type: issueType,
               },
