@@ -533,6 +533,74 @@ ${EMAIL_HEADER}
 }
 
 /**
+ * Sends an email notification to a scout when their Stripe Connect account has issues or restrictions.
+ * 
+ * @param userEmail - The scout's email address
+ * @param userName - The scout's name
+ * @param issueType - Type of issue (e.g., 'restricted', 'payouts_disabled', 'capability_disabled')
+ * @param issueDetails - Additional details about the issue
+ */
+export async function sendStripeAccountIssueEmail(
+  userEmail: string,
+  userName: string,
+  issueType: string,
+  issueDetails?: string
+): Promise<void> {
+  const profileUrl = `${getBaseUrl()}/profile`
+  
+  let issueTitle = 'Stripe Account Issue'
+  let issueMessage = 'There is an issue with your Stripe Connect account that may affect your ability to receive payouts.'
+  
+  switch (issueType) {
+    case 'restricted':
+      issueTitle = 'Stripe Account Restriction'
+      issueMessage = 'Your Stripe Connect account has been restricted. Payouts may be paused until this is resolved.'
+      break
+    case 'payouts_disabled':
+      issueTitle = 'Payouts Disabled'
+      issueMessage = 'Payouts have been disabled on your Stripe Connect account. You will not receive payments until this is resolved.'
+      break
+    case 'capability_disabled':
+      issueTitle = 'Account Capability Disabled'
+      issueMessage = 'A critical capability has been disabled on your Stripe Connect account. This may prevent you from receiving payments.'
+      break
+    case 'charges_disabled':
+      issueTitle = 'Charges Disabled'
+      issueMessage = 'Your Stripe Connect account can no longer accept charges. Players will not be able to pay for evaluations.'
+      break
+  }
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
+      <h2 style="color: #b91c1c; margin-bottom: 20px;">⚠️ ${issueTitle}</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${userName || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        ${issueMessage}
+      </p>
+      ${issueDetails ? `
+      <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0; color: #b91c1c; white-space: pre-wrap;">${issueDetails}</p>
+      </div>
+      ` : ''}
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Please sign in to your Stripe Connect account dashboard to review the issue and take any required action. Once resolved, payouts will resume automatically.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${profileUrl}" style="display: inline-block; background: #111827; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Stripe Dashboard</a>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        If you have questions about this issue, reply to this email and our team can help guide you through the resolution process.
+      </p>
+    </div>
+  `
+
+  await sendEmail(userEmail, `⚠️ ${issueTitle} - Action Required`, html)
+}
+
+/**
  * Sends an email notification to the admin when a new scout application is submitted.
  * This is the existing function from scout-application/submit/route.ts, moved here for consistency.
  * 

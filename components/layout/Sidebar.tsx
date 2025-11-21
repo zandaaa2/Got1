@@ -281,8 +281,9 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
       {/* Make Money and Talk to Us Buttons - Bottom left */}
       <div className={`flex-shrink-0 p-4 md:p-6 pt-0 ${isMobile ? '' : isCollapsed ? 'px-2' : ''}`}>
         <nav className="space-y-2">
+          {/* REFERRAL PROCESS TEMPORARILY DISABLED */}
           {/* Only show Make Money link if user is not a player */}
-          {userRole !== 'player' && (
+          {/* {userRole !== 'player' && (
             <Link
               href="/make-money"
               onClick={() => isMobile && setIsMobileOpen(false)}
@@ -308,7 +309,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
               </svg>
               {(isMobile || !isCollapsed) && <span>Make Money</span>}
             </Link>
-          )}
+          )} */}
           <button
             onClick={() => setShowTalkToUsModal(true)}
             className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal text-black hover:bg-gray-50 ${

@@ -9,7 +9,7 @@ import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 export default async function UserSetupPage({
   searchParams,
 }: {
-  searchParams: { ref?: string }
+  searchParams: { ref?: string } // REFERRAL PROCESS TEMPORARILY DISABLED - ref param kept for compatibility but not used
 }) {
   const supabase = createServerClient()
   const {
@@ -56,11 +56,11 @@ export default async function UserSetupPage({
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
       <DynamicLayout header={headerContent}>
+        {/* REFERRAL PROCESS TEMPORARILY DISABLED - referrerId prop removed */}
         <UserSetupForm
           userEmail={user?.email || ''}
           userName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
           userAvatar={sanitizedAvatar || ''}
-          referrerId={searchParams.ref || undefined}
         />
       </DynamicLayout>
     </div>

@@ -3,6 +3,8 @@ import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createNotification } from '@/lib/notifications'
+import { getUserEmail } from '@/lib/supabase-admin'
+import { sendStripeAccountIssueEmail } from '@/lib/email'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -329,40 +331,26 @@ export async function POST(request: NextRequest) {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       const paymentIntentId = paymentIntent.id
       
-      if (paymentIntentId) {
-        try {
-          // Find evaluation by payment_intent_id
-          const { data: evaluation } = await adminSupabase
-            .from('evaluations')
-            .select('*')
-            .eq('payment_intent_id', paymentIntentId)
-            .maybeSingle()
-
-          if (evaluation) {
-            // Create in-app notification for player about payment failure
-            await createNotification({
-              userId: evaluation.player_id,
-              type: 'payment_failed',
-              title: 'Payment Failed',
-              message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation could not be processed. Please try again.`,
-              link: `/evaluations/${evaluation.id}`,
-              metadata: {
-                evaluation_id: evaluation.id,
-                amount: evaluation.price,
-                payment_intent_id: paymentIntentId,
-              },
-            })
-            // Payment failed notification sent
-          }
-        } catch (notificationError) {
-          console.error('Error creating payment failed notification:', notificationError)
-          // Don't fail the webhook if notification fails
-        }
-      }
-    } else if (event.type === 'charge.failed') {
-      // Handle charge failure (alternative event type)
-      const charge = event.data.object as Stripe.Charge
-      const paymentIntentId = charge.payment_intent as string
+      // Extract failure details
+      const errorCode = paymentIntent.last_payment_error?.code || 'unknown'
+      const errorMessage = paymentIntent.last_payment_error?.message || 'Unknown error'
+      const errorType = paymentIntent.last_payment_error?.type || 'unknown'
+      
+      // Categorize failure type
+      const isCardIssue = ['card_declined', 'insufficient_funds', 'expired_card', 'incorrect_cvc', 
+                           'incorrect_number', 'generic_decline', 'lost_card', 'stolen_card'].includes(errorCode)
+      const isSystemIssue = errorType === 'api_error' || errorType === 'rate_limit_error' || errorCode === 'processing_error'
+      const category = isSystemIssue ? 'SYSTEM_ERROR' : isCardIssue ? 'CARD_ISSUE' : 'UNKNOWN'
+      
+      console.log('❌ PAYMENT INTENT FAILED:', {
+        payment_intent_id: paymentIntentId,
+        amount: paymentIntent.amount / 100,
+        currency: paymentIntent.currency,
+        failure_reason: errorCode,
+        failure_message: errorMessage,
+        error_type: errorType,
+        category: category,
+      })
       
       if (paymentIntentId) {
         try {
@@ -379,19 +367,331 @@ export async function POST(request: NextRequest) {
               userId: evaluation.player_id,
               type: 'payment_failed',
               title: 'Payment Failed',
-              message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation could not be processed. Please try again.`,
+              message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation could not be processed. ${errorMessage}. Please try again.`,
               link: `/evaluations/${evaluation.id}`,
               metadata: {
                 evaluation_id: evaluation.id,
                 amount: evaluation.price,
                 payment_intent_id: paymentIntentId,
+                error_code: errorCode,
+                error_message: errorMessage,
+                error_type: errorType,
+                is_card_issue: isCardIssue,
+                is_system_issue: isSystemIssue,
+                category: category,
               },
             })
-            // Payment failed notification sent
+            console.log('✅ Payment failure notification sent to player:', evaluation.player_id, `[${category}]`)
+          } else {
+            console.warn('⚠️ No evaluation found for failed payment intent:', paymentIntentId, `[${category}]`)
           }
         } catch (notificationError) {
           console.error('Error creating payment failed notification:', notificationError)
           // Don't fail the webhook if notification fails
+        }
+      }
+    } else if (event.type === 'charge.failed') {
+      // Handle charge failure (alternative event type)
+      const charge = event.data.object as Stripe.Charge
+      const paymentIntentId = charge.payment_intent as string
+      
+      // Extract failure details
+      const failureCode = charge.failure_code || 'unknown'
+      const failureMessage = charge.failure_message || 'Unknown error'
+      
+      // Categorize failure type
+      const isCardIssue = ['card_declined', 'insufficient_funds', 'expired_card', 'incorrect_cvc', 
+                           'incorrect_number', 'generic_decline', 'lost_card', 'stolen_card'].includes(failureCode)
+      const isSystemIssue = failureCode === 'api_error' || failureCode === 'rate_limit_error' || failureCode === 'processing_error'
+      const category = isSystemIssue ? 'SYSTEM_ERROR' : isCardIssue ? 'CARD_ISSUE' : 'UNKNOWN'
+      
+      console.log('❌ CHARGE FAILED:', {
+        charge_id: charge.id,
+        payment_intent_id: paymentIntentId,
+        amount: charge.amount / 100,
+        currency: charge.currency,
+        failure_code: failureCode,
+        failure_message: failureMessage,
+        category: category,
+      })
+      
+      if (paymentIntentId) {
+        try {
+          // Find evaluation by payment_intent_id
+          const { data: evaluation } = await adminSupabase
+            .from('evaluations')
+            .select('*')
+            .eq('payment_intent_id', paymentIntentId)
+            .maybeSingle()
+
+          if (evaluation) {
+            // Create in-app notification for player about payment failure
+            await createNotification({
+              userId: evaluation.player_id,
+              type: 'payment_failed',
+              title: 'Payment Failed',
+              message: `Your payment of $${evaluation.price.toFixed(2)} for the evaluation could not be processed. ${failureMessage}. Please try again.`,
+              link: `/evaluations/${evaluation.id}`,
+              metadata: {
+                evaluation_id: evaluation.id,
+                amount: evaluation.price,
+                payment_intent_id: paymentIntentId,
+                error_code: failureCode,
+                error_message: failureMessage,
+                is_card_issue: isCardIssue,
+                is_system_issue: isSystemIssue,
+                category: category,
+              },
+            })
+            console.log('✅ Payment failure notification sent to player:', evaluation.player_id, `[${category}]`)
+          } else {
+            console.warn('⚠️ No evaluation found for failed charge:', charge.id, paymentIntentId, `[${category}]`)
+          }
+        } catch (notificationError) {
+          console.error('Error creating payment failed notification:', notificationError)
+          // Don't fail the webhook if notification fails
+        }
+      }
+    } else if (event.type === 'checkout.session.async_payment_failed') {
+      // Handle checkout session payment failure
+      const session = event.data.object as Stripe.Checkout.Session
+      const playerId = session.metadata?.player_id
+      const priceStr = session.metadata?.price
+      
+      // Get payment intent to extract failure details
+      let errorCode = 'unknown'
+      let errorMessage = 'Unknown error'
+      let errorType = 'unknown'
+      let isCardIssue = false
+      let isSystemIssue = false
+      let category = 'UNKNOWN'
+      
+      if (session.payment_intent && typeof session.payment_intent === 'string') {
+        try {
+          const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent)
+          errorCode = paymentIntent.last_payment_error?.code || 'unknown'
+          errorMessage = paymentIntent.last_payment_error?.message || 'Unknown error'
+          errorType = paymentIntent.last_payment_error?.type || 'unknown'
+          
+          isCardIssue = ['card_declined', 'insufficient_funds', 'expired_card', 'incorrect_cvc', 
+                        'incorrect_number', 'generic_decline', 'lost_card', 'stolen_card'].includes(errorCode)
+          isSystemIssue = errorType === 'api_error' || errorType === 'rate_limit_error' || errorCode === 'processing_error'
+          category = isSystemIssue ? 'SYSTEM_ERROR' : isCardIssue ? 'CARD_ISSUE' : 'UNKNOWN'
+        } catch (piError) {
+          console.error('Error retrieving payment intent for failed checkout:', piError)
+        }
+      }
+      
+      console.log('❌ CHECKOUT SESSION PAYMENT FAILED:', {
+        checkout_session_id: session.id,
+        payment_status: session.payment_status,
+        player_id: playerId,
+        amount: priceStr ? parseFloat(priceStr) : 0,
+        failure_reason: errorCode,
+        failure_message: errorMessage,
+        error_type: errorType,
+        category: category,
+      })
+      
+      if (playerId) {
+        try {
+          await createNotification({
+            userId: playerId,
+            type: 'payment_failed',
+            title: 'Payment Failed',
+            message: `Your payment of $${priceStr ? parseFloat(priceStr).toFixed(2) : '0.00'} could not be processed. ${errorMessage}. Please try again.`,
+            link: '/browse',
+            metadata: {
+              checkout_session_id: session.id,
+              scout_id: session.metadata?.scout_id,
+              amount: priceStr ? parseFloat(priceStr) : 0,
+              error_code: errorCode,
+              error_message: errorMessage,
+              error_type: errorType,
+              is_card_issue: isCardIssue,
+              is_system_issue: isSystemIssue,
+              category: category,
+            },
+          })
+          console.log('✅ Payment failure notification sent to player:', playerId, `[${category}]`)
+        } catch (error) {
+          console.error('Error creating payment failed notification:', error)
+        }
+      } else {
+        console.warn('⚠️ No player_id in checkout session metadata for failed payment:', session.id, `[${category}]`)
+      }
+    } else if (event.type === 'account.updated') {
+      // Handle Stripe Connect account updates (restrictions, requirements, etc.)
+      const account = event.data.object as Stripe.Account
+      const accountId = account.id
+      
+      console.log('🔔 Stripe Account Updated:', {
+        account_id: accountId,
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
+        requirements: account.requirements ? {
+          currently_due: account.requirements.currently_due,
+          past_due: account.requirements.past_due,
+          eventually_due: account.requirements.eventually_due,
+        } : null,
+      })
+      
+      // Find the user with this Stripe account ID
+      const { data: profile } = await adminSupabase
+        .from('profiles')
+        .select('user_id, full_name, email, role')
+        .eq('stripe_account_id', accountId)
+        .maybeSingle()
+      
+      if (!profile || profile.role !== 'scout') {
+        console.log('⚠️ No scout profile found for Stripe account:', accountId)
+        return NextResponse.json({ received: true })
+      }
+      
+      // Check for issues
+      const issues: string[] = []
+      let issueType = 'unknown'
+      let issueDetails = ''
+      
+      // Check if account is restricted
+      if (!account.charges_enabled || !account.payouts_enabled || !account.details_submitted) {
+        if (!account.charges_enabled) {
+          issues.push('Charges are disabled on your account')
+          issueType = 'charges_disabled'
+        }
+        if (!account.payouts_enabled) {
+          issues.push('Payouts are disabled on your account')
+          issueType = 'payouts_disabled'
+        }
+        if (!account.details_submitted) {
+          issues.push('Account details need to be submitted')
+          issueType = 'details_missing'
+        }
+      }
+      
+      // Check for restrictions
+      if (account.requirements) {
+        const hasPastDue = account.requirements.past_due && account.requirements.past_due.length > 0
+        const hasCurrentlyDue = account.requirements.currently_due && account.requirements.currently_due.length > 0
+        
+        if (hasPastDue || hasCurrentlyDue) {
+          issueType = 'restricted'
+          if (hasPastDue) {
+            issues.push(`Past due requirements: ${account.requirements.past_due.join(', ')}`)
+          }
+          if (hasCurrentlyDue) {
+            issues.push(`Required information needed: ${account.requirements.currently_due.join(', ')}`)
+          }
+        }
+      }
+      
+      // If there are issues, send email
+      if (issues.length > 0) {
+        issueDetails = issues.join('\n\n')
+        
+        try {
+          const userEmail = await getUserEmail(profile.user_id)
+          if (userEmail) {
+            await sendStripeAccountIssueEmail(
+              userEmail,
+              profile.full_name || 'there',
+              issueType,
+              issueDetails
+            )
+            console.log('✅ Stripe account issue email sent to scout:', userEmail)
+            
+            // Also create in-app notification
+            await createNotification({
+              userId: profile.user_id,
+              type: 'stripe_account_issue',
+              title: 'Stripe Account Issue',
+              message: `Your Stripe Connect account has an issue that needs attention: ${issues[0]}`,
+              link: '/profile',
+              metadata: {
+                stripe_account_id: accountId,
+                issue_type: issueType,
+                charges_enabled: account.charges_enabled,
+                payouts_enabled: account.payouts_enabled,
+              },
+            })
+          }
+        } catch (emailError) {
+          console.error('Error sending Stripe account issue email:', emailError)
+        }
+      }
+    } else if (event.type === 'capability.updated') {
+      // Handle Stripe Connect capability updates (when capabilities are disabled/enabled)
+      const capability = event.data.object as Stripe.Capability
+      const accountId = capability.account as string
+      
+      console.log('🔔 Stripe Capability Updated:', {
+        account_id: accountId,
+        capability_id: capability.id,
+        capability_type: capability.type,
+        status: capability.status,
+        requirements: capability.requirements ? {
+          currently_due: capability.requirements.currently_due,
+          past_due: capability.requirements.past_due,
+        } : null,
+      })
+      
+      // Only send notification if capability is disabled or has requirements
+      if (capability.status === 'inactive' || 
+          (capability.requirements && (capability.requirements.past_due?.length > 0 || capability.requirements.currently_due?.length > 0))) {
+        
+        // Find the user with this Stripe account ID
+        const { data: profile } = await adminSupabase
+          .from('profiles')
+          .select('user_id, full_name, email, role')
+          .eq('stripe_account_id', accountId)
+          .maybeSingle()
+        
+        if (!profile || profile.role !== 'scout') {
+          console.log('⚠️ No scout profile found for Stripe account:', accountId)
+          return NextResponse.json({ received: true })
+        }
+        
+        let issueType = 'capability_disabled'
+        let issueDetails = `The ${capability.type} capability on your Stripe Connect account is ${capability.status}.`
+        
+        if (capability.requirements) {
+          if (capability.requirements.past_due && capability.requirements.past_due.length > 0) {
+            issueDetails += `\n\nPast due requirements: ${capability.requirements.past_due.join(', ')}`
+          }
+          if (capability.requirements.currently_due && capability.requirements.currently_due.length > 0) {
+            issueDetails += `\n\nRequired information: ${capability.requirements.currently_due.join(', ')}`
+          }
+        }
+        
+        try {
+          const userEmail = await getUserEmail(profile.user_id)
+          if (userEmail) {
+            await sendStripeAccountIssueEmail(
+              userEmail,
+              profile.full_name || 'there',
+              issueType,
+              issueDetails
+            )
+            console.log('✅ Stripe capability issue email sent to scout:', userEmail)
+            
+            // Also create in-app notification
+            await createNotification({
+              userId: profile.user_id,
+              type: 'stripe_account_issue',
+              title: 'Stripe Account Capability Issue',
+              message: `The ${capability.type} capability on your Stripe account needs attention.`,
+              link: '/profile',
+              metadata: {
+                stripe_account_id: accountId,
+                capability_type: capability.type,
+                capability_status: capability.status,
+                issue_type: issueType,
+              },
+            })
+          }
+        } catch (emailError) {
+          console.error('Error sending Stripe capability issue email:', emailError)
         }
       }
     }

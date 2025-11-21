@@ -287,8 +287,9 @@ export default function ProfileSetupForm({
 
       if (insertError) throw insertError
 
+      // REFERRAL PROCESS TEMPORARILY DISABLED
       // Create referral record if referrer was selected
-      if (formData.referrer_id && role && (role === 'player' || role === 'scout')) {
+      /* if (formData.referrer_id && role && (role === 'player' || role === 'scout')) {
         try {
           const referralResponse = await fetch('/api/referrals/select-referrer', {
             method: 'POST',
@@ -300,7 +301,7 @@ export default function ProfileSetupForm({
               referred_role: role,
             }),
           })
-          
+
           if (!referralResponse.ok) {
             const errorData = await referralResponse.json()
             console.error('Error creating referral:', errorData.error)
@@ -310,7 +311,7 @@ export default function ProfileSetupForm({
           console.error('Error creating referral:', referralError)
           // Don't block the redirect if referral creation fails
         }
-      }
+      } */
 
       // Send welcome email (don't block if it fails)
       try {
@@ -486,8 +487,9 @@ export default function ProfileSetupForm({
           />
         </div>
 
+        {/* REFERRAL PROCESS TEMPORARILY DISABLED */}
         {/* Referrer Selection - Optional */}
-        <div className="relative">
+        {/* <div className="relative">
           <div className="flex items-center justify-between mb-2">
             <label htmlFor="referrer" className="block text-sm font-medium text-black">
               Referred by (Optional)
@@ -594,7 +596,7 @@ export default function ProfileSetupForm({
               )}
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Scout-specific fields */}
         {role === 'scout' && (
