@@ -767,7 +767,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           try {
             const orgMatch = findCollegeMatch(profile.organization)
             if (orgMatch && orgMatch.name) {
-              matchesCollegeConnection = (
+              matchesCollegeConnection = !!(
                 orgMatch.name.toLowerCase().includes(query) ||
                 (orgMatch.conference && orgMatch.conference.toLowerCase().includes(query)) ||
                 (orgMatch.slug && orgMatch.slug.toLowerCase().includes(query))
