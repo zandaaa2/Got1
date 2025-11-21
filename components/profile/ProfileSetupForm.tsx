@@ -42,7 +42,7 @@ export default function ProfileSetupForm({
   const router = useRouter()
   const supabase = createClient()
 
-  const [role, setRole] = useState<'player' | 'scout'>('player')
+  const [role, setRole] = useState<'player' | 'scout' | 'user' | null>(null)
   const initialUsername = normalizeUsername(userName || '')
   const sanitizedAvatar = isMeaningfulAvatar(userAvatar) ? userAvatar : null
 
@@ -156,7 +156,7 @@ export default function ProfileSetupForm({
 
       const profileData: any = {
         user_id: session.user.id,
-        role: role,
+        role: role || 'user', // Default to 'user' if no role selected
         full_name: formData.full_name || null,
         username: normalizedUsername,
         avatar_url: sanitizedAvatar,
@@ -173,7 +173,7 @@ export default function ProfileSetupForm({
         profileData.social_link = formData.social_link || null
         profileData.turnaround_time = formData.turnaround_time || null
         profileData.sports = Array.isArray(formData.sports) ? formData.sports : []
-      } else {
+      } else if (role === 'player') {
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
           .filter((hl: HudlLink) => hl.link && hl.link.trim() !== '')
@@ -189,6 +189,7 @@ export default function ProfileSetupForm({
           : null
         profileData.parent_name = formData.parent_name || null
       }
+      // If role is null/'user', don't set player or scout specific fields
 
       const { error: insertError } = await supabase
         .from('profiles')
@@ -249,7 +250,7 @@ export default function ProfileSetupForm({
         {/* Role Selection */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
-            I am a: *
+            I am a: <span className="text-gray-500 text-xs font-normal">(Optional - you can skip)</span>
           </label>
           <div className="flex gap-4">
             <button
@@ -274,7 +275,23 @@ export default function ProfileSetupForm({
             >
               Scout
             </button>
+            <button
+              type="button"
+              onClick={() => setRole(null)}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                role === null
+                  ? 'bg-gray-200 text-gray-700 border-gray-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Skip
+            </button>
           </div>
+          {role === null && (
+            <p className="mt-2 text-xs text-gray-500">
+              You can set up your profile later as a player or scout
+            </p>
+          )}
         </div>
 
         {/* Common Fields */}
