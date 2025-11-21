@@ -8,6 +8,7 @@ import { SportSelector, MultiSportSelector } from '@/components/shared/SportSele
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import Image from 'next/image'
 
 interface HudlLink {
   link: string
@@ -29,12 +30,14 @@ interface ProfileSetupFormProps {
   userEmail: string
   userName: string
   userAvatar: string
+  referrerId?: string
 }
 
 export default function ProfileSetupForm({
   userEmail,
   userName,
   userAvatar,
+  referrerId,
 }: ProfileSetupFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +53,8 @@ export default function ProfileSetupForm({
     full_name: userName,
     username: initialUsername,
     birthday: '', // Date in YYYY-MM-DD format
+    referrer_id: '', // User ID of who referred them
+    referrer_username: '', // Username for display
     // Scout fields
     organization: '',
     price_per_eval: '99',
@@ -67,12 +72,97 @@ export default function ProfileSetupForm({
     // Scout fields
     sports: [] as string[],
   })
+  const [referrerSearchQuery, setReferrerSearchQuery] = useState('')
+  const [referrerSearchResults, setReferrerSearchResults] = useState<any[]>([])
+  const [showReferrerDropdown, setShowReferrerDropdown] = useState(false)
+  const [searchingReferrer, setSearchingReferrer] = useState(false)
 
   useEffect(() => {
     if (!formData.username && formData.full_name) {
       setFormData((prev) => ({ ...prev, username: normalizeUsername(formData.full_name) }))
     }
   }, [formData.full_name, formData.username])
+
+  // Load referrer info if referrerId is provided
+  useEffect(() => {
+    if (referrerId && !formData.referrer_username) {
+      const loadReferrerInfo = async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id, username, full_name')
+            .eq('user_id', referrerId)
+            .maybeSingle()
+
+          if (profile) {
+            setFormData((prev) => ({
+              ...prev,
+              referrer_id: referrerId,
+              referrer_username: profile.username || profile.full_name || 'Unknown',
+            }))
+            setReferrerSearchQuery(profile.username || profile.full_name || '')
+          }
+        } catch (error) {
+          console.error('Error loading referrer info:', error)
+        }
+      }
+      loadReferrerInfo()
+    }
+  }, [referrerId, formData.referrer_username, supabase])
+
+  // Search for referrers (approved users in referral program)
+  useEffect(() => {
+    if (!referrerSearchQuery || referrerSearchQuery.trim().length < 2) {
+      setReferrerSearchResults([])
+      setShowReferrerDropdown(false)
+      return
+    }
+
+    const searchReferrers = async () => {
+      setSearchingReferrer(true)
+      try {
+        // Get approved referral applications and their user profiles
+        const { data: approvedApplications } = await supabase
+          .from('referral_program_applications')
+          .select('user_id')
+          .eq('status', 'approved')
+
+        if (!approvedApplications || approvedApplications.length === 0) {
+          setReferrerSearchResults([])
+          setSearchingReferrer(false)
+          return
+        }
+
+        const approvedUserIds = approvedApplications.map((app: any) => app.user_id)
+
+        if (approvedUserIds.length === 0) {
+          setReferrerSearchResults([])
+          setSearchingReferrer(false)
+          return
+        }
+
+        // Search profiles for matching usernames/full names
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, user_id, username, full_name, avatar_url')
+          .in('user_id', approvedUserIds)
+          .or(`username.ilike.%${referrerSearchQuery}%,full_name.ilike.%${referrerSearchQuery}%`)
+          .limit(10)
+
+        setReferrerSearchResults(profiles || [])
+        setShowReferrerDropdown(profiles ? profiles.length > 0 : false)
+      } catch (error) {
+        console.error('Error searching referrers:', error)
+        setReferrerSearchResults([])
+        setShowReferrerDropdown(false)
+      } finally {
+        setSearchingReferrer(false)
+      }
+    }
+
+    const timeoutId = setTimeout(searchReferrers, 300)
+    return () => clearTimeout(timeoutId)
+  }, [referrerSearchQuery, supabase])
 
 
   /**
@@ -196,6 +286,31 @@ export default function ProfileSetupForm({
         .insert(profileData)
 
       if (insertError) throw insertError
+
+      // Create referral record if referrer was selected
+      if (formData.referrer_id && role && (role === 'player' || role === 'scout')) {
+        try {
+          const referralResponse = await fetch('/api/referrals/select-referrer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              referrer_id: formData.referrer_id,
+              referred_role: role,
+            }),
+          })
+          
+          if (!referralResponse.ok) {
+            const errorData = await referralResponse.json()
+            console.error('Error creating referral:', errorData.error)
+            // Don't block the redirect if referral creation fails
+          }
+        } catch (referralError) {
+          console.error('Error creating referral:', referralError)
+          // Don't block the redirect if referral creation fails
+        }
+      }
 
       // Send welcome email (don't block if it fails)
       try {
@@ -369,6 +484,116 @@ export default function ProfileSetupForm({
             rows={3}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
           />
+        </div>
+
+        {/* Referrer Selection - Optional */}
+        <div className="relative">
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="referrer" className="block text-sm font-medium text-black">
+              Referred by (Optional)
+            </label>
+            {!formData.referrer_id && (
+              <button
+                type="button"
+                onClick={() => {
+                  // Skip referral selection - clear search and close dropdown
+                  setReferrerSearchQuery('')
+                  setReferrerSearchResults([])
+                  setShowReferrerDropdown(false)
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Skip
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mb-2">
+            If someone referred you to Got1, search for their username or name to give them credit!
+          </p>
+          {formData.referrer_id ? (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm text-gray-700">
+                Referred by: <strong>{formData.referrer_username}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, referrer_id: '', referrer_username: '' }))
+                  setReferrerSearchQuery('')
+                  setReferrerSearchResults([])
+                }}
+                className="ml-auto text-blue-600 hover:text-blue-800"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="text"
+                id="referrer"
+                value={referrerSearchQuery}
+                onChange={(e) => {
+                  setReferrerSearchQuery(e.target.value)
+                  setShowReferrerDropdown(true)
+                }}
+                onFocus={() => {
+                  if (referrerSearchResults.length > 0) {
+                    setShowReferrerDropdown(true)
+                  }
+                }}
+                placeholder="Search for username or name..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              {showReferrerDropdown && referrerSearchResults.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {referrerSearchResults.map((profile: any) => (
+                    <button
+                      key={profile.user_id}
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          referrer_id: profile.user_id,
+                          referrer_username: profile.username || profile.full_name || 'Unknown',
+                        }))
+                        setReferrerSearchQuery(profile.username || profile.full_name || '')
+                        setShowReferrerDropdown(false)
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                    >
+                      {profile.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt=""
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600">
+                          {(profile.full_name || profile.username || '?').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-black truncate">
+                          {profile.full_name || 'Unknown'}
+                        </p>
+                        {profile.username && (
+                          <p className="text-xs text-gray-500 truncate">@{profile.username}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {referrerSearchQuery && referrerSearchQuery.length >= 2 && !searchingReferrer && referrerSearchResults.length === 0 && (
+                <p className="mt-1 text-xs text-gray-500">
+                  No approved referrers found with that name.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Scout-specific fields */}

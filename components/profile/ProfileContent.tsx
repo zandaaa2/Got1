@@ -1241,6 +1241,7 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
   const [isEditingPricing, setIsEditingPricing] = useState(false)
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const checklistStorageKey = useMemo(
@@ -1459,6 +1460,21 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
       setTurnaroundTime(turnaround)
     }
   }, [profile.price_per_eval, profile.turnaround_time])
+
+  // Get user email for admin check
+  useEffect(() => {
+    const getUserEmail = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user?.email) {
+          setUserEmail(session.user.email)
+        }
+      } catch (error) {
+        console.error('Error getting user email:', error)
+      }
+    }
+    getUserEmail()
+  }, [supabase])
 
   /**
    * Handles user logout by signing out from Supabase and redirecting to home.
@@ -2016,7 +2032,15 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
             </Link>
           </div>
 
-          <div className="rounded-2xl bg-white p-4 md:p-4 shadow-sm flex items-center justify-end">
+          <div className="rounded-2xl bg-white p-4 md:p-4 shadow-sm flex flex-col items-end gap-3">
+            {userEmail === 'zander@got1.app' && (
+              <Link
+                href="/admin/scouts"
+                className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full border border-blue-600 bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Scout Admins
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full border border-red-500 bg-white text-sm font-semibold text-red-600 hover:bg-red-50"

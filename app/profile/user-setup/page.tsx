@@ -6,7 +6,11 @@ import DynamicLayout from '@/components/layout/DynamicLayout'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
-export default async function UserSetupPage() {
+export default async function UserSetupPage({
+  searchParams,
+}: {
+  searchParams: { ref?: string }
+}) {
   const supabase = createServerClient()
   const {
     data: { session },
@@ -56,6 +60,7 @@ export default async function UserSetupPage() {
           userEmail={user?.email || ''}
           userName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
           userAvatar={sanitizedAvatar || ''}
+          referrerId={searchParams.ref || undefined}
         />
       </DynamicLayout>
     </div>
