@@ -1,7 +1,7 @@
 'use client'
 
 const CALENDLY_30_MIN_URL = 'https://calendly.com/zander-got1/30min'
-const CALENDLY_15_MIN_URL = 'https://calendly.com/zander-got1/15min' // Update this with your actual 15 min link
+const CALENDLY_15_MIN_URL = 'https://calendly.com/zander-got1/30min'
 
 /**
  * Opens the Calendly 30-minute meeting popup with the founder.
