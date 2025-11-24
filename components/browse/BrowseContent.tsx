@@ -72,6 +72,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
   const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
+  const [divisionFilter, setDivisionFilter] = useState<'all' | 'D1' | 'D2' | 'D3' | 'FBS' | 'FCS' | 'NAIA'>('all')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const [currentUserPosition, setCurrentUserPosition] = useState<string | null>(null)
@@ -307,14 +308,16 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   const normalizedColleges = useMemo(() => {
     if (!colleges || !Array.isArray(colleges)) {
+      console.warn('⚠️ colleges array is empty or not an array:', colleges)
       return []
     }
+    console.log('✅ Normalizing colleges:', colleges.length, 'total colleges')
     return colleges.map((college) => ({
       ...college,
       normalizedName: college.name.toLowerCase(),
       normalizedSimple: college.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
     }))
-  }, [])
+  }, [colleges])
 
   const findCollegeMatch = useCallback((organization: string) => {
     const normalized = organization.toLowerCase().trim()
@@ -658,7 +661,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }, [profiles, findCollegeMatch])
 
   const teamEntries = useMemo<TeamEntry[]>(() => {
-    return normalizedColleges
+    if (!normalizedColleges || normalizedColleges.length === 0) {
+      console.warn('⚠️ normalizedColleges is empty')
+      return []
+    }
+    const entries = normalizedColleges
       .filter((college) => college.slug !== 'got1') // Exclude Got1 from universities list
       .map<TeamEntry>((college) => ({
         name: college.name,
@@ -669,7 +676,23 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         scoutCount: organizationCounts.get(college.slug) || 0,
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
+    console.log('✅ Created teamEntries:', entries.length, 'teams')
+    return entries
   }, [normalizedColleges, organizationCounts])
+
+  // Get available divisions from teamEntries
+  const availableDivisions = useMemo(() => {
+    const divisions = new Set<string>()
+    teamEntries.forEach(team => {
+      if (team.division) {
+        if (team.division === 'FBS' || team.division === 'FCS') {
+          divisions.add('D1')
+        }
+        divisions.add(team.division)
+      }
+    })
+    return Array.from(divisions).sort()
+  }, [teamEntries])
 
   const trimmedQuery = searchQuery.trim().toLowerCase()
 
@@ -885,16 +908,34 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return filtered
   }, [profiles, trimmedQuery, roleFilter, isProduction, currentUserRole, currentUserPosition, normalizedColleges, findCollegeMatch, playerOffers])
 
-  const filteredTeams = teamEntries.filter((team) => {
-    const query = trimmedQuery
-    if (!query) return true
-    return (
-      team.name.toLowerCase().includes(query) ||
-      team.conference?.toLowerCase().includes(query) ||
-      team.division?.toLowerCase().includes(query) ||
-      team.slug.toLowerCase().includes(query)
-    )
-  })
+  const filteredTeams = useMemo(() => {
+    return teamEntries.filter((team) => {
+      // Filter by division
+      if (divisionFilter !== 'all') {
+        if (divisionFilter === 'D1') {
+          // D1 includes both FBS and FCS
+          if (team.division !== 'FBS' && team.division !== 'FCS') {
+            return false
+          }
+        } else {
+          // For other divisions, match exactly
+          if (team.division !== divisionFilter) {
+            return false
+          }
+        }
+      }
+      
+      // Filter by search query
+      const query = trimmedQuery
+      if (!query) return true
+      return (
+        team.name.toLowerCase().includes(query) ||
+        team.conference?.toLowerCase().includes(query) ||
+        team.division?.toLowerCase().includes(query) ||
+        team.slug.toLowerCase().includes(query)
+      )
+    })
+  }, [teamEntries, divisionFilter, trimmedQuery])
 
   const showTeamHighlights = viewMode !== 'universities' && trimmedQuery.length > 0 && filteredTeams.length > 0
 
@@ -920,12 +961,14 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('all')
+      setDivisionFilter('all')
       return
     }
     setViewMode('universities')
     if (roleFilter !== 'all') {
       setRoleFilter('all')
     }
+    // Keep division filter as is when switching to universities
   }
 
   return (
@@ -963,46 +1006,136 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         </div>
         
         {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <button
-            onClick={handleScoutsClick}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              viewMode === 'profiles' && roleFilter === 'scout'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Scouts
-          </button>
-          <button
-            onClick={handlePlayersClick}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              viewMode === 'profiles' && roleFilter === 'player'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Players
-          </button>
-          <button
-            onClick={handleUniversitiesClick}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              viewMode === 'universities'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Universities
-          </button>
-          
-          {/* Clear filters button - only show when filters are active */}
-          {viewMode === 'profiles' && roleFilter !== 'all' && (
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setRoleFilter('all')}
-              className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+              onClick={handleScoutsClick}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                viewMode === 'profiles' && roleFilter === 'scout'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              Clear filters
+              Scouts
             </button>
+            <button
+              onClick={handlePlayersClick}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                viewMode === 'profiles' && roleFilter === 'player'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Players
+            </button>
+            <button
+              onClick={handleUniversitiesClick}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                viewMode === 'universities'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Universities
+            </button>
+            
+            {/* Clear filters button - only show when filters are active */}
+            {viewMode === 'profiles' && roleFilter !== 'all' && (
+              <button
+                onClick={() => setRoleFilter('all')}
+                className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+          
+          {/* Division Tabs - only show when on Universities view */}
+          {viewMode === 'universities' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setDivisionFilter('all')}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  divisionFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All
+              </button>
+              {availableDivisions.includes('D1') && (
+                <button
+                  onClick={() => setDivisionFilter('D1')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    divisionFilter === 'D1'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  D1
+                </button>
+              )}
+              {availableDivisions.includes('D2') && (
+                <button
+                  onClick={() => setDivisionFilter('D2')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    divisionFilter === 'D2'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  D2
+                </button>
+              )}
+              {availableDivisions.includes('D3') && (
+                <button
+                  onClick={() => setDivisionFilter('D3')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    divisionFilter === 'D3'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  D3
+                </button>
+              )}
+              {availableDivisions.includes('FBS') && (
+                <button
+                  onClick={() => setDivisionFilter('FBS')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    divisionFilter === 'FBS'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  FBS
+                </button>
+              )}
+              {availableDivisions.includes('FCS') && (
+                <button
+                  onClick={() => setDivisionFilter('FCS')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    divisionFilter === 'FCS'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  FCS
+                </button>
+              )}
+              {availableDivisions.includes('NAIA') && (
+                <button
+                  onClick={() => setDivisionFilter('NAIA')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    divisionFilter === 'NAIA'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  NAIA
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1033,6 +1166,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                               width={64}
                               height={64}
                               className="object-contain"
+                              onError={(e) => {
+                                console.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           ) : (
                             <span className="text-lg font-semibold text-gray-600">
@@ -1077,6 +1214,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                               width={64}
                               height={64}
                               className="object-contain"
+                              onError={(e) => {
+                                console.warn(`Logo failed to load for ${team.name}: ${team.logo}`);
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           ) : (
                             <span className="text-lg font-semibold text-gray-600">
@@ -1148,6 +1289,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                           height={48}
                           className="w-full h-full object-contain"
                           unoptimized
+                          onError={(e) => {
+                            console.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                       ) : (
                         <div className={`w-full h-full flex items-center justify-center text-sm font-semibold text-white ${getGradientForId(team.slug)}`}>
