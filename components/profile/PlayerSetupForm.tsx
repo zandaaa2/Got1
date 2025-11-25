@@ -116,6 +116,7 @@ export default function PlayerSetupForm({ profile }: PlayerSetupFormProps) {
       }))
 
       // Update profile to player role
+      // IMPORTANT: Preserve existing fields like full_name, username, avatar_url, birthday
       const updateData: any = {
         role: 'player',
         social_link: formData.social_link.trim(),
@@ -128,6 +129,11 @@ export default function PlayerSetupForm({ profile }: PlayerSetupFormProps) {
         graduation_year: parseInt(formData.graduation_year),
         parent_name: formData.parent_name?.trim() || null,
         bio: formData.bio?.trim() || null,
+        // Explicitly preserve existing fields from user-setup
+        full_name: profile?.full_name || null,
+        username: profile?.username || null,
+        avatar_url: profile?.avatar_url || null,
+        birthday: profile?.birthday || null,
         updated_at: new Date().toISOString(),
       }
 

@@ -69,6 +69,7 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
       if (!session) throw new Error('Not authenticated')
 
       // Update profile to scout role
+      // IMPORTANT: Preserve existing fields like full_name, username, avatar_url, birthday
       const updateData: any = {
         role: 'scout',
         organization: formData.organization.trim(),
@@ -77,6 +78,11 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
         social_link: formData.social_link.trim(),
         work_history: formData.work_history?.trim() || null,
         additional_info: formData.additional_info?.trim() || null,
+        // Explicitly preserve existing fields from user-setup
+        full_name: profile?.full_name || null,
+        username: profile?.username || null,
+        avatar_url: profile?.avatar_url || null,
+        birthday: profile?.birthday || null,
         updated_at: new Date().toISOString(),
       }
 
