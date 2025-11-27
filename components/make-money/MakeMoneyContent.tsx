@@ -7,6 +7,7 @@ import { useAuthModal } from '@/contexts/AuthModalContext'
 import Image from 'next/image'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
+import { openCalendly30Min } from '@/lib/calendly'
 
 interface MakeMoneyContentProps {
   session: any
@@ -87,8 +88,8 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
         try {
           const { data: leaderboardData, error: leaderboardError } = await supabase
             .from('referrals')
-            .select('referrer_id, amount_earned, status')
-            .in('status', ['approved', 'paid'])
+            .select('referrer_id, payment_amount, payment_status')
+            .eq('payment_status', 'paid')
 
           if (leaderboardError) {
             console.error('Error loading leaderboard:', leaderboardError)
@@ -98,8 +99,9 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
             const earningsMap = new Map<string, { total: number; count: number }>()
             leaderboardData.forEach((ref) => {
               const existing = earningsMap.get(ref.referrer_id) || { total: 0, count: 0 }
+              const paymentAmount = ref.payment_amount ? parseFloat(ref.payment_amount.toString()) : 0
               earningsMap.set(ref.referrer_id, {
-                total: existing.total + parseFloat(ref.amount_earned.toString()),
+                total: existing.total + paymentAmount,
                 count: existing.count + 1,
               })
             })
@@ -156,54 +158,72 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
         }
 
         // Get user's referral application
-        const { data: app } = await supabase
-          .from('referral_program_applications')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
+        try {
+          const { data: app, error: appError } = await supabase
+            .from('referral_program_applications')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
 
-        setApplication(app || null)
+          if (appError) {
+            console.error('Error loading referral application:', appError)
+            // Continue without application if error (columns might not exist yet)
+          } else {
+            setApplication(app || null)
+          }
+        } catch (error) {
+          console.error('Error in referral application query:', error)
+          // Continue without application
+        }
 
         // Get user's referrals (as referrer)
-        const { data: referrals } = await supabase
-          .from('referrals')
-          .select('*')
-          .eq('referrer_id', session.user.id)
-          .order('created_at', { ascending: false })
+        try {
+          const { data: referrals, error: referralsError } = await supabase
+            .from('referrals')
+            .select('*')
+            .eq('referrer_id', session.user.id)
+            .order('created_at', { ascending: false })
 
-        if (referrals) {
-          // Load referrer profiles for display
-          const referralsWithProfiles = await Promise.all(
-            referrals.map(async (ref) => {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name, username, avatar_url')
-                .eq('user_id', ref.referred_id)
-                .maybeSingle()
+          if (referralsError) {
+            console.error('Error loading referrals:', referralsError)
+            // Continue without referrals if error
+          } else if (referrals) {
+            // Load referrer profiles for display
+            const referralsWithProfiles = await Promise.all(
+              referrals.map(async (ref) => {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('full_name, username, avatar_url')
+                  .eq('user_id', ref.referred_id)
+                  .maybeSingle()
 
-              return {
-                ...ref,
-                referred_profile: profile || null,
-              }
-            })
-          )
+                return {
+                  ...ref,
+                  referred_profile: profile || null,
+                }
+              })
+            )
 
-          setMyReferrals(referralsWithProfiles as any)
+            setMyReferrals(referralsWithProfiles as any)
 
-          // Calculate earnings
-          const pending = referrals
-            .filter(r => r.status === 'pending')
-            .reduce((sum, r) => sum + parseFloat(r.amount_earned.toString()), 0)
-          const approved = referrals
-            .filter(r => r.status === 'approved')
-            .reduce((sum, r) => sum + parseFloat(r.amount_earned.toString()), 0)
-          const total = referrals
-            .filter(r => r.status === 'approved' || r.status === 'paid')
-            .reduce((sum, r) => sum + parseFloat(r.amount_earned.toString()), 0)
+            // Calculate earnings based on new payment structure
+            // Handle cases where payment_status and payment_amount might not exist yet
+            const pending = referrals
+              .filter(r => (r as any).payment_status === 'pending_admin_review')
+              .reduce((sum, r) => sum + ((r as any).payment_amount ? parseFloat((r as any).payment_amount.toString()) : 0), 0)
+            const paid = referrals
+              .filter(r => (r as any).payment_status === 'paid')
+              .reduce((sum, r) => sum + ((r as any).payment_amount ? parseFloat((r as any).payment_amount.toString()) : 0), 0)
+            const total = referrals
+              .filter(r => (r as any).payment_status === 'paid')
+              .reduce((sum, r) => sum + ((r as any).payment_amount ? parseFloat((r as any).payment_amount.toString()) : 0), 0)
 
-          setPendingEarnings(pending)
-          setApprovedEarnings(approved)
-          setTotalEarned(total)
+            setPendingEarnings(pending)
+            setApprovedEarnings(paid)
+            setTotalEarned(total)
+          }
+        } catch (referralsQueryError) {
+          console.error('Error in referrals query:', referralsQueryError)
         }
       } catch (error) {
         console.error('Error loading referral data:', error)
@@ -234,7 +254,9 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
       }
 
       setApplication(data.application)
-      alert('Application submitted successfully! We will review it soon.')
+      alert('Application submitted successfully! Please book a time to meet with us.')
+      // Open Calendly for meeting booking
+      openCalendly30Min()
     } catch (error: any) {
       console.error('Error submitting application:', error)
       alert(error.message || 'Failed to submit application. Please try again.')
@@ -263,9 +285,16 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
 
   return (
     <div>
-      <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">
-        Make Money
-      </h1>
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-black mb-2">
+          Referral Program
+        </h1>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4">
+          <p className="text-sm text-yellow-800">
+            <strong>Limited Time:</strong> This referral program is valid through January 31, 2026.
+          </p>
+        </div>
+      </div>
 
       {/* Instructions and Leaderboard Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -294,16 +323,26 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
                 3
               </span>
               <p>
-                <strong>Share your link</strong> - When new users sign up, they can select you as their referrer
+                <strong>Get selected</strong> - When new scouts are approved, they'll see a list of approved referrers and can select you as their referrer
               </p>
             </div>
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-sm font-bold">
                 4
               </span>
-              <p>
-                <strong>Get paid</strong> - Earn <strong>$5 for each scout</strong> and <strong>$2 for each player</strong> you refer! Payments are processed through your existing Stripe account.
-              </p>
+              <div className="flex-1">
+                <p className="mb-2">
+                  <strong>Get paid</strong> - After the new scout completes onboarding, admin will verify their X follower count and process your payment:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-2">
+                  <li><strong>$45</strong> for scouts with under 10,000 X followers</li>
+                  <li><strong>$65</strong> for scouts with 10,000-100,000 X followers</li>
+                  <li><strong>$125</strong> for scouts with over 100,000 X followers</li>
+                </ul>
+                <p className="mt-2 text-sm">
+                  Payments are processed through your existing Stripe account.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -421,7 +460,7 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
           <h3 className="text-lg font-bold text-black mb-2">Join the Referral Program</h3>
           <p className="text-gray-600 mb-4">
-            Apply to start earning money by referring new users to Got1! As a scout, payments will be processed through your existing Stripe account.
+            Apply to start earning money by referring new scouts to Got1! Your application will be reviewed in the admin portal. <strong>Approval requires a one-on-one meeting through Calendly.</strong> Payments will be processed through your existing Stripe account.
           </p>
           <button
             onClick={handleApply}
@@ -461,42 +500,12 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
               <p className="text-2xl font-bold text-black">${totalEarned.toFixed(2)}</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <p className="text-sm text-gray-600 mb-1">Pending Approval</p>
+              <p className="text-sm text-gray-600 mb-1">Pending Review</p>
               <p className="text-2xl font-bold text-yellow-600">${pendingEarnings.toFixed(2)}</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <p className="text-sm text-gray-600 mb-1">Total Referrals</p>
               <p className="text-2xl font-bold text-black">{myReferrals.length}</p>
-            </div>
-          </div>
-
-          {/* Share Your Link */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-bold text-black mb-2">Share Your Referral Link</h3>
-            <p className="text-gray-600 mb-4">
-              Share this link with people you want to refer. When they sign up and select you as their referrer, you'll earn money!
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                readOnly
-                value={`${typeof window !== 'undefined' ? window.location.origin : 'https://got1.app'}/profile/user-setup?ref=${session.user.id}`}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-700"
-              />
-              <button
-                onClick={async () => {
-                  const link = `${window.location.origin}/profile/user-setup?ref=${session.user.id}`
-                  try {
-                    await navigator.clipboard.writeText(link)
-                    alert('Link copied to clipboard!')
-                  } catch (err) {
-                    alert('Failed to copy link. Please copy manually.')
-                  }
-                }}
-                className="interactive-press px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Copy
-              </button>
             </div>
           </div>
 
@@ -538,19 +547,29 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
                             {profile?.full_name || 'Unknown User'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {ref.referred_role === 'scout' ? 'Scout' : 'Player'} • ${ref.amount_earned.toFixed(2)} earned
+                            {ref.referred_role === 'scout' ? 'Scout' : 'Player'} • {
+                              ref.payment_status === 'paid' && ref.payment_amount
+                                ? `$${ref.payment_amount.toFixed(2)} earned`
+                                : ref.payment_status === 'pending_admin_review'
+                                ? 'Pending admin review'
+                                : 'Pending'
+                            }
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          ref.status === 'approved' || ref.status === 'paid'
-                            ? 'bg-gray-100 text-gray-700'
-                            : ref.status === 'pending'
-                            ? 'bg-gray-100 text-gray-700'
+                          ref.payment_status === 'paid'
+                            ? 'bg-green-100 text-green-700'
+                            : ref.payment_status === 'pending_admin_review'
+                            ? 'bg-yellow-100 text-yellow-700'
                             : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {ref.status.charAt(0).toUpperCase() + ref.status.slice(1)}
+                          {ref.payment_status === 'paid' 
+                            ? 'Paid' 
+                            : ref.payment_status === 'pending_admin_review'
+                            ? 'Pending Review'
+                            : 'Pending'}
                         </span>
                       </div>
                     </div>

@@ -350,7 +350,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
         <div className="flex-1 min-w-0 overflow-hidden">
           <h3 className="font-bold text-black text-base md:text-lg truncate flex items-center gap-2">
-            <span className="truncate">{profile.full_name || 'Unknown'}</span>
+            <span className="truncate">{profile.full_name || profile.username || 'Unknown'}</span>
             {isScout && <VerificationBadge className="flex-shrink-0" />}
             {isTestAccount(profile.full_name) && (
               <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full flex-shrink-0">
@@ -489,7 +489,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         </div>
 
         <div className="flex items-center gap-2 justify-center flex-wrap mb-2">
-          <h3 className="font-bold text-black text-xl">{profile.full_name || 'Unknown'}</h3>
+          <h3 className="font-bold text-black text-xl">{profile.full_name || profile.username || 'Unknown'}</h3>
           {isScout && <VerificationBadge className="flex-shrink-0" />}
           {isTestAccount(profile.full_name) && (
             <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full">

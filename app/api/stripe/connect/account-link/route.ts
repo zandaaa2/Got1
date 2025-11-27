@@ -65,6 +65,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if Stripe setup was bypassed manually
+    if (profile.stripe_account_id === 'bypass_manual_setup') {
+      console.log('📧 Stripe setup bypassed for user:', session.user.id)
+      return successResponse({
+        success: true,
+        onboardingUrl: null,
+        dashboardUrl: null,
+        accountId: 'bypass_manual_setup',
+        onboardingComplete: true,
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        bypassed: true,
+      })
+    }
+
     console.log('📧 Stripe account ID:', profile.stripe_account_id)
 
     // Get the base URL for return links
@@ -261,6 +276,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         hasAccount: false,
         onboardingComplete: false,
+      })
+    }
+
+    // Check if Stripe setup was bypassed manually
+    if (profile.stripe_account_id === 'bypass_manual_setup') {
+      return NextResponse.json({
+        hasAccount: true,
+        onboardingComplete: true,
+        accountId: 'bypass_manual_setup',
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+        bypassed: true,
       })
     }
 

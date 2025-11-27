@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotification } from '@/lib/notifications'
+import { sendReferralApplicationSubmittedEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Check if user is a scout (only scouts can apply)
     const { data: profile } = await adminSupabase
       .from('profiles')
-      .select('role')
+      .select('role, full_name, username')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
@@ -82,6 +84,35 @@ export async function POST(request: NextRequest) {
         { error: insertError.message || 'Failed to submit application' },
         { status: 500 }
       )
+    }
+
+    // Fire-and-forget notification + email
+    const applicantName = profile?.full_name || profile?.username || session.user.user_metadata?.full_name || session.user.email
+    const applicantEmail = session.user.email
+
+    try {
+      await createNotification({
+        userId: session.user.id,
+        type: 'referral_application_submitted',
+        title: 'Referral application received',
+        message: 'We received your referral program application and will notify you after review.',
+        link: '/make-money',
+        metadata: {
+          application_id: application.id,
+          submitted_at: new Date().toISOString(),
+        },
+      })
+    } catch (notificationError) {
+      console.error('❌ Failed to create referral application notification:', notificationError)
+    }
+
+    if (applicantEmail) {
+      sendReferralApplicationSubmittedEmail({
+        email: applicantEmail,
+        name: applicantName,
+      }).catch((emailError) => {
+        console.error('❌ Failed to send referral application email:', emailError)
+      })
     }
 
     return successResponse({ 

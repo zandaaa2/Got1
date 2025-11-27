@@ -95,6 +95,25 @@ export default async function ProfilePage() {
     console.log('⚠️ Approved application exists but scout status was recently revoked - NOT restoring')
   }
 
+  // Check if scout needs to select a referrer (for display in profile, not redirect)
+  let needsReferrerSelection = false
+  if (profile.role === 'scout' && approvedApplication) {
+    const { data: existingReferral } = await supabase
+      .from('referrals')
+      .select('id')
+      .eq('referred_id', session.user.id)
+      .maybeSingle()
+
+    if (!existingReferral) {
+      const recentlyApproved = approvedApplication.reviewed_at && 
+        new Date(approvedApplication.reviewed_at) > new Date(Date.now() - 24 * 3600000)
+      
+      if (recentlyApproved) {
+        needsReferrerSelection = true
+      }
+    }
+  }
+
   const { data: userProfile } = await supabase
     .from('profiles')
     .select('avatar_url')
@@ -117,7 +136,11 @@ export default async function ProfilePage() {
       <AuthRefreshHandler />
       <Sidebar />
       <DynamicLayout header={headerContent}>
-        <ProfileContent profile={profile} hasPendingApplication={!!scoutApplication} />
+        <ProfileContent 
+          profile={profile} 
+          hasPendingApplication={!!scoutApplication}
+          needsReferrerSelection={needsReferrerSelection}
+        />
       </DynamicLayout>
     </div>
   )

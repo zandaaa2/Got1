@@ -9,11 +9,8 @@ import MakeMoneyContent from '@/components/make-money/MakeMoneyContent'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// REFERRAL PROCESS TEMPORARILY DISABLED - Redirect to browse
 export default async function MakeMoneyPage() {
-  redirect('/browse')
-  
-  /* const supabase = createServerClient()
+  const supabase = createServerClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -56,6 +53,6 @@ export default async function MakeMoneyPage() {
         <MakeMoneyContent session={session} />
       </DynamicLayout>
     </div>
-  ) */
+  )
 }
 

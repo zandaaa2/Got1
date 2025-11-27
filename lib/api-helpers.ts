@@ -9,8 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * Creates a Supabase client for API route handlers
  */
 export function getApiSupabaseClient(): SupabaseClient {
-  const cookieStore = cookies()
-  return createRouteHandlerClient(() => cookieStore)
+  return createRouteHandlerClient(() => cookies())
 }
 
 /**

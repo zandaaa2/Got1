@@ -17,6 +17,7 @@ import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 interface ProfileContentProps {
   profile: any
   hasPendingApplication: boolean
+  needsReferrerSelection?: boolean
 }
 
 // Shared account status state - lifted to parent scope so MoneyDashboard can access it
@@ -738,6 +739,520 @@ function MoneyDashboard({ profile }: { profile: any }) {
  * Stripe Connect Section Component
  * Allows scouts to access their Stripe Connect account for payouts
  */
+function ScoutSetupProgress({ profile }: { profile: any }) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [referrerSelected, setReferrerSelected] = useState(false)
+  const [needsReferrerSelection, setNeedsReferrerSelection] = useState(false)
+  const [stripeStarted, setStripeStarted] = useState(false)
+  const [stripeComplete, setStripeComplete] = useState(false)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const checkProgress = async () => {
+      setLoading(true)
+      // Small delay to ensure any previous writes are committed
+      await new Promise(resolve => setTimeout(resolve, 100))
+      try {
+        // Step 1: Check if referrer has been selected
+        // Use API endpoint as fallback since RLS might be blocking direct queries
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        const sessionUserId = currentSession?.user?.id
+        const profileUserId = profile.user_id
+        
+        let referral = null
+        let hasReferrer = false
+        
+        // First try direct query (faster if RLS allows it)
+        // Use .limit(1) to get the first referral if duplicates exist
+        if (sessionUserId) {
+          const result = await supabase
+            .from('referrals')
+            .select('id, referrer_id, referred_id, created_at')
+            .eq('referred_id', sessionUserId)
+            .limit(1)
+            .maybeSingle()
+          
+          if (result.data) {
+            referral = result.data
+            hasReferrer = true
+          } else if (result.error) {
+            console.warn('Direct query failed, trying API endpoint:', result.error)
+          }
+        }
+        
+        // If direct query didn't work, try API endpoint (bypasses RLS)
+        if (!hasReferrer) {
+          try {
+            const checkResponse = await fetch(`/api/referrals/check?t=${Date.now()}`, {
+              cache: 'no-store',
+              headers: {
+                'Cache-Control': 'no-cache',
+              },
+            })
+            
+            if (checkResponse.ok) {
+              const checkData = await checkResponse.json()
+              hasReferrer = checkData.hasReferral === true
+              referral = checkData.referral || null
+              
+              console.log('✅ API check result:', {
+                hasReferral: checkData.hasReferral,
+                referral: referral ? { id: referral.id } : null,
+              })
+            } else {
+              console.warn('API check failed:', checkResponse.status)
+            }
+          } catch (apiError) {
+            console.warn('API check error:', apiError)
+          }
+        }
+        
+        console.log('🔍 Final referral check result:', {
+          sessionUserId,
+          profileUserId,
+          referral: referral ? { id: referral.id, referrerId: referral.referrer_id, referredId: referral.referred_id } : null,
+          hasReferral: hasReferrer,
+        })
+        
+        if (hasReferrer) {
+          console.log('✅ Referral found - setting referrerSelected to TRUE')
+          setReferrerSelected(true)
+        } else {
+          console.log('⚠️ No referral found')
+          setReferrerSelected(false)
+        }
+
+        // Check if they need to select a referrer (recently approved scout)
+        // Only show if no referral exists AND they were recently approved
+        if (!hasReferrer) {
+          const { data: approvedApp } = await supabase
+            .from('scout_applications')
+            .select('reviewed_at')
+            .eq('user_id', sessionUserId || profileUserId)
+            .eq('status', 'approved')
+            .maybeSingle()
+          
+          if (approvedApp?.reviewed_at) {
+            const recentlyApproved = new Date(approvedApp.reviewed_at) > new Date(Date.now() - 24 * 3600000)
+            setNeedsReferrerSelection(recentlyApproved)
+            console.log('📋 Needs referrer selection:', recentlyApproved, 'approved at:', approvedApp.reviewed_at)
+          } else {
+            setNeedsReferrerSelection(false)
+          }
+        } else {
+          // If referral exists, don't show referrer selection
+          console.log('✅ Referral exists - hiding referrer selection screen')
+          setNeedsReferrerSelection(false)
+        }
+
+        // Step 2 & 3: Check Stripe account status
+        const response = await fetch('/api/stripe/connect/account-link', {
+          method: 'GET',
+        })
+        const data = await response.json()
+        
+        setStripeStarted(data.hasAccount || false)
+        setStripeComplete(
+          data.hasAccount && 
+          data.onboardingComplete && 
+          data.chargesEnabled && 
+          data.payoutsEnabled
+        )
+      } catch (error) {
+        console.error('Error checking setup progress:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkProgress()
+  }, [profile.user_id]) // Removed supabase from deps as it's stable
+
+  const handleStartStripe = async () => {
+    try {
+      // Check if account exists first
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'GET',
+      })
+      const data = await response.json()
+
+      if (!data.hasAccount) {
+        // Create account first
+        const createResponse = await fetch('/api/stripe/connect/create-account', {
+          method: 'POST',
+        })
+        const createData = await createResponse.json()
+        
+        if (!createResponse.ok) {
+          const errorMsg = createData.error || 'Failed to create Stripe account'
+          const details = createData.details ? ` (${createData.details})` : ''
+          throw new Error(`${errorMsg}${details}`)
+        }
+      }
+
+      // Get account link
+      const linkResponse = await fetch('/api/stripe/connect/account-link', {
+        method: 'GET',
+      })
+      const linkData = await linkResponse.json()
+
+      if (linkData.url) {
+        window.location.href = linkData.url
+      } else {
+        throw new Error('No account link available')
+      }
+    } catch (error: any) {
+      console.error('Error starting Stripe setup:', error)
+      alert(`Failed to start Stripe setup: ${error.message || 'Please try again.'}`)
+    }
+  }
+
+  const handleCompleteStripe = async () => {
+    try {
+      const response = await fetch('/api/stripe/connect/account-link', {
+        method: 'GET',
+      })
+      const data = await response.json()
+
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No account link available')
+      }
+    } catch (error: any) {
+      console.error('Error accessing Stripe account:', error)
+      alert(`Failed to access Stripe account: ${error.message || 'Please try again.'}`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="mb-6 md:mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Debug: Log current state values
+  console.log('🔍 Scout Setup Progress State:', {
+    referrerSelected,
+    stripeStarted,
+    stripeComplete,
+    needsReferrerSelection,
+    profileUserId: profile.user_id,
+  })
+
+  const completedSteps = [referrerSelected, stripeStarted, stripeComplete].filter(Boolean).length
+  const progressPercent = (completedSteps / 3) * 100
+
+  console.log('📊 Progress calculation:', {
+    completedSteps,
+    progressPercent,
+    referrerSelected,
+    stripeStarted,
+    stripeComplete,
+    willShowReferrerSelection: !referrerSelected && needsReferrerSelection,
+  })
+
+  // Determine current step
+  let currentStep = null
+  if (!referrerSelected && needsReferrerSelection) {
+    currentStep = 'referrer'
+  } else if (!stripeStarted) {
+    currentStep = 'start-stripe'
+  } else if (!stripeComplete) {
+    currentStep = 'complete-stripe'
+  }
+
+  // If all steps are complete, don't show the section
+  if (completedSteps === 3) {
+    return null
+  }
+
+  return (
+    <div className="mb-6 md:mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-black mb-2">Scout Setup Progress</h2>
+        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+          <div
+            className="bg-black h-3 rounded-full transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          ></div>
+        </div>
+        <p className="text-sm text-gray-600">
+          {completedSteps} of 3 steps completed
+        </p>
+      </div>
+
+      {/* Current Action */}
+      {currentStep === 'referrer' && (
+        <ReferrerSelectionInline 
+          profile={profile}
+          onComplete={() => {
+            setReferrerSelected(true)
+            setNeedsReferrerSelection(false)
+            // Force full page reload to ensure referral check runs again
+            window.location.reload()
+          }}
+        />
+      )}
+
+      {currentStep === 'start-stripe' && (
+        <div className="p-4 rounded-lg border-2 border-blue-200 bg-blue-50">
+          <h3 className="font-semibold text-black mb-2">Start Stripe Setup</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Create your Stripe Connect account to receive payments for evaluations.
+          </p>
+          <button
+            onClick={handleStartStripe}
+            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 font-medium"
+          >
+            Start Stripe Setup
+          </button>
+        </div>
+      )}
+
+      {currentStep === 'complete-stripe' && (
+        <div className="p-4 rounded-lg border-2 border-blue-200 bg-blue-50">
+          <h3 className="font-semibold text-black mb-2">Complete Stripe Setup</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Finish setting up your Stripe account to enable payments.
+          </p>
+          <button
+            onClick={handleCompleteStripe}
+            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 font-medium"
+          >
+            Complete Stripe Setup
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReferrerSelectionInline({ profile, onComplete }: { profile: any; onComplete: () => void }) {
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [approvedReferrers, setApprovedReferrers] = useState<any[]>([])
+  const [selectedReferrerId, setSelectedReferrerId] = useState<string | null>(null)
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const supabase = createClient()
+
+  useEffect(() => {
+    const loadApprovedReferrers = async () => {
+      try {
+        const { data: applications, error: appsError } = await supabase
+          .from('referral_program_applications')
+          .select('user_id, status')
+          .eq('status', 'approved')
+
+        if (appsError) {
+          console.error('Error fetching referral applications:', appsError)
+          setLoading(false)
+          return
+        }
+
+        if (!applications || applications.length === 0) {
+          console.log('No approved referral applications found')
+          setLoading(false)
+          return
+        }
+
+        console.log('Found approved referral applications:', applications.length)
+        const referrerIds = applications.map(app => app.user_id)
+
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url, position, organization')
+          .in('user_id', referrerIds)
+
+        if (profilesError) {
+          console.error('Error fetching referrer profiles:', profilesError)
+          setLoading(false)
+          return
+        }
+
+        console.log('Loaded referrer profiles:', profiles?.length || 0)
+        setApprovedReferrers(profiles || [])
+      } catch (error) {
+        console.error('Error loading referrers:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadApprovedReferrers()
+  }, [supabase])
+
+  const handleSubmit = async () => {
+    if (!selectedReferrerId) {
+      alert('Please select a referrer')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const response = await fetch('/api/referrals/select-referrer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          referrer_id: selectedReferrerId,
+          referred_role: 'scout',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // If referral already exists, refresh to check status
+        if (data.error?.includes('already') || data.error?.includes('Referral already exists')) {
+          alert('You already have a referrer selected. Refreshing page...')
+          window.location.reload()
+          return
+        }
+        throw new Error(data.error || 'Failed to select referrer')
+      }
+
+      // Verify the referral was actually created before proceeding
+      console.log('✅ Referral created successfully:', data.referral?.id)
+      
+      // Small delay to ensure database write is complete, then reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+    } catch (error: any) {
+      console.error('Error selecting referrer:', error)
+      alert(error.message || 'Failed to select referrer')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSkip = async () => {
+    onComplete()
+  }
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-black mb-2">Select Your Referrer</h3>
+      <p className="text-sm text-gray-600 mb-6">
+        Who referred you to Got1? This helps us track referrals and reward those who bring new scouts to the platform.
+      </p>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 border-2 border-gray-200 rounded-full"></div>
+            <div className="absolute inset-0 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      ) : approvedReferrers.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600 mb-4">No referrers available.</p>
+          <button
+            onClick={handleSkip}
+            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 font-medium"
+          >
+            Skip This Step
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3 mb-6 max-h-80 overflow-y-auto">
+            {approvedReferrers.map((referrer) => {
+              const avatarUrl = referrer.avatar_url && isMeaningfulAvatar(referrer.avatar_url)
+                ? referrer.avatar_url
+                : null
+              const initial = (referrer.full_name || '?').charAt(0).toUpperCase()
+              const gradientKey = referrer.user_id
+              const positionOrg = referrer.position && referrer.organization
+                ? `${referrer.position} at ${referrer.organization}`
+                : referrer.position || referrer.organization || null
+
+              return (
+                <button
+                  key={referrer.user_id}
+                  onClick={() => setSelectedReferrerId(referrer.user_id)}
+                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                    selectedReferrerId === referrer.user_id
+                      ? 'border-black bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    {avatarUrl && !imageErrors.has(referrer.user_id) ? (
+                      <Image
+                        src={avatarUrl}
+                        alt=""
+                        width={48}
+                        height={48}
+                        className="rounded-full object-cover flex-shrink-0"
+                        onError={() => setImageErrors(prev => new Set(prev).add(referrer.user_id))}
+                      />
+                    ) : (
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${getGradientForId(gradientKey)}`}>
+                        {initial}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-black mb-1">{referrer.full_name || 'Unknown'}</p>
+                      {positionOrg && (
+                        <p className="text-sm text-gray-600">{positionOrg}</p>
+                      )}
+                    </div>
+                    {selectedReferrerId === referrer.user_id && (
+                      <div className="flex-shrink-0">
+                        <svg
+                          className="w-6 h-6 text-black"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={handleSkip}
+              className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700"
+            >
+              Skip
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedReferrerId || submitting}
+              className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {submitting ? 'Submitting...' : 'Continue'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function StripeConnectSection({ profile }: { profile: any }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -1230,7 +1745,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
   )
 }
 
-export default function ProfileContent({ profile, hasPendingApplication }: ProfileContentProps) {
+export default function ProfileContent({ profile, hasPendingApplication, needsReferrerSelection = false }: ProfileContentProps) {
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -1686,6 +2201,37 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
     <div className="max-w-4xl mx-auto">
       <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
 
+      {/* Pending Scout Application Banner */}
+      {hasPendingApplication && (
+        <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 md:p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-6 h-6 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-amber-900 mb-1">
+                Scout Application Pending Review
+              </h3>
+              <p className="text-amber-800">
+                Your scout application is currently being reviewed by our admin team. You will be notified once a decision has been made.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Profile Card */}
       <div className="surface-card flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
@@ -1750,8 +2296,8 @@ export default function ProfileContent({ profile, hasPendingApplication }: Profi
         </Link>
       </div>
 
-      {/* Stripe Connect Account Section - Only show for scouts */}
-      {profile.role === 'scout' && <StripeConnectSection key={`stripe-${refreshKey}`} profile={profile} />}
+      {/* Scout Setup Progress - Only show for scouts */}
+      {profile.role === 'scout' && <ScoutSetupProgress key={`setup-${refreshKey}`} profile={profile} />}
 
       {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
       {profile.role === 'scout' && <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />}

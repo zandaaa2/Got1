@@ -13,6 +13,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe key is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('❌ STRIPE_SECRET_KEY environment variable is not set')
+      return NextResponse.json(
+        { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.' },
+        { status: 500 }
+      )
+    }
+    
+    // Log key type for debugging (without exposing the actual key)
+    const keyType = process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ? 'test' : 
+                    process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') ? 'live' : 'unknown'
+    console.log(`📧 Using Stripe ${keyType} key`)
+    
     // Require authentication
     const authResult = await requireAuth(request)
     if (authResult.response) {
@@ -98,6 +112,47 @@ export async function POST(request: NextRequest) {
       onboardingUrl: null, // Will need to get onboarding link separately
     })
   } catch (error: any) {
+    console.error('❌ Stripe account creation error:', error)
+    
+    // Check if it's a Stripe API error
+    if (error.type === 'StripeInvalidRequestError' || error.type === 'StripeAPIError') {
+      console.error('Stripe API Error Details:', {
+        type: error.type,
+        code: error.code,
+        message: error.message,
+        statusCode: error.statusCode,
+      })
+      
+      // Provide more specific error messages
+      if (error.code === 'api_key_expired' || error.message?.includes('Invalid API Key')) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid Stripe API key. Please check your STRIPE_SECRET_KEY environment variable.',
+            details: 'The Stripe secret key may be incorrect, expired, or missing.'
+          },
+          { status: 500 }
+        )
+      }
+      
+      if (error.message?.includes('test') || error.message?.includes('live')) {
+        return NextResponse.json(
+          { 
+            error: 'Stripe key mismatch. You may be using a test key with a live account (or vice versa).',
+            details: error.message
+          },
+          { status: 500 }
+        )
+      }
+      
+      return NextResponse.json(
+        { 
+          error: `Stripe API error: ${error.message || 'Failed to create Stripe Connect account'}`,
+          details: error.code ? `Error code: ${error.code}` : undefined
+        },
+        { status: error.statusCode || 500 }
+      )
+    }
+    
     return handleApiError(error, 'Failed to create Stripe Connect account')
   }
 }

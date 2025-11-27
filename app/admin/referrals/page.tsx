@@ -1,8 +1,9 @@
 import { createServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { redirect } from 'next/navigation'
 import { isAdmin } from '@/lib/admin'
 import ReferralApplicationsList from '@/components/admin/ReferralApplicationsList'
-import Link from 'next/link'
+import AdminReferralNav from '@/components/admin/AdminReferralNav'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -26,8 +27,13 @@ export default async function ReferralsAdminPage() {
     redirect('/browse')
   }
 
-  // Get all referral applications
-  const { data: applications, error: applicationsError } = await supabase
+  const adminSupabase = createAdminClient()
+  if (!adminSupabase) {
+    throw new Error('Supabase admin client is not configured')
+  }
+
+  // Get all referral applications (admin client bypasses RLS)
+  const { data: applications, error: applicationsError } = await adminSupabase
     .from('referral_program_applications')
     .select('*')
     .order('created_at', { ascending: false })
@@ -37,7 +43,7 @@ export default async function ReferralsAdminPage() {
   if (applications && applications.length > 0) {
     const userIds = applications.map(app => app.user_id).filter(Boolean)
     if (userIds.length > 0) {
-      const { data: profiles } = await supabase
+      const { data: profiles } = await adminSupabase
         .from('profiles')
         .select('id, full_name, avatar_url, user_id, username')
         .in('user_id', userIds)
@@ -51,27 +57,14 @@ export default async function ReferralsAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-8">
+    <div className="min-h-screen bg-white p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-black">Referral Program Applications</h1>
-          <div className="flex gap-3">
-            <Link
-              href="/admin/scouts"
-              className="px-4 py-2 border border-black text-black rounded hover:bg-gray-50 font-medium"
-            >
-              Manage Scouts
-            </Link>
-            <Link
-              href="/admin/scout-applications"
-              className="px-4 py-2 border border-black text-black rounded hover:bg-gray-50 font-medium"
-            >
-              Scout Applications
-            </Link>
-          </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-bold text-black">Referral Program Applications</h1>
+          <AdminReferralNav active="applications" />
         </div>
         {applicationsError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
             <h3 className="font-bold text-red-800 mb-2">Error Loading Applications</h3>
             <p className="text-red-700 text-sm">{applicationsError.message}</p>
           </div>

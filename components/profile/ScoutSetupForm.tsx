@@ -68,8 +68,20 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
+      // Get user metadata from auth.users as fallback
+      let authName = null
+      let authAvatar = null
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        authName = user?.user_metadata?.full_name || user?.user_metadata?.name || null
+        authAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
+      } catch (err) {
+        // If getUser fails, continue without auth metadata
+        console.warn('Could not fetch user metadata:', err)
+      }
+
       // Update profile to scout role
-      // IMPORTANT: Preserve existing fields like full_name, username, avatar_url, birthday
+      // IMPORTANT: Preserve existing fields, or pull from auth.users if missing
       const updateData: any = {
         role: 'scout',
         organization: formData.organization.trim(),
@@ -78,10 +90,10 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
         social_link: formData.social_link.trim(),
         work_history: formData.work_history?.trim() || null,
         additional_info: formData.additional_info?.trim() || null,
-        // Explicitly preserve existing fields from user-setup
-        full_name: profile?.full_name || null,
+        // Preserve existing fields from profile, or pull from auth.users if missing
+        full_name: profile?.full_name || authName || null,
         username: profile?.username || null,
-        avatar_url: profile?.avatar_url || null,
+        avatar_url: profile?.avatar_url || authAvatar || null,
         birthday: profile?.birthday || null,
         updated_at: new Date().toISOString(),
       }

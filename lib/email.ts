@@ -318,6 +318,89 @@ ${EMAIL_HEADER}
   await sendEmail(scoutEmail, 'A Player Cancelled Their Evaluation Request', html)
 }
 
+type ReferralEmailParams = {
+  email: string
+  name?: string | null
+}
+
+export async function sendReferralApplicationSubmittedEmail({
+  email,
+  name,
+}: ReferralEmailParams): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
+      <h2 style="color: #000; margin-bottom: 20px;">Referral Program Application Received</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Thanks for applying to the Got1 referral program. Our team reviews every application manually and will follow up soon.
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        We’ll notify you as soon as a decision is made. In the meantime, make sure your profile is up to date so potential referrals can learn more about you.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${getBaseUrl()}/profile" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View Your Profile</a>
+      </div>
+    </div>
+  `
+
+  await sendEmail(email, 'We received your referral program application', html)
+}
+
+export async function sendReferralApplicationApprovedEmail({
+  email,
+  name,
+}: ReferralEmailParams): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
+      <h2 style="color: #000; margin-bottom: 20px;">You’re Approved!</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Great news — your referral program application has been approved. You can now earn $45, $65, or $125 for every new scout you bring to Got1.
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Head to the Referral Program dashboard to review onboarding requirements and track your referral payouts.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${getBaseUrl()}/make-money" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Open Referral Dashboard</a>
+      </div>
+    </div>
+  `
+
+  await sendEmail(email, 'Your Got1 referral application was approved', html)
+}
+
+export async function sendReferralApplicationDeniedEmail({
+  email,
+  name,
+}: ReferralEmailParams): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+${EMAIL_HEADER}
+      <h2 style="color: #000; margin-bottom: 20px;">Referral Application Update</h2>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        We reviewed your application to the Got1 referral program but aren’t able to approve it at this time. You’re welcome to apply again in the future once you meet all requirements.
+      </p>
+      <p style="color: #333; line-height: 1.6; margin-bottom: 20px;">
+        If you have questions, just reply to this email and our team can help.
+      </p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="${getBaseUrl()}/make-money" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Review Requirements</a>
+      </div>
+    </div>
+  `
+
+  await sendEmail(email, 'Your referral application status', html)
+}
+
 /**
  * Sends an email notification to a player when a scout confirms their evaluation request.
  * Includes a payment link for the player to complete payment.

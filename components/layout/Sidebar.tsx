@@ -279,9 +279,36 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Bottom left buttons - Book call, Talk to us, Help */}
+      {/* Bottom left buttons - Referral Program, Book call, Talk to us, Help */}
       <div className={`flex-shrink-0 p-4 md:p-6 pt-0 ${isMobile ? '' : isCollapsed ? 'px-2' : ''}`}>
         <nav className="space-y-2">
+          {/* Referral Program */}
+          <Link
+            href="/make-money"
+            onClick={() => isMobile && setIsMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
+              currentActivePage === 'make-money'
+                ? 'bg-green-100 text-green-700'
+                : 'text-green-600 hover:bg-green-50'
+            } ${(isMobile || !isCollapsed) ? '' : 'justify-center'}`}
+            title={(isMobile || !isCollapsed) ? undefined : 'Referral Program'}
+          >
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {(isMobile || !isCollapsed) && <span>Referral Program</span>}
+          </Link>
+
           {/* Book a 15 min call */}
           <button
             onClick={() => {

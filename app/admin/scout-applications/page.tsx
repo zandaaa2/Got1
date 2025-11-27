@@ -113,6 +113,12 @@ export default async function ScoutApplicationsPage() {
             >
               Manage Scouts
             </Link>
+            <Link
+              href="/admin/sync-profiles"
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-medium text-sm"
+            >
+              Sync Profiles
+            </Link>
           </div>
         </div>
         {applicationsError && (

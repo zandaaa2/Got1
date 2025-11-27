@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { createAdminClient } from '@/lib/supabase-admin'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-})
 
 export const dynamic = 'force-dynamic'
 
@@ -82,70 +77,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if referral already exists
-    const { data: existingReferral } = await adminSupabase
+    // Check if referral already exists for this user (with any referrer)
+    // This prevents duplicate referrals even if they try to select a different referrer
+    // Use .limit(1) to ensure we get the first one if duplicates exist
+    const { data: existingReferrals } = await adminSupabase
       .from('referrals')
-      .select('id')
-      .eq('referrer_id', referrer_id)
+      .select('id, referrer_id')
       .eq('referred_id', session.user.id)
-      .maybeSingle()
+      .limit(1)
+    
+    const existingReferral = existingReferrals && existingReferrals.length > 0 ? existingReferrals[0] : null
 
     if (existingReferral) {
+      console.log('⚠️ Referral already exists for user:', session.user.id, 'with referrer:', existingReferral.referrer_id)
       return NextResponse.json(
-        { error: 'Referral already exists' },
+        { 
+          error: 'You have already selected a referrer. Each user can only have one referral.',
+          existingReferralId: existingReferral.id
+        },
         { status: 400 }
       )
     }
 
-    // Calculate earnings: $5 for scout referral, $2 for player referral
-    const amountEarned = referrerProfile.role === 'scout' ? 5.00 : 2.00
-
-    // Get referrer's Stripe Connect account ID (required for payout)
-    const { data: referrerProfileFull } = await adminSupabase
-      .from('profiles')
-      .select('stripe_account_id')
-      .eq('user_id', referrer_id)
-      .maybeSingle()
-
-    let transferId: string | null = null
-    let paymentStatus: 'pending' | 'paid' = 'pending'
-
-    // Only scouts get automatic payments (they have Stripe Connect accounts)
-    if (referrerProfile.role === 'scout' && referrerProfileFull?.stripe_account_id) {
-      try {
-        // Transfer funds to scout's Stripe Connect account
-        // Note: This requires the platform account to have available balance
-        // Or you can use Payment Intents with destination charges
-        const transfer = await stripe.transfers.create({
-          amount: Math.round(amountEarned * 100), // Convert to cents
-          currency: 'usd',
-          destination: referrerProfileFull.stripe_account_id,
-          metadata: {
-            type: 'referral_bonus',
-            referrer_id: referrer_id,
-            referred_id: session.user.id,
-            referred_role: referred_role,
-          },
-        })
-
-        transferId = transfer.id
-        paymentStatus = 'paid'
-        console.log('✅ Referral payment transferred successfully:', transfer.id)
-      } catch (stripeError: any) {
-        console.error('❌ Error processing referral payment:', stripeError)
-        // If transfer fails, we'll still create the referral record but mark it as pending
-        // This allows manual processing later
-        paymentStatus = 'pending'
-        // Log the error but don't fail the referral creation
-        console.error('Referral payment failed, will be processed manually:', {
-          referrer_id,
-          amount: amountEarned,
-          error: stripeError.message,
-        })
-      }
-    }
-
-    // Create referral record
+    // Create referral record with pending_admin_review status
+    // Admin will manually review and process payment ($45, $65, or $125) after verifying onboarding completion
     const { data: referral, error: insertError } = await adminSupabase
       .from('referrals')
       .insert({
@@ -153,9 +108,9 @@ export async function POST(request: NextRequest) {
         referred_id: session.user.id,
         referrer_role: referrerProfile.role,
         referred_role: referred_role,
-        amount_earned: amountEarned,
-        status: paymentStatus === 'paid' ? 'paid' : 'pending', // Auto-mark as paid if transfer succeeded
-        transfer_id: transferId,
+        amount_earned: 0, // Will be set by admin when processing payment
+        payment_status: 'pending_admin_review', // Admin will review and process payment
+        payment_amount: null, // Will be set by admin ($45, $65, or $125)
       })
       .select()
       .single()
@@ -170,11 +125,7 @@ export async function POST(request: NextRequest) {
 
     return successResponse({ 
       referral,
-      paymentProcessed: paymentStatus === 'paid',
-      transferId,
-      message: paymentStatus === 'paid' 
-        ? 'Referral recorded and payment processed successfully!' 
-        : 'Referral recorded successfully! Payment will be processed manually.' 
+      message: 'Referral recorded successfully! Payment will be processed by admin after onboarding verification.' 
     })
   } catch (error: any) {
     return handleApiError(error, 'Failed to create referral')
