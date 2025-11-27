@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Get all profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, user_id, full_name, avatar_url, role')
+      .select('id, user_id, full_name, username, avatar_url, role')
 
     if (profilesError) {
       console.error('❌ Error fetching profiles:', profilesError)
