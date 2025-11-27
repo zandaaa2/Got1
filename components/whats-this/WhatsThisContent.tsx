@@ -118,7 +118,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            For Players
+            For Players + Parents
           </button>
         <button
             onClick={() => setActiveTab('scout')}
