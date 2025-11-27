@@ -16,6 +16,7 @@ import ShareButton from '@/components/evaluations/ShareButton'
 import AuthModal from '@/components/auth/AuthModal'
 import { collegeEntries } from '@/lib/college-data'
 import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
+import PlayerTabs from '@/components/profile/PlayerTabs'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -398,15 +399,15 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </button>
 
         {/* Player Profile Section */}
-        <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-3 md:gap-4 mb-4 md:mb-6 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 md:p-6">
           <div className="flex flex-col items-start gap-2 flex-shrink-0">
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden">
               {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
                 <Image
                   src={profileAvatarUrl}
                   alt={profile.full_name || 'Player'}
-                  width={96}
-                  height={96}
+                  width={80}
+                  height={80}
                   className="w-full h-full object-cover"
                   onError={() => {
                     setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
@@ -415,321 +416,325 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 />
               ) : (
                 <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
-                  <span className="text-white text-3xl font-semibold">
+                  <span className="text-white text-2xl font-semibold">
                     {profile.full_name?.charAt(0).toUpperCase() || '?'}
                   </span>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex-1 w-full text-left">
-            <div className="flex flex-wrap items-center gap-1 mb-1">
-              <h1 className="text-xl md:text-2xl font-bold text-black break-words">
-                {profile.full_name || 'Unknown Player'}
-              </h1>
-              {isTestAccount(profile.full_name) && (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0 whitespace-nowrap">
-                  test account
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-1">
-              {profile.username && <span className="text-gray-500">@{profile.username}</span>}
-              {!isOwnProfile && <span className="text-gray-400">•</span>}
-              {!isOwnProfile && (
-                <button
-                  onClick={() => setShowMoreInfo(true)}
-                  className="interactive-press text-blue-600 hover:text-blue-800 underline font-medium"
-                >
-                  Details
-                </button>
-              )}
-            </div>
-            {profile.school && (
-              <div className="mb-2">
-                <p className="text-blue-600">
-                  {profile.school}
-                  {profile.state && `, ${profile.state}`}
-                  {profile.classification && ` (${profile.classification})`}
-                </p>
-              </div>
-            )}
-            {/* Player positions */}
-            {(() => {
-              let positions: string[] = []
-              try {
-                // Try to load from positions JSONB array first (new format)
-                if (profile.positions && typeof profile.positions === 'string') {
-                  positions = JSON.parse(profile.positions)
-                } else if (Array.isArray(profile.positions)) {
-                  positions = profile.positions
-                } else if (profile.position) {
-                  // Fall back to single position field (backward compatibility)
-                  positions = [profile.position]
-                }
-              } catch {
-                // If parsing fails, fall back to single position
-                if (profile.position) {
-                  positions = [profile.position]
-                }
-              }
-              
-              if (positions.length > 0) {
-                return (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {positions.map((pos) => (
-                      <span
-                        key={pos}
-                        className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
-                      >
-                        {pos}
-                      </span>
-                    ))}
-                  </div>
-                )
-              }
-              return null
-            })()}
-          </div>
-        </div>
-
-        {/* Player Stats Section */}
-        {(profile.gpa || profile.weight || profile.height || profile.forty_yard_dash || 
-          profile.bench_max || profile.squat_max || profile.clean_max) && (
-          <div className="surface-card mb-6 md:mb-8 p-4 md:p-6">
-            <h2 className="text-lg md:text-xl font-bold text-black mb-4 md:mb-6">Athletic Information</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {profile.gpa && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">GPA</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.gpa.toFixed(2)}</p>
-                </div>
-              )}
-              {profile.height && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Height</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.height}</p>
-                </div>
-              )}
-              {profile.weight && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Weight</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.weight} lbs</p>
-                </div>
-              )}
-              {profile.forty_yard_dash && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">40-Yard Dash</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.forty_yard_dash.toFixed(2)}s</p>
-                </div>
-              )}
-              {profile.bench_max && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Bench Max</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.bench_max} lbs</p>
-                </div>
-              )}
-              {profile.squat_max && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Squat Max</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.squat_max} lbs</p>
-                </div>
-              )}
-              {profile.clean_max && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Clean Max</p>
-                  <p className="text-lg md:text-xl font-semibold text-black">{profile.clean_max} lbs</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* College Offers Section */}
-        <div className="mb-6 md:mb-8">
-          <PlayerOffersSection
-            profileId={profile.id}
-            userId={profile.user_id}
-            isOwnProfile={isOwnProfile}
-          />
-        </div>
-
-        {/* Evaluations Section */}
-        <div className="mb-6 md:mb-8 relative">
-          <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
-            Evaluations ({evaluations.length})
-          </h2>
-          {loading ? (
-            <EvaluationListSkeleton />
-          ) : evaluations.length === 0 && isSignedIn ? (
-            <EmptyState
-              icon={emptyEvaluationIcon}
-              title="No evaluations yet"
-              description={
-                isOwnProfile
-                  ? 'Request an evaluation from a scout to see it appear here.'
-                  : 'This player has not received any public evaluations yet.'
-              }
-              action={
-                isOwnProfile ? (
-                  <Link
-                    href="/browse?tab=profiles"
-                    className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                  >
-                    Browse scouts
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7M4 12h12" />
-                    </svg>
-                  </Link>
-                ) : undefined
-              }
-            />
-          ) : (
-            <div className="relative">
-              <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
-                {isSignedIn ? (
-                  evaluations.map((evaluation) => {
-                    const scoutAvatarUrl = isMeaningfulAvatar(evaluation.scout?.avatar_url)
-                      ? evaluation.scout?.avatar_url ?? undefined
-                      : undefined
-                    const scoutGradientKey =
-                      evaluation.scout?.user_id ||
-                      evaluation.scout_id ||
-                      evaluation.scout?.id ||
-                      evaluation.scout?.username ||
-                      evaluation.id
-                    const showScoutAvatar =
-                      Boolean(scoutAvatarUrl) && !imageErrors.has(`scout-${evaluation.id}`)
-
-                    return (
-                      <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                        <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
-                          <Link 
-                            href={evaluation.scout?.id ? getProfilePath(evaluation.scout.id, evaluation.scout.username) : '#'}
-                            className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
-                          >
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                              {showScoutAvatar ? (
-                                <Image
-                                  src={scoutAvatarUrl!}
-                                  alt={evaluation.scout?.full_name || 'Scout'}
-                                  width={64}
-                                  height={64}
-                                  className="w-full h-full object-cover"
-                                  onError={() => {
-                                    setImageErrors((prev) => new Set(prev).add(`scout-${evaluation.id}`))
-                                  }}
-                                  unoptimized
-                                />
-                              ) : (
-                                <div className={`w-full h-full flex items-center justify-center ${getGradientForId(scoutGradientKey)}`}>
-                                  <span className="text-white text-xl font-semibold">
-                                    {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                              {evaluation.scout?.full_name || 'Unknown Scout'}
-                            </h3>
-                            <p className="text-black text-xs md:text-sm mb-1 truncate">
-                              {evaluation.scout?.organization || 'Scout'}
-                            </p>
-                            <p className="text-black text-xs md:text-sm text-gray-600">
-                              {formatDate(evaluation.created_at)}
-                            </p>
-                          </div>
-                        </Link>
-                        {evaluation.notes && (
-                          <button
-                            onClick={() => toggleEvalMinimize(evaluation.id)}
-                            className="flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
-                            title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
-                          >
-                            <svg
-                              className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 9l-7 7-7-7"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                        {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
-                          <div className="pl-0 md:pl-20 mt-4 md:mt-0">
-                            <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
-                              {evaluation.notes}
-                            </p>
-                          </div>
-                        )}
-                        {/* Share button - bottom left underneath evaluation (always visible) */}
-                        <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
-                          <ShareButton 
-                            evaluationId={evaluation.id} 
-                            {...(currentUserId && { userId: currentUserId })}
-                            evaluation={{
-                              id: evaluation.id,
-                              share_token: evaluation.share_token || null,
-                              status: 'completed',
-                              ...(evaluation.player_id && { player_id: evaluation.player_id }),
-                              scout: evaluation.scout ? {
-                                full_name: evaluation.scout.full_name,
-                                organization: evaluation.scout.organization,
-                              } : null,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <EvaluationListSkeleton />
+          <div className="flex-1 w-full text-left flex items-center">
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-1 mb-1">
+                <h1 className="text-lg md:text-xl font-bold text-black break-words">
+                  {profile.full_name || 'Unknown Player'}
+                </h1>
+                {isTestAccount(profile.full_name) && (
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0 whitespace-nowrap">
+                    test account
+                  </span>
                 )}
               </div>
-              {/* Sign in/Sign up overlay for non-signed-in users */}
-              {!isSignedIn && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
-                  <div className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 md:p-8 max-w-md mx-4 text-center">
-                    <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
-                      Sign in to view evaluations
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      Create an account or sign in to see detailed evaluations
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Link
-                        href="/auth/signup"
-                        className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
-                      >
-                        Sign Up
-                      </Link>
-                      <Link
-                        href="/auth/signin"
-                        className="flex-1 px-6 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 font-medium transition-colors"
-                      >
-                        Sign In
-                      </Link>
-                    </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-gray-600 mb-1">
+                {profile.username && <span className="text-gray-500">@{profile.username}</span>}
+                {!isOwnProfile && <span className="text-gray-400">•</span>}
+                {!isOwnProfile && (
+                  <button
+                    onClick={() => setShowMoreInfo(true)}
+                    className="interactive-press text-blue-600 hover:text-blue-800 underline font-medium"
+                  >
+                    Details
+                  </button>
+                )}
+              </div>
+              <div className="mb-1.5">
+                <p className="text-xs md:text-sm text-blue-600 flex flex-wrap items-center gap-1">
+                  {profile.school && (
+                    <>
+                      <span>{profile.school}</span>
+                      {profile.state && <span>, {profile.state}</span>}
+                      {profile.classification && <span> ({profile.classification})</span>}
+                    </>
+                  )}
+                  {(() => {
+                    let positions: string[] = []
+                    try {
+                      // Try to load from positions JSONB array first (new format)
+                      if (profile.positions && typeof profile.positions === 'string') {
+                        positions = JSON.parse(profile.positions)
+                      } else if (Array.isArray(profile.positions)) {
+                        positions = profile.positions
+                      } else if (profile.position) {
+                        // Fall back to single position field (backward compatibility)
+                        positions = [profile.position]
+                      }
+                    } catch {
+                      // If parsing fails, fall back to single position
+                      if (profile.position) {
+                        positions = [profile.position]
+                      }
+                    }
+                    
+                    if (positions.length > 0) {
+                      return (
+                        <>
+                          {(profile.school || profile.state || profile.classification) && (
+                            <span className="text-gray-400">•</span>
+                          )}
+                          <span>{positions.join(', ')}</span>
+                        </>
+                      )
+                    }
+                    return null
+                  })()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Player Tabs - Only show for players */}
+        <PlayerTabs
+          playerInfoContent={
+            <>
+              {/* Player Stats Section */}
+              {(profile.gpa || profile.weight || profile.height || profile.forty_yard_dash || 
+                profile.bench_max || profile.squat_max || profile.clean_max) && (
+                <div className="surface-card mb-6 md:mb-8 p-4 md:p-6">
+                  <h2 className="text-lg md:text-xl font-bold text-black mb-4 md:mb-6">Athletic Information</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    {profile.gpa && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">GPA</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.gpa.toFixed(2)}</p>
+                      </div>
+                    )}
+                    {profile.height && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Height</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.height}</p>
+                      </div>
+                    )}
+                    {profile.weight && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Weight</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.weight} lbs</p>
+                      </div>
+                    )}
+                    {profile.forty_yard_dash && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">40-Yard Dash</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.forty_yard_dash.toFixed(2)}s</p>
+                      </div>
+                    )}
+                    {profile.bench_max && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Bench Max</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.bench_max} lbs</p>
+                      </div>
+                    )}
+                    {profile.squat_max && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Squat Max</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.squat_max} lbs</p>
+                      </div>
+                    )}
+                    {profile.clean_max && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Clean Max</p>
+                        <p className="text-lg md:text-xl font-semibold text-black">{profile.clean_max} lbs</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
+
+              {/* College Offers Section */}
+              <div className="mb-6 md:mb-8">
+                <PlayerOffersSection
+                  profileId={profile.id}
+                  userId={profile.user_id}
+                  isOwnProfile={isOwnProfile}
+                />
+              </div>
+            </>
+          }
+          evaluationsContent={
+            <div className="mb-6 md:mb-8 relative">
+              {loading ? (
+                <EvaluationListSkeleton />
+              ) : evaluations.length === 0 && isSignedIn ? (
+                <EmptyState
+                  icon={emptyEvaluationIcon}
+                  title="No evaluations yet"
+                  description={
+                    isOwnProfile
+                      ? 'Request an evaluation from a scout to see it appear here.'
+                      : 'This player has not received any public evaluations yet.'
+                  }
+                  action={
+                    isOwnProfile ? (
+                      <Link
+                        href="/browse?tab=profiles"
+                        className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                      >
+                        Browse scouts
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7M4 12h12" />
+                        </svg>
+                      </Link>
+                    ) : undefined
+                  }
+                />
+              ) : (
+                <div className="relative">
+                  <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
+                    {isSignedIn ? (
+                      evaluations.map((evaluation) => {
+                        const scoutAvatarUrl = isMeaningfulAvatar(evaluation.scout?.avatar_url)
+                          ? evaluation.scout?.avatar_url ?? undefined
+                          : undefined
+                        const scoutGradientKey =
+                          evaluation.scout?.user_id ||
+                          evaluation.scout_id ||
+                          evaluation.scout?.id ||
+                          evaluation.scout?.username ||
+                          evaluation.id
+                        const showScoutAvatar =
+                          Boolean(scoutAvatarUrl) && !imageErrors.has(`scout-${evaluation.id}`)
+
+                        return (
+                          <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
+                            <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                              <Link 
+                                href={evaluation.scout?.id ? getProfilePath(evaluation.scout.id, evaluation.scout.username) : '#'}
+                                className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
+                              >
+                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                                  {showScoutAvatar ? (
+                                    <Image
+                                      src={scoutAvatarUrl!}
+                                      alt={evaluation.scout?.full_name || 'Scout'}
+                                      width={64}
+                                      height={64}
+                                      className="w-full h-full object-cover"
+                                      onError={() => {
+                                        setImageErrors((prev) => new Set(prev).add(`scout-${evaluation.id}`))
+                                      }}
+                                      unoptimized
+                                    />
+                                  ) : (
+                                    <div className={`w-full h-full flex items-center justify-center ${getGradientForId(scoutGradientKey)}`}>
+                                      <span className="text-white text-xl font-semibold">
+                                        {evaluation.scout?.full_name?.charAt(0).toUpperCase() || '?'}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                                  {evaluation.scout?.full_name || 'Unknown Scout'}
+                                </h3>
+                                <p className="text-black text-xs md:text-sm mb-1 truncate">
+                                  {evaluation.scout?.organization || 'Scout'}
+                                </p>
+                                <p className="text-black text-xs md:text-sm text-gray-600">
+                                  {formatDate(evaluation.created_at)}
+                                </p>
+                              </div>
+                            </Link>
+                            {evaluation.notes && (
+                              <button
+                                onClick={() => toggleEvalMinimize(evaluation.id)}
+                                className="flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
+                                title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
+                              >
+                                <svg
+                                  className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                            {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
+                              <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                                <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                                  {evaluation.notes}
+                                </p>
+                              </div>
+                            )}
+                            {/* Share button - bottom left underneath evaluation (always visible) */}
+                            <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
+                              <ShareButton 
+                                evaluationId={evaluation.id} 
+                                {...(currentUserId && { userId: currentUserId })}
+                                evaluation={{
+                                  id: evaluation.id,
+                                  share_token: evaluation.share_token || null,
+                                  status: 'completed',
+                                  ...(evaluation.player_id && { player_id: evaluation.player_id }),
+                                  scout: evaluation.scout ? {
+                                    full_name: evaluation.scout.full_name,
+                                    organization: evaluation.scout.organization,
+                                  } : null,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <EvaluationListSkeleton />
+                    )}
+                  </div>
+                  {/* Sign in/Sign up overlay for non-signed-in users */}
+                  {!isSignedIn && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
+                      <div className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 md:p-8 max-w-md mx-4 text-center">
+                        <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
+                          Sign in to view evaluations
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                          Create an account or sign in to see detailed evaluations
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Link
+                            href="/auth/signup"
+                            className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
+                          >
+                            Sign Up
+                          </Link>
+                          <Link
+                            href="/auth/signin"
+                            className="flex-1 px-6 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                          >
+                            Sign In
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          }
+          evaluationsCount={evaluations.length}
+        />
 
         {/* More Info Modal */}
         {showMoreInfo && (

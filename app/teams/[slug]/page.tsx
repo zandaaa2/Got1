@@ -4,15 +4,13 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import dynamicImport from 'next/dynamic'
 
-import VerificationBadge from '@/components/shared/VerificationBadge'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
-import { getGradientForId } from '@/lib/gradients'
-import { isMeaningfulAvatar } from '@/lib/avatar'
+import TeamTabs from '@/components/teams/TeamTabs'
 
 const TeamMenu = dynamicImport(() => import('@/components/shared/TeamMenu'), {
   ssr: false,
@@ -22,7 +20,7 @@ export const revalidate = 0
 
 
 
-interface ScoutProfile {
+interface Profile {
   id: string
   user_id: string | null
   full_name: string | null
@@ -32,6 +30,8 @@ interface ScoutProfile {
   price_per_eval: number | null
   suspended_until?: string | null
   sports?: string[] | null
+  role: 'scout' | 'player'
+  college_connections?: string | any // JSONB field
 }
 
 const normalizeValue = (value: string) =>
@@ -90,14 +90,15 @@ export default async function TeamPage({ params }: PageParams) {
   const {
     data: { session },
   } = await supabase.auth.getSession()
-  const { data, error } = await supabase
+
+  // Fetch all profiles (scouts and players) with college_connections
+  const { data: allProfiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, user_id, full_name, organization, position, avatar_url, price_per_eval, suspended_until, sports')
-    .eq('role', 'scout')
+    .select('id, user_id, full_name, organization, position, avatar_url, price_per_eval, suspended_until, sports, role, college_connections')
     .order('full_name', { ascending: true })
 
-  if (error) {
-    console.error('Error loading scouts for team page:', error)
+  if (profilesError) {
+    console.error('Error loading profiles for team page:', profilesError)
   }
 
   let userProfile: { avatar_url: string | null; full_name?: string | null; username?: string | null } | null = null
@@ -112,14 +113,51 @@ export default async function TeamPage({ params }: PageParams) {
 
   const now = new Date()
   const teamKey = normalizeValue(team.name)
+  const teamSlug = team.slug
 
-  const scouts: ScoutProfile[] = (data || []).filter((profile) => {
-    if (!profile.organization) return false
-
+  // Filter for Connections: Scouts/Players who have this college in their college_connections
+  const connections: Profile[] = (allProfiles || []).filter((profile) => {
+    // Skip suspended profiles
     const suspensionEnds = profile.suspended_until
     if (suspensionEnds && typeof suspensionEnds === 'string' && new Date(suspensionEnds) > now) {
       return false
     }
+
+    // Check if college_connections contains the team slug
+    if (!profile.college_connections) return false
+
+    try {
+      let connectionsArray: string[] = []
+      
+      // Handle JSONB field (could be string or already parsed)
+      if (typeof profile.college_connections === 'string') {
+        connectionsArray = JSON.parse(profile.college_connections)
+      } else if (Array.isArray(profile.college_connections)) {
+        connectionsArray = profile.college_connections
+      } else {
+        return false
+      }
+
+      // Check if team slug is in the connections array
+      return connectionsArray.includes(teamSlug)
+    } catch (error) {
+      console.error('Error parsing college_connections for profile:', profile.id, error)
+      return false
+    }
+  })
+
+  // Filter for Employees: Scouts who have this university as their organization
+  const employees: Profile[] = (allProfiles || []).filter((profile) => {
+    // Only scouts for employees tab
+    if (profile.role !== 'scout') return false
+
+    // Skip suspended profiles
+    const suspensionEnds = profile.suspended_until
+    if (suspensionEnds && typeof suspensionEnds === 'string' && new Date(suspensionEnds) > now) {
+      return false
+    }
+
+    if (!profile.organization) return false
 
     const normalizedOrg = normalizeValue(profile.organization)
     if (!normalizedOrg) return false
@@ -130,55 +168,6 @@ export default async function TeamPage({ params }: PageParams) {
       teamKey.includes(normalizedOrg)
     )
   })
-
-  const sportMap = new Map<string, ScoutProfile[]>()
-  const unspecifiedScouts: ScoutProfile[] = []
-
-  scouts.forEach((scout) => {
-    const sportsArray = Array.isArray(scout.sports) ? scout.sports : []
-    const uniqueSports = Array.from(new Set(sportsArray.filter(Boolean)))
-
-    if (uniqueSports.length === 0) {
-      unspecifiedScouts.push(scout)
-      return
-    }
-
-    uniqueSports.forEach((sport) => {
-      const normalizedSport = sport.trim()
-      if (!normalizedSport) return
-      const list = sportMap.get(normalizedSport) ?? []
-      list.push(scout)
-      sportMap.set(normalizedSport, list)
-    })
-  })
-
-  const sportGroups = Array.from(sportMap.entries()).sort((a, b) => b[1].length - a[1].length)
-
-  const getScoutInitial = (name: string | null) => name?.trim()?.charAt(0).toUpperCase() || 'S'
-  const renderScoutAvatar = (scout: ScoutProfile) => {
-    const avatarUrl = isMeaningfulAvatar(scout.avatar_url) ? scout.avatar_url : null
-    const gradientClass = getGradientForId(
-      scout.user_id || scout.id || scout.full_name || scout.organization || 'scout'
-    )
-
-    return (
-      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={scout.full_name || 'Scout'}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            className={`w-full h-full flex items-center justify-center text-lg font-semibold text-white ${gradientClass}`}
-          >
-            {getScoutInitial(scout.full_name)}
-          </div>
-        )}
-      </div>
-    )
-  }
 
   const headerContent = session ? (
     <HeaderUserAvatar
@@ -206,24 +195,24 @@ export default async function TeamPage({ params }: PageParams) {
             </Link>
           </div>
 
-          <div className="relative flex flex-col md:flex-row md:items-start gap-6 md:gap-8 bg-white border border-gray-200 rounded-2xl shadow-sm p-5 sm:p-6 md:p-8">
-            <div className="w-24 h-24 md:w-32 md:h-32 mx-auto md:mx-0 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center overflow-hidden">
+          <div className="relative flex flex-col md:flex-row md:items-start gap-4 md:gap-6 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 md:p-6">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto md:mx-0 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
               {team.logo ? (
                 <Image
                   src={team.logo}
                   alt={team.name}
-                  width={128}
-                  height={128}
+                  width={80}
+                  height={80}
                   className="object-contain"
                  
                 />
               ) : (
-                <span className="text-3xl font-semibold text-gray-600">
+                <span className="text-2xl font-semibold text-gray-600">
                   {team.name.charAt(0)}
                 </span>
               )}
             </div>
-            <div className="flex-1 min-w-0 text-center md:text-left relative">
+            <div className="flex-1 min-w-0 text-center md:text-left relative flex items-center">
               <div className="absolute top-0 right-0">
                 <TeamMenu 
                   teamSlug={team.slug}
@@ -231,159 +220,32 @@ export default async function TeamPage({ params }: PageParams) {
                   isSignedIn={!!session}
                 />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
-                {team.name}
-              </h1>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm md:text-base text-gray-600 mb-4">
-                {team.conference && (
-                  <span className="font-medium text-black">
-                    {team.conference}
-                  </span>
-                )}
-                {team.division && (
-                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs sm:text-sm">
-                    {team.division}
-                  </span>
-                )}
-                <span className="text-gray-500">
-                  {scouts.length} scout{scouts.length === 1 ? '' : 's'} on Got1
-                </span>
+              <div className="flex-1">
+                <h1 className="text-xl md:text-2xl font-bold text-black mb-1.5">
+                  {team.name}
+                </h1>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-xs md:text-sm text-gray-600">
+                  {team.conference && (
+                    <span className="font-medium text-black">
+                      {team.conference}
+                    </span>
+                  )}
+                  {team.division && (
+                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
+                      {team.division}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-sm md:text-base text-gray-600">
-                View active Got1 scouts who evaluate for {team.name}.
-              </p>
             </div>
           </div>
 
-          <section>
-            <div className="mb-6 text-center md:text-left">
-              <h2 className="text-lg md:text-xl font-semibold text-black">
-                Scouts on Got1
-              </h2>
-              <p className="text-sm md:text-base text-gray-600">
-                These scouts list {team.name} as their current organization on Got1.
-              </p>
-            </div>
-
-            {scouts.length === 0 ? (
-              <div className="border border-dashed border-gray-300 rounded-lg p-6 sm:p-8 text-center text-gray-500">
-                No scouts from {team.name} are on the platform yet. Check back soon!
-              </div>
-            ) : sportGroups.length > 0 ? (
-              <div className="space-y-10">
-                {sportGroups.map(([sport, sportScouts]) => (
-                  <div key={sport} className="space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <h3 className="text-base md:text-lg font-semibold text-black">
-                        {sport}
-                      </h3>
-                      <span className="text-xs md:text-sm text-gray-500">
-                        {sportScouts.length} scout{sportScouts.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {sportScouts.map((scout) => (
-                        <Link
-                          key={`${sport}-${scout.id}`}
-                          href={`/profile/${scout.id}`}
-                          className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
-                        >
-                          {renderScoutAvatar(scout)}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-black text-base md:text-lg flex items-center gap-2 truncate">
-                              {scout.full_name || 'Scout'}
-                              <VerificationBadge />
-                            </h4>
-                            <p className="text-xs md:text-sm text-gray-600 truncate">
-                              {scout.position || 'Scout'}
-                            </p>
-                          </div>
-                          {typeof scout.price_per_eval === 'number' && (
-                            <div className="flex-shrink-0 text-right">
-                              <p className="text-sm md:text-base text-blue-600 font-semibold">
-                                ${scout.price_per_eval}
-                              </p>
-                              <p className="text-xs text-gray-400">per evaluation</p>
-                            </div>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-                {unspecifiedScouts.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base md:text-lg font-semibold text-black">
-                        Other Scouts
-                      </h3>
-                      <span className="text-xs md:text-sm text-gray-500">
-                        {unspecifiedScouts.length} scout{unspecifiedScouts.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {unspecifiedScouts.map((scout) => (
-                        <Link
-                          key={`unspecified-${scout.id}`}
-                          href={`/profile/${scout.id}`}
-                          className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
-                        >
-                          {renderScoutAvatar(scout)}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-black text-base md:text-lg flex items-center gap-2 truncate">
-                              {scout.full_name || 'Scout'}
-                              <VerificationBadge />
-                            </h4>
-                            <p className="text-xs md:text-sm text-gray-600 truncate">
-                              {scout.position || 'Scout'}
-                            </p>
-                          </div>
-                          {typeof scout.price_per_eval === 'number' && (
-                            <div className="flex-shrink-0 text-right">
-                              <p className="text-sm md:text-base text-blue-600 font-semibold">
-                                ${scout.price_per_eval}
-                              </p>
-                              <p className="text-xs text-gray-400">per evaluation</p>
-                            </div>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {scouts.map((scout) => (
-                  <Link
-                    key={scout.id}
-                    href={`/profile/${scout.id}`}
-                    className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
-                  >
-                    {renderScoutAvatar(scout)}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-black text-base md:text-lg flex items-center gap-2 truncate">
-                        {scout.full_name || 'Scout'}
-                        <VerificationBadge />
-                      </h3>
-                      <p className="text-xs md:text-sm text-gray-600 truncate">
-                        {scout.position || 'Scout'}
-                      </p>
-                    </div>
-                    {typeof scout.price_per_eval === 'number' && (
-                      <div className="flex-shrink-0 text-right">
-                        <p className="text-sm md:text-base text-blue-600 font-semibold">
-                          ${scout.price_per_eval}
-                        </p>
-                        <p className="text-xs text-gray-400">per evaluation</p>
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
+          {/* Tabs Component */}
+          <TeamTabs 
+            connections={connections}
+            employees={employees}
+            teamName={team.name}
+          />
         </div>
       </DynamicLayout>
     </div>

@@ -42,6 +42,8 @@ interface TeamEntry {
   conference?: string
   division?: string
   scoutCount: number
+  connectionCount: number
+  hasActivity: boolean // true if has employees OR connections
 }
 
 const emptyTeamsIcon = (
@@ -633,6 +635,35 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return counts
   }, [profiles, findCollegeMatch])
 
+  const connectionCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    profiles.forEach((profile) => {
+      // Check college_connections for both scouts and players
+      if (!profile.college_connections) return
+
+      let collegeSlugs: string[] = []
+      try {
+        if (typeof profile.college_connections === 'string') {
+          collegeSlugs = JSON.parse(profile.college_connections)
+        } else if (Array.isArray(profile.college_connections)) {
+          collegeSlugs = profile.college_connections
+        }
+      } catch {
+        collegeSlugs = []
+      }
+
+      // Count each connection
+      collegeSlugs.forEach((slug) => {
+        if (slug && normalizedColleges.find((c) => c.slug === slug)) {
+          counts.set(slug, (counts.get(slug) || 0) + 1)
+        }
+      })
+    })
+
+    return counts
+  }, [profiles, normalizedColleges])
+
   const teamEntries = useMemo<TeamEntry[]>(() => {
     if (!normalizedColleges || normalizedColleges.length === 0) {
       console.warn('⚠️ normalizedColleges is empty')
@@ -640,18 +671,32 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     }
     const entries = normalizedColleges
       .filter((college) => college.slug !== 'got1') // Exclude Got1 from universities list
-      .map<TeamEntry>((college) => ({
-        name: college.name,
-        slug: college.slug,
-        logo: college.logo,
-        conference: college.conference,
-        division: college.division,
-        scoutCount: organizationCounts.get(college.slug) || 0,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .map<TeamEntry>((college) => {
+        const employeeCount = organizationCounts.get(college.slug) || 0
+        const connectionCount = connectionCounts.get(college.slug) || 0
+        const hasActivity = employeeCount > 0 || connectionCount > 0
+        
+        return {
+          name: college.name,
+          slug: college.slug,
+          logo: college.logo,
+          conference: college.conference,
+          division: college.division,
+          scoutCount: employeeCount,
+          connectionCount: connectionCount,
+          hasActivity: hasActivity,
+        }
+      })
+      .sort((a, b) => {
+        // Sort by activity first (hasActivity = true comes first), then alphabetically
+        if (a.hasActivity !== b.hasActivity) {
+          return a.hasActivity ? -1 : 1
+        }
+        return a.name.localeCompare(b.name)
+      })
     console.log('✅ Created teamEntries:', entries.length, 'teams')
     return entries
-  }, [normalizedColleges, organizationCounts])
+  }, [normalizedColleges, organizationCounts, connectionCounts])
 
   // Get available divisions from teamEntries
   const availableDivisions = useMemo(() => {
@@ -1118,61 +1163,70 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       ) : viewMode === 'universities' ? (
         filteredTeams.length > 0 ? (
           <div className="space-y-8">
-            {/* Represented Universities */}
-            {filteredTeams.filter(team => team.scoutCount > 0).length > 0 && (
+            {/* Universities with Activity (Employees or Connections) */}
+            {filteredTeams.filter(team => team.hasActivity).length > 0 && (
               <div>
-                <h2 className="text-lg md:text-xl font-bold text-black mb-4">Represented</h2>
+                <h2 className="text-lg md:text-xl font-bold text-black mb-4">Active on Got1</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {filteredTeams
-                    .filter(team => team.scoutCount > 0)
-                    .map((team) => (
-                      <Link
-                        key={team.slug}
-                        href={`/teams/${team.slug}`}
-                        className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
-                      >
-                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
-                          {team.logo ? (
-                            <Image
-                              src={team.logo}
-                              alt={team.name}
-                              width={64}
-                              height={64}
-                              className="object-contain"
-                              onError={(e) => {
-                                console.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <span className="text-lg font-semibold text-gray-600">
-                              {team.name.charAt(0)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <h3 className="font-bold text-black text-base md:text-lg truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{team.name}</h3>
-                          <p className="text-xs md:text-sm text-gray-600 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-                            {team.conference ? team.conference : 'Conference not specified'}
-                            {team.division ? ` · ${team.division}` : ''}
-                          </p>
-                          <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-                            {team.scoutCount} scout{team.scoutCount === 1 ? '' : 's'} on Got1
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
+                    .filter(team => team.hasActivity)
+                    .map((team) => {
+                      const totalActivity = team.scoutCount + team.connectionCount
+                      const activityText = team.scoutCount > 0 && team.connectionCount > 0
+                        ? `${team.scoutCount} employee${team.scoutCount === 1 ? '' : 's'} • ${team.connectionCount} connection${team.connectionCount === 1 ? '' : 's'}`
+                        : team.scoutCount > 0
+                        ? `${team.scoutCount} employee${team.scoutCount === 1 ? '' : 's'}`
+                        : `${team.connectionCount} connection${team.connectionCount === 1 ? '' : 's'}`
+                      
+                      return (
+                        <Link
+                          key={team.slug}
+                          href={`/teams/${team.slug}`}
+                          className="surface-card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
+                        >
+                          <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                            {team.logo ? (
+                              <Image
+                                src={team.logo}
+                                alt={team.name}
+                                width={64}
+                                height={64}
+                                className="object-contain"
+                                onError={(e) => {
+                                  console.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-lg font-semibold text-gray-600">
+                                {team.name.charAt(0)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <h3 className="font-bold text-black text-base md:text-lg truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{team.name}</h3>
+                            <p className="text-xs md:text-sm text-gray-600 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                              {team.conference ? team.conference : 'Conference not specified'}
+                              {team.division ? ` · ${team.division}` : ''}
+                            </p>
+                            <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                              {activityText}
+                            </p>
+                          </div>
+                        </Link>
+                      )
+                    })}
                 </div>
               </div>
             )}
 
-            {/* Nonrepresented Universities */}
-            {filteredTeams.filter(team => team.scoutCount === 0).length > 0 && (
+            {/* Universities without Activity */}
+            {filteredTeams.filter(team => !team.hasActivity).length > 0 && (
               <div>
-                <h2 className="text-lg md:text-xl font-bold text-black mb-4">Nonrepresented</h2>
+                <h2 className="text-lg md:text-xl font-bold text-black mb-4">Not Yet on Got1</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {filteredTeams
-                    .filter(team => team.scoutCount === 0)
+                    .filter(team => !team.hasActivity)
                     .map((team) => (
                       <Link
                         key={team.slug}
@@ -1205,7 +1259,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                             {team.division ? ` · ${team.division}` : ''}
                           </p>
                           <p className="text-xs md:text-sm text-gray-500 truncate overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-                            No scouts on Got1
+                            No activity on Got1
                           </p>
                         </div>
                       </Link>
