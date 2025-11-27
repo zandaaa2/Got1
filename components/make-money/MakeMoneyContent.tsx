@@ -29,6 +29,8 @@ interface Referral {
   referred_role: string
   amount_earned: number
   status: 'pending' | 'approved' | 'paid'
+  payment_status?: 'pending_admin_review' | 'paid' | 'failed'
+  payment_amount?: number | null
   created_at: string
   referrer_profile?: {
     full_name: string | null
