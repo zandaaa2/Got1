@@ -88,7 +88,7 @@ export async function POST(
     const decisionStatus = action === 'approve' ? 'approved' : 'denied'
 
     // Fetch user email & profile for notifications
-    const [userEmail, userProfile] = await Promise.all([
+    const [userEmail, userProfileResult] = await Promise.all([
       getUserEmail(application.user_id),
       adminSupabase
         .from('profiles')
@@ -97,6 +97,7 @@ export async function POST(
         .maybeSingle(),
     ])
 
+    const userProfile = userProfileResult.data
     const applicantName =
       userProfile?.full_name ||
       userProfile?.username ||
