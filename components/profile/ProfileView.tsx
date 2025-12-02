@@ -554,6 +554,36 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 </div>
               )}
 
+              {/* Parent Information Section */}
+              {profile.role === 'player' && parentProfile && (
+                <div className="surface-card mb-6 md:mb-8 p-4 md:p-6">
+                  <h2 className="text-lg md:text-xl font-bold text-black mb-4 md:mb-6">Parent Information</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                      {isMeaningfulAvatar(parentProfile.avatar_url) && parentProfile.avatar_url ? (
+                        <Image
+                          src={parentProfile.avatar_url}
+                          alt={parentProfile.full_name || 'Parent'}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id)}`}>
+                          <span className="text-white text-lg font-semibold">
+                            {parentProfile.full_name?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-black">{parentProfile.full_name || 'Parent'}</p>
+                      <p className="text-sm text-gray-600">Managing this player profile</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* College Offers Section */}
               <div className="mb-6 md:mb-8">
                 <PlayerOffersSection
@@ -959,6 +989,11 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 flex-shrink-0 whitespace-nowrap">
                 <VerificationBadge className="w-3.5 h-3.5" />
                 Scout
+              </span>
+            )}
+            {profile.role === 'player' && parentProfile && (
+              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded flex-shrink-0 whitespace-nowrap">
+                Parent Ran
               </span>
             )}
             {isTestAccount(profile.full_name) && (
