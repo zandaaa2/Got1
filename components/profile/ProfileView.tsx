@@ -82,9 +82,14 @@ const emptyEvaluationIcon = (
   </svg>
 )
 
-interface ProfileViewProps {
+export interface ProfileViewProps {
   profile: any
   isOwnProfile: boolean
+  parentProfile?: {
+    id: string
+    full_name: string | null
+    avatar_url: string | null
+  } | null
 }
 
 interface Evaluation {
@@ -113,7 +118,7 @@ interface Evaluation {
   } | null
 }
 
-export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
+export default function ProfileView({ profile, isOwnProfile, parentProfile }: ProfileViewProps) {
   const [requesting, setRequesting] = useState(false)
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
@@ -839,6 +844,32 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </svg>
         <span className="md:hidden">Back</span>
       </button>
+
+      {/* "Ran by parent" banner - show at top for players with parent */}
+      {profile.role === 'player' && parentProfile && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+            {isMeaningfulAvatar(parentProfile.avatar_url) && parentProfile.avatar_url ? (
+              <Image
+                src={parentProfile.avatar_url}
+                alt={parentProfile.full_name || 'Parent'}
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id)}`}>
+                <span className="text-white text-sm font-semibold">
+                  {parentProfile.full_name?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+            )}
+          </div>
+          <span className="text-sm text-gray-700">
+            ran by <span className="font-medium text-black">{parentProfile.full_name}</span>
+          </span>
+        </div>
+      )}
 
       {/* Profile Section */}
       <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">

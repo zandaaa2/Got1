@@ -727,18 +727,23 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         return false
       }
       
-      // On "all" page, only show scouts (not players)
-      if (roleFilter === 'all' && profile.role !== 'scout') {
-        return false
-      }
-      
       // Search query filter
       const query = trimmedQuery
       
       // If no query, don't filter (show all that match role)
+      // Exclude parents from default "all" view, but allow them in search
       if (!query) {
+        // On "all" page with no search, only show scouts (not players or parents)
+        if (roleFilter === 'all' && profile.role !== 'scout') {
+          return false
+        }
         const matchesRole = roleFilter === 'all' || profile.role === roleFilter
         return matchesRole
+      }
+      
+      // When searching, exclude parents from scout/player filters, but include in 'all'
+      if (roleFilter !== 'all' && profile.role === 'parent') {
+        return false
       }
       
       // Basic profile search
@@ -855,8 +860,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       
       const matchesSearch = matchesBasicSearch || matchesCollegeConnection
       
-      // Role filter
-      const matchesRole = roleFilter === 'all' || profile.role === roleFilter
+      // Role filter - exclude parents from scout/player filters, but include in 'all' for search
+      const matchesRole = roleFilter === 'all' 
+        ? profile.role !== 'parent' || trimmedQuery.length > 0 // Include parents only if searching
+        : (profile.role === roleFilter) // roleFilter is 'scout' or 'player', so this already excludes 'parent'
       
       return matchesSearch && matchesRole
     })

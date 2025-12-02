@@ -20,20 +20,36 @@ export default async function UserSetupPage({
     redirect('/auth/signin')
   }
 
-  // Check if profile already exists
+  // Check if profile already exists and has required fields
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('full_name, username, birthday, role, avatar_url')
     .eq('user_id', session.user.id)
     .maybeSingle()
 
-  // If profile exists and has a role other than 'user', redirect to profile
-  if (profile && profile.role !== 'user') {
+  // Check if profile has all required fields
+  const hasRequiredFields = profile && 
+    profile.full_name && 
+    profile.username && 
+    profile.birthday
+
+  // CRITICAL: If profile exists but doesn't have required fields, reset role to 'user'
+  // This ensures users can't bypass role selection by having an incomplete profile with wrong role
+  if (profile && !hasRequiredFields && profile.role !== 'user') {
+    await supabase
+      .from('profiles')
+      .update({ role: 'user' })
+      .eq('user_id', session.user.id)
+  }
+
+  // If profile exists and has all required fields AND has a role other than 'user', redirect to profile
+  // This means they've completed setup and selected a role
+  if (hasRequiredFields && profile && profile.role !== 'user') {
     redirect('/profile')
   }
 
-  // If profile exists with 'user' role, they can still access this page to update
-  // But if they have completed player/scout setup, redirect to profile
+  // If profile exists with required fields and 'user' role, they can still access this page to update
+  // But if they have completed player/scout/parent setup, redirect to profile
 
   // Get user info from auth
   const {

@@ -2,12 +2,15 @@ import { createServerClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import dynamic from 'next/dynamic'
+import type { ComponentType } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 
+import type { ProfileViewProps } from '@/components/profile/ProfileView'
+
 const ProfileView = dynamic(() => import('@/components/profile/ProfileView'), {
   ssr: false,
-})
+}) as ComponentType<ProfileViewProps>
 import AuthButtons from '@/components/auth/AuthButtons'
 import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import type { Metadata } from 'next'
