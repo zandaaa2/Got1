@@ -126,7 +126,60 @@ export default async function UsernameProfilePage({ params }: UsernamePageProps)
     notFound() // Returns 404 in production
   }
 
+  // Parent profiles are non-clickable - return 404
+  if (profile.role === 'parent') {
+    notFound()
+  }
+
   const isOwnProfile = session?.user?.id === profile.user_id
+
+  // Fetch parent info for player profiles
+  let parentProfile = null
+  if (profile.role === 'player') {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Looking for parent for player:', {
+        player_id: profile.id,
+        player_user_id: profile.user_id,
+        player_name: profile.full_name
+      })
+    }
+    
+    const { data: parentLink, error: parentLinkError } = await supabase
+      .from('parent_children')
+      .select('parent_id')
+      .eq('player_id', profile.user_id)
+      .maybeSingle()
+    
+    if (parentLinkError) {
+      console.error('❌ Error fetching parent link:', parentLinkError)
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Parent link result:', { parentLink, error: parentLinkError })
+    }
+    
+    if (parentLink) {
+      const { data: parent, error: parentError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .eq('user_id', parentLink.parent_id)
+        .eq('role', 'parent')
+        .maybeSingle()
+      
+      if (parentError) {
+        console.error('❌ Error fetching parent profile:', parentError)
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Parent profile result:', { parent, error: parentError })
+      }
+      parentProfile = parent
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚠️ No parent link found for player')
+      }
+    }
+  }
 
   let userProfile = null
   if (session) {
@@ -154,7 +207,7 @@ export default async function UsernameProfilePage({ params }: UsernamePageProps)
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
       <DynamicLayout header={headerContent}>
-        <ProfileView profile={profile} isOwnProfile={isOwnProfile} />
+        <ProfileView profile={profile} isOwnProfile={isOwnProfile} parentProfile={parentProfile} />
       </DynamicLayout>
     </div>
   )
