@@ -555,12 +555,12 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               )}
 
               {/* Parent Information Section */}
-              {profile.role === 'player' && parentProfile && (
+              {profile.role === 'player' && parentProfile && parentProfile.id && (
                 <div className="surface-card mb-6 md:mb-8 p-4 md:p-6">
                   <h2 className="text-lg md:text-xl font-bold text-black mb-4 md:mb-6">Parent Information</h2>
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-                      {isMeaningfulAvatar(parentProfile.avatar_url) && parentProfile.avatar_url ? (
+                      {parentProfile.avatar_url && isMeaningfulAvatar(parentProfile.avatar_url) ? (
                         <Image
                           src={parentProfile.avatar_url}
                           alt={parentProfile.full_name || 'Parent'}
@@ -569,7 +569,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id)}`}>
+                        <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id || 'default')}`}>
                           <span className="text-white text-lg font-semibold">
                             {parentProfile.full_name?.charAt(0).toUpperCase() || '?'}
                           </span>
@@ -876,10 +876,10 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
       </button>
 
       {/* "Ran by parent" banner - show at top for players with parent */}
-      {profile.role === 'player' && parentProfile && (
+      {profile.role === 'player' && parentProfile && parentProfile.id && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
           <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-            {isMeaningfulAvatar(parentProfile.avatar_url) && parentProfile.avatar_url ? (
+            {parentProfile.avatar_url && isMeaningfulAvatar(parentProfile.avatar_url) ? (
               <Image
                 src={parentProfile.avatar_url}
                 alt={parentProfile.full_name || 'Parent'}
@@ -888,7 +888,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id)}`}>
+              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id || 'default')}`}>
                 <span className="text-white text-sm font-semibold">
                   {parentProfile.full_name?.charAt(0).toUpperCase() || '?'}
                 </span>
@@ -896,7 +896,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             )}
           </div>
           <span className="text-sm text-gray-700">
-            ran by <span className="font-medium text-black">{parentProfile.full_name}</span>
+            ran by <span className="font-medium text-black">{parentProfile.full_name || 'Parent'}</span>
           </span>
         </div>
       )}
@@ -991,7 +991,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 Scout
               </span>
             )}
-            {profile.role === 'player' && parentProfile && (
+            {profile.role === 'player' && parentProfile && parentProfile.id && (
               <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded flex-shrink-0 whitespace-nowrap">
                 Parent Ran
               </span>
