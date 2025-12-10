@@ -14,13 +14,21 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const token_hash = requestUrl.searchParams.get('token_hash')
   
+  console.log('🔵 API /api/auth/callback hit')
+  console.log('🔵 Full URL:', requestUrl.href)
+  console.log('🔵 Code:', code ? code.substring(0, 20) + '...' : 'MISSING')
+  console.log('🔵 Token hash:', token_hash ? 'PRESENT' : 'MISSING')
+  console.log('🔵 All params:', Object.fromEntries(requestUrl.searchParams))
+  
   // For OAuth (code), redirect to client-side callback where PKCE verifier in localStorage is accessible
   if (code) {
+    console.log('🔵 OAuth code detected, redirecting to /auth/callback')
     // Redirect to client-side callback page which has access to localStorage for PKCE
     const redirectUrl = new URL('/auth/callback', requestUrl.origin)
     requestUrl.searchParams.forEach((value, key) => {
       redirectUrl.searchParams.set(key, value)
     })
+    console.log('🔵 Redirect URL:', redirectUrl.href)
     return NextResponse.redirect(redirectUrl)
   }
   

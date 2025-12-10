@@ -10,9 +10,33 @@ function HomeContent() {
 
   useEffect(() => {
     const checkAuth = async () => {
+        console.log('🟢 Root page (/), checking auth...')
+        console.log('🟢 Full URL:', window.location.href)
+        console.log('🟢 Search params:', Object.fromEntries(searchParams.entries()))
+        
+        // Check for OAuth callback parameters FIRST, before any other checks
+        // If Supabase redirects OAuth to root instead of /auth/callback, catch it here
+        const code = searchParams.get('code')
+        const token_hash = searchParams.get('token_hash')
+        const type_param = searchParams.get('type')
+        
+        console.log('🟢 OAuth params check:', { code: !!code, token_hash: !!token_hash, type_param })
+        
+        if (code || (token_hash && type_param)) {
+          console.log('🟢 OAuth callback detected on root page, redirecting to /auth/callback')
+          // Preserve all query parameters when redirecting
+          const callbackUrl = new URL('/auth/callback', window.location.origin)
+          searchParams.forEach((value, key) => {
+            callbackUrl.searchParams.set(key, value)
+          })
+          console.log('🟢 Redirecting to:', callbackUrl.href)
+          window.location.replace(callbackUrl.href)
+          return
+        }
+
         // Add timeout to prevent infinite loading
         const timeoutId = setTimeout(() => {
-          console.warn('Auth check timeout - redirecting to welcome')
+          console.warn('🟢 Auth check timeout - redirecting to welcome')
           router.replace('/welcome')
         }, 3000) // 3 second timeout
 
@@ -23,26 +47,8 @@ function HomeContent() {
         const error = searchParams.get('error')
         if (error) {
           clearTimeout(timeoutId)
-          console.error('Auth error:', error)
+          console.error('🟢 Auth error:', error)
           router.replace('/auth/signin?error=' + encodeURIComponent(error))
-          return
-        }
-
-        // Check for OAuth callback parameters (code or token_hash)
-        // If Supabase redirects OAuth to root instead of /auth/callback, catch it here
-        const code = searchParams.get('code')
-        const token_hash = searchParams.get('token_hash')
-        const type_param = searchParams.get('type')
-        
-        if (code || (token_hash && type_param)) {
-          clearTimeout(timeoutId)
-          console.log('🔍 OAuth callback detected on root page, redirecting to /auth/callback')
-          // Preserve all query parameters when redirecting
-          const callbackUrl = new URL('/auth/callback', window.location.origin)
-          searchParams.forEach((value, key) => {
-            callbackUrl.searchParams.set(key, value)
-          })
-          window.location.replace(callbackUrl.href)
           return
         }
 

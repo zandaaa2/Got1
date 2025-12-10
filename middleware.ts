@@ -92,11 +92,26 @@ export async function middleware(request: NextRequest) {
 
       // If route is protected and user is not authenticated, redirect appropriately
       if (!isPublicRoute && !session) {
+        // Check if this is an OAuth callback on root (shouldn't happen, but just in case)
+        const code = request.nextUrl.searchParams.get('code')
+        const token_hash = request.nextUrl.searchParams.get('token_hash')
+        if (code || token_hash) {
+          console.log('🟡 Middleware: OAuth params detected on protected route without session')
+          console.log('🟡 Redirecting to /auth/callback to handle OAuth')
+          const callbackUrl = new URL('/auth/callback', request.url)
+          request.nextUrl.searchParams.forEach((value, key) => {
+            callbackUrl.searchParams.set(key, value)
+          })
+          return NextResponse.redirect(callbackUrl)
+        }
+        
         // Special case: root route should go to welcome page, not sign-in
         if (pathname === '/') {
+          console.log('🟡 Middleware: No session on root, redirecting to /welcome')
           return NextResponse.redirect(new URL('/welcome', request.url))
         }
         // All other protected routes go to sign-in
+        console.log('🟡 Middleware: No session on protected route:', pathname)
         const signInUrl = new URL('/auth/signin', request.url)
         signInUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(signInUrl)
