@@ -47,7 +47,7 @@ export default async function WhatsThisPage() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      <Sidebar activePage="whats-this" />
+      <Sidebar />
       <DynamicLayout header={headerContent}>
         <WhatsThisContent 
           organizations={uniqueOrganizations} 

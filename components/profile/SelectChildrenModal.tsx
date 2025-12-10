@@ -148,7 +148,7 @@ export default function SelectChildrenModal({
                         <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
                           {isMeaningfulAvatar(child.avatar_url) ? (
                             <Image
-                              src={child.avatar_url}
+                              src={child.avatar_url!}
                               alt={child.full_name || 'Child'}
                               width={48}
                               height={48}
@@ -204,6 +204,7 @@ export default function SelectChildrenModal({
     </Modal>
   )
 }
+
 
 
 

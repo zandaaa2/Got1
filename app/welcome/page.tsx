@@ -96,7 +96,7 @@ export default async function WelcomePage() {
   })
   
   // Process all unique scouts
-  for (const scout of scoutsToProcess.values()) {
+  for (const scout of Array.from(scoutsToProcess.values())) {
     // Extract from college_connections field
     const connections = scout.college_connections
     

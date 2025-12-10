@@ -168,7 +168,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
           <Link
             href="/browse"
             className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
-              currentActivePage === 'discover' || currentActivePage === 'browse'
+              currentActivePage === 'discover'
                 ? 'bg-gray-100 text-black'
                 : 'text-black hover:bg-gray-50'
             } ${!isCollapsed ? '' : 'justify-center'}`}

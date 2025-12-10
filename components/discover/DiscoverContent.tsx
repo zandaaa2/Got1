@@ -180,7 +180,7 @@ export default function DiscoverContent({
       console.log('✅ Discover: Active profiles after filtering:', activeProfiles.length)
       console.log('✅ Discover: Scouts count:', activeProfiles.filter(p => p.role === 'scout').length)
       console.log('✅ Discover: Players count:', activeProfiles.filter(p => p.role === 'player').length)
-      console.log('✅ Discover: All roles:', [...new Set(activeProfiles.map(p => p.role))])
+      console.log('✅ Discover: All roles:', Array.from(new Set(activeProfiles.map(p => p.role))))
       
       setProfiles(activeProfiles)
     } catch (error: any) {
