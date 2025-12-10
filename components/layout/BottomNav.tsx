@@ -124,51 +124,28 @@ export default function BottomNav() {
     }
   ]
 
-  // Filter nav items based on auth status
-  const navItems = allNavItems.filter(item => !item.requiresAuth || userId)
+  // Define protected routes where we should always show all nav items
+  // Middleware handles auth, so if user is on these routes, they're authenticated
+  const protectedRoutes = ['/browse', '/my-evals', '/notifications', '/profile', '/evaluations', '/discover']
+  const isProtectedRoute = protectedRoutes.some(route => pathname?.startsWith(route))
+  
+  // Public routes where we might only show Browse
+  const publicRoutes = ['/welcome', '/whats-this', '/faq', '/about', '/blog', '/terms-of-service', '/privacy-policy']
+  const isPublicRoute = publicRoutes.some(route => pathname?.startsWith(route))
 
-  const isActive = (item: typeof navItems[0]) => {
+  // Always show all nav items on protected routes (middleware handles auth)
+  // On public routes or username routes, only show Browse
+  const navItems = isProtectedRoute || userId 
+    ? allNavItems  // Show all items on protected routes or if user is detected
+    : allNavItems.filter(item => !item.requiresAuth) // Only Browse on public routes
+
+  const isActive = (item: typeof allNavItems[0]) => {
     return item.activePaths.some(activePath => pathname?.startsWith(activePath))
   }
 
-  // Show bottom nav if user is authenticated
-  // Always show Browse at minimum for public pages
-  if (!userId && pathname !== '/browse' && pathname !== '/discover' && pathname !== '/whats-this' && pathname !== '/welcome') {
+  // Don't show on public routes if user is not authenticated
+  if (!userId && isPublicRoute) {
     return null
-  }
-  
-  // If no userId but we're on a public page, show at least Browse
-  if (!userId) {
-    const publicNavItems = allNavItems.filter(item => !item.requiresAuth)
-    return (
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/50" />
-        <div className="relative flex items-center justify-around h-20 px-4">
-          {publicNavItems.map((item) => {
-            const active = isActive(item)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative flex items-center justify-center flex-1 h-full transition-all duration-300 ${
-                  active ? 'scale-110' : 'scale-100 hover:scale-105'
-                }`}
-              >
-                <div className={`transition-all duration-300 ${
-                  active 
-                    ? 'text-black drop-shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}>
-                  <div className={active ? '[&>svg]:w-6 [&>svg]:h-6' : '[&>svg]:w-5 [&>svg]:h-5'}>
-                    {item.icon}
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
-    )
   }
 
   return (
