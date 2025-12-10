@@ -28,6 +28,24 @@ function HomeContent() {
           return
         }
 
+        // Check for OAuth callback parameters (code or token_hash)
+        // If Supabase redirects OAuth to root instead of /auth/callback, catch it here
+        const code = searchParams.get('code')
+        const token_hash = searchParams.get('token_hash')
+        const type_param = searchParams.get('type')
+        
+        if (code || (token_hash && type_param)) {
+          clearTimeout(timeoutId)
+          console.log('🔍 OAuth callback detected on root page, redirecting to /auth/callback')
+          // Preserve all query parameters when redirecting
+          const callbackUrl = new URL('/auth/callback', window.location.origin)
+          searchParams.forEach((value, key) => {
+            callbackUrl.searchParams.set(key, value)
+          })
+          window.location.replace(callbackUrl.href)
+          return
+        }
+
         // Wait a moment for cookies to be available (especially after auth callbacks)
         // Increase wait time after sign-in to ensure session is fully established
         await new Promise(resolve => setTimeout(resolve, 500))
