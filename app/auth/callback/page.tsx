@@ -34,15 +34,15 @@ function AuthCallbackContent() {
           })
 
           if (sessionError) {
-            console.error('Error verifying email token:', sessionError)
-            router.push('/?error=auth_failed')
+            console.error('❌ Error verifying email token:', sessionError)
+            window.location.href = `/auth/signin?error=${encodeURIComponent(sessionError.message || 'auth_failed')}`
             return
           }
 
           const session = sessionData.session
           if (!session) {
-            console.error('No session in verification response')
-            router.push('/?error=no_session')
+            console.error('❌ No session in verification response')
+            window.location.href = `/auth/signin?error=no_session`
             return
           }
 
@@ -61,7 +61,7 @@ function AuthCallbackContent() {
           const { data: { session: verifySession } } = await supabase.auth.getSession()
           if (!verifySession) {
             console.error('❌ Session not found after email verification')
-            router.push('/?error=session_not_persisted')
+            window.location.href = `/auth/signin?error=session_not_persisted`
             return
           }
 
@@ -69,7 +69,7 @@ function AuthCallbackContent() {
           const { data: { user: verifyUser }, error: userError } = await supabase.auth.getUser()
           if (userError || !verifyUser) {
             console.error('❌ getUser failed after email verification:', userError?.message)
-            router.push('/?error=user_validation_failed')
+            window.location.href = `/auth/signin?error=${encodeURIComponent(userError?.message || 'user_validation_failed')}`
             return
           }
 
@@ -121,14 +121,25 @@ function AuthCallbackContent() {
 
           console.log('✅ Email verification session verified, redirecting through sync page to:', finalRedirect)
           
+          // Ensure redirect is never /welcome or /
+          if (finalRedirect === '/welcome' || finalRedirect === '/') {
+            console.warn('⚠️ Email callback: Preventing redirect to /welcome or /, defaulting to /browse')
+            finalRedirect = '/browse'
+          }
+          
           // Redirect through sync page which will ensure cookies are set server-side
-          const syncUrl = `/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`
-          window.location.href = syncUrl
+          // before doing the final redirect - use absolute URL
+          const syncUrl = new URL(`/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`, window.location.origin).href
+          console.log('✅ Redirecting to sync page:', syncUrl)
+          window.location.replace(syncUrl)
 
           return
         } catch (error: any) {
-          console.error('Email confirmation callback error:', error)
-          router.push('/?error=auth_failed')
+          console.error('❌ Email confirmation callback error:', error)
+          console.error('❌ Error stack:', error?.stack)
+          // Don't redirect to root which might go to /welcome
+          // Instead, redirect directly to sign-in with error
+          window.location.href = `/auth/signin?error=${encodeURIComponent(error.message || 'auth_failed')}`
           return
         }
       }
@@ -137,10 +148,11 @@ function AuthCallbackContent() {
       if (!code) {
         const errorParam = searchParams.get('error')
         if (errorParam) {
-          console.error('OAuth error:', errorParam)
-          router.push(`/?error=${errorParam}`)
+          console.error('❌ OAuth error:', errorParam)
+          window.location.href = `/auth/signin?error=${encodeURIComponent(errorParam)}`
         } else {
-          router.push('/?error=no_code')
+          console.error('❌ OAuth callback: No code parameter')
+          window.location.href = `/auth/signin?error=no_code`
         }
         return
       }
@@ -223,7 +235,7 @@ function AuthCallbackContent() {
         console.error('❌ Code verifier not found in localStorage or cookies')
         console.error('This will cause exchangeCodeForSession to fail')
         console.error('Please ensure OAuth flow initiated from same origin')
-        router.push('/?error=verifier_not_found')
+        window.location.href = '/auth/signin?error=verifier_not_found'
         return
       }
 
@@ -233,7 +245,7 @@ function AuthCallbackContent() {
       // Verify the code is actually present
       if (!code || code.trim().length === 0) {
         console.error('❌ Code parameter is empty or missing')
-        router.push('/?error=code_missing')
+        window.location.href = '/auth/signin?error=code_missing'
         return
       }
 
@@ -241,7 +253,7 @@ function AuthCallbackContent() {
       const codeValue = String(code).trim()
       if (!codeValue || codeValue.length === 0) {
         console.error('❌ Code is empty after conversion to string')
-        router.push('/?error=code_invalid')
+        window.location.href = '/auth/signin?error=code_invalid'
         return
       }
 
@@ -249,7 +261,7 @@ function AuthCallbackContent() {
       const verifierCheck = localStorage.getItem(verifierKey)
       if (!verifierCheck) {
         console.error('❌ Verifier disappeared from localStorage!')
-        router.push('/?error=verifier_lost')
+        window.location.href = '/auth/signin?error=verifier_lost'
         return
       }
 
@@ -271,7 +283,7 @@ function AuthCallbackContent() {
       const finalVerifierCheck = localStorage.getItem(verifierKey)
       if (!finalVerifierCheck) {
         console.error('❌ Verifier not accessible right before exchange!')
-        router.push('/?error=verifier_not_accessible')
+        window.location.href = '/auth/signin?error=verifier_not_accessible'
         return
       }
       
@@ -303,7 +315,7 @@ function AuthCallbackContent() {
         if (error) {
           console.error('Exchange error:', error)
           console.error('Error details:', JSON.stringify(error, null, 2))
-          router.push('/?error=auth_failed')
+          window.location.href = '/auth/signin?error=auth_failed'
           return
         }
 
@@ -329,7 +341,7 @@ function AuthCallbackContent() {
         const { data: { session: verifySession } } = await supabase.auth.getSession()
         if (!verifySession) {
           console.error('❌ Session not found after exchange')
-          router.push('/?error=session_not_persisted')
+          window.location.href = '/auth/signin?error=session_not_persisted'
           return
         }
 
@@ -337,7 +349,7 @@ function AuthCallbackContent() {
         const { data: { user: verifyUser }, error: userError } = await supabase.auth.getUser()
         if (userError || !verifyUser) {
           console.error('❌ getUser failed after session exchange:', userError?.message)
-          router.push('/?error=user_validation_failed')
+          window.location.href = '/auth/signin?error=user_validation_failed'
           return
         }
         console.log('✅ User validated successfully:', verifyUser.id)
@@ -387,14 +399,25 @@ function AuthCallbackContent() {
         }
 
         console.log('✅ Session verified, redirecting through sync page to:', finalRedirect)
+        console.log('✅ OAuth callback complete, user ID:', data.session.user.id)
+        
+        // Ensure redirect is never /welcome or /
+        if (finalRedirect === '/welcome' || finalRedirect === '/') {
+          console.warn('⚠️ OAuth callback: Preventing redirect to /welcome or /, defaulting to /browse')
+          finalRedirect = '/browse'
+        }
         
         // Redirect through sync page which will ensure cookies are set server-side
-        // before doing the final redirect
-        const syncUrl = `/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`
-        window.location.href = syncUrl
+        // before doing the final redirect - use absolute URL
+        const syncUrl = new URL(`/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`, window.location.origin).href
+        console.log('✅ Redirecting to sync page:', syncUrl)
+        window.location.replace(syncUrl)
       } catch (error: any) {
-        console.error('Callback error:', error)
-        router.push('/?error=auth_failed')
+        console.error('❌ OAuth callback error:', error)
+        console.error('❌ Error stack:', error?.stack)
+        // Don't redirect to root which might go to /welcome
+        // Instead, redirect directly to sign-in with error
+        window.location.href = `/auth/signin?error=${encodeURIComponent(error.message || 'auth_failed')}`
       }
     }
 
