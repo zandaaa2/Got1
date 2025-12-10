@@ -429,7 +429,24 @@ function AuthCallbackContent() {
           }
         }
         
-        // For OAuth, session is already set, so we can redirect directly
+        // Wait longer to ensure cookies are set server-side before redirecting
+        // This is critical - middleware needs to see the cookies when checking /browse
+        console.log('⏳ Waiting for cookies to be set server-side...')
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        // Double-check session one more time
+        const { data: { session: preRedirectSession } } = await supabase.auth.getSession()
+        if (!preRedirectSession) {
+          console.error('❌ Session lost before redirect! Retrying...')
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const retryCheck = await supabase.auth.getSession()
+          if (!retryCheck.data.session) {
+            console.error('❌ Session still not found, redirecting to welcome')
+            window.location.href = '/welcome'
+            return
+          }
+        }
+        
         // Create notification in the background (don't block redirect)
         fetch('/api/notifications/create', {
           method: 'POST',
@@ -445,11 +462,12 @@ function AuthCallbackContent() {
           // Ignore errors - notification is not critical
         })
         
-        // Redirect directly to the destination (skip sync page for OAuth)
-        // The session is already set, so we can go straight to browse
-        console.log('✅ OAuth callback successful, redirecting directly to:', finalRedirect)
+        // Use sync page to ensure cookies are fully propagated before final redirect
+        // This ensures middleware can see the session when /browse is accessed
+        const syncUrl = new URL(`/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`, window.location.origin).href
+        console.log('✅ OAuth callback successful, redirecting to sync page:', syncUrl)
         console.log('✅ Session confirmed, user ID:', verifyUser.id)
-        window.location.replace(finalRedirect)
+        window.location.replace(syncUrl)
       } catch (error: any) {
         console.error('❌ OAuth callback error:', error)
         console.error('❌ Error stack:', error?.stack)

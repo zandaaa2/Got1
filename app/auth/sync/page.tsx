@@ -223,9 +223,10 @@ function AuthSyncContent() {
         // Ignore errors - cookies might already be set
       })
 
-      // Wait for remaining time to reach 2 seconds minimum (increased for cookie propagation)
+      // Wait for remaining time to reach 3 seconds minimum (increased for cookie propagation)
+      // This ensures cookies are fully available server-side before redirect
       const elapsed = Date.now() - startTime
-      const remainingWait = Math.max(0, 2000 - elapsed)
+      const remainingWait = Math.max(0, 3000 - elapsed)
       await new Promise(resolve => setTimeout(resolve, remainingWait))
 
       // Re-check session one more time before redirecting to ensure it's still valid
