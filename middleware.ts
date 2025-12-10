@@ -90,8 +90,13 @@ export async function middleware(request: NextRequest) {
         return { data: { session: null }, error: err }
       })
 
-      // If route is protected and user is not authenticated, redirect to sign in
+      // If route is protected and user is not authenticated, redirect appropriately
       if (!isPublicRoute && !session) {
+        // Special case: root route should go to welcome page, not sign-in
+        if (pathname === '/') {
+          return NextResponse.redirect(new URL('/welcome', request.url))
+        }
+        // All other protected routes go to sign-in
         const signInUrl = new URL('/auth/signin', request.url)
         signInUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(signInUrl)
