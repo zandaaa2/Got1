@@ -484,8 +484,15 @@ function AuthCallbackContent() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-lg">Completing sign in...</p>
+      <div className="text-center space-y-4">
+        <div className="relative w-12 h-12 mx-auto">
+          <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <div>
+          <p className="text-lg font-medium text-gray-900">Completing sign in...</p>
+          <p className="text-sm text-gray-500 mt-2">Please wait while we authenticate you</p>
+        </div>
       </div>
     </div>
   )
