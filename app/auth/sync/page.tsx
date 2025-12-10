@@ -164,27 +164,55 @@ function AuthSyncContent() {
         // Ignore errors - cookies might already be set
       })
 
-      // Wait for remaining time to reach 1 second minimum
+      // Wait for remaining time to reach 2 seconds minimum (increased for cookie propagation)
       const elapsed = Date.now() - startTime
-      const remainingWait = Math.max(0, 1000 - elapsed)
+      const remainingWait = Math.max(0, 2000 - elapsed)
       await new Promise(resolve => setTimeout(resolve, remainingWait))
+
+      // Re-check session one more time before redirecting to ensure it's still valid
+      const { data: { session: finalSessionCheck } } = await supabase.auth.getSession()
+      if (!finalSessionCheck) {
+        console.error('❌ Session lost before redirect!')
+        window.location.href = '/auth/signin'
+        return
+      }
 
       // Determine final redirect - use the redirect we determined above
       // Always default to /browse if somehow redirect is still null/empty
       let finalRedirect = redirect || '/browse'
       
-      // Ensure we never redirect authenticated users to /welcome
-      if (finalRedirect === '/welcome') {
-        console.warn('⚠️ Preventing redirect to /welcome for authenticated user, defaulting to /browse')
+      // CRITICAL: Ensure we never redirect authenticated users to /welcome or root
+      // Root will redirect to /welcome for unauthenticated users, so avoid it
+      if (finalRedirect === '/welcome' || finalRedirect === '/') {
+        console.warn('⚠️ Preventing redirect to /welcome or / for authenticated user, defaulting to /browse')
+        console.warn('⚠️ Original redirect was:', finalRedirect)
         finalRedirect = '/browse'
       }
       
-      console.log('✅ Using redirect:', finalRedirect, 'from query param:', queryRedirect, 'from localStorage:', postSignUpRedirect)
+      // Double-check redirect is a valid path
+      if (!finalRedirect || finalRedirect.trim() === '' || !finalRedirect.startsWith('/')) {
+        console.error('❌ Invalid redirect detected:', finalRedirect, 'defaulting to /browse')
+        finalRedirect = '/browse'
+      }
+      
+      console.log('✅ Final redirect decision:', {
+        queryRedirect,
+        postSignUpRedirect,
+        intermediateRedirect: redirect,
+        finalRedirect,
+        sessionUserId: finalSessionCheck.user.id
+      })
 
       console.log('✅ Auth sync: Cookies processed, redirecting to:', finalRedirect)
+      console.log('✅ Session confirmed, user ID:', finalSessionCheck.user.id)
+      
+      // Use absolute URL to ensure proper redirect
+      const absoluteUrl = new URL(finalRedirect, window.location.origin).href
+      console.log('✅ Redirecting to absolute URL:', absoluteUrl)
       
       // Force a hard reload to ensure server reads cookies
-      window.location.href = finalRedirect
+      // Use replace instead of assign to avoid adding to history
+      window.location.replace(absoluteUrl)
     }
 
     syncAuth()
