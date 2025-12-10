@@ -2010,17 +2010,40 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
   }, [supabase])
 
   /**
-   * Handles user logout by signing out from Supabase and redirecting to home.
+   * Handles user logout by signing out from Supabase and redirecting to welcome page.
    *
    * @returns {Promise<void>}
    */
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
-      router.push('/')
-      router.refresh()
+      console.log('🚪 Signing out...')
+      
+      // Sign out from Supabase
+      const { error: signOutError } = await supabase.auth.signOut()
+      
+      if (signOutError) {
+        console.error('❌ Sign out error:', signOutError)
+        throw signOutError
+      }
+      
+      console.log('✅ Signed out successfully')
+      
+      // Wait a moment to ensure cookies are cleared
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Verify session is cleared
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        console.warn('⚠️ Session still exists after signOut, forcing redirect anyway')
+      }
+      
+      // Use window.location.href for a hard redirect to /welcome
+      // This ensures we clear any cached state and go directly to the welcome page
+      window.location.href = '/welcome'
     } catch (error) {
-      console.error('Logout error:', error)
+      console.error('❌ Logout error:', error)
+      // Even if there's an error, try to redirect to welcome
+      window.location.href = '/welcome'
     }
   }
 

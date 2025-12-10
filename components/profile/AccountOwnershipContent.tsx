@@ -79,10 +79,12 @@ export default function AccountOwnershipContent() {
         throw new Error(errorData.error || 'Failed to delete account')
       }
 
-      // Sign out and redirect to home
+      // Sign out and redirect to welcome page
       await supabase.auth.signOut()
-      router.push('/')
-      router.refresh()
+      // Wait a moment to ensure cookies are cleared
+      await new Promise(resolve => setTimeout(resolve, 200))
+      // Use window.location.href for a hard redirect to /welcome
+      window.location.href = '/welcome'
     } catch (err: any) {
       console.error('Error deleting account:', err)
       setError(err.message || 'Failed to delete account. Please try again.')
