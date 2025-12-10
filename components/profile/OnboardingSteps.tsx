@@ -292,12 +292,13 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       
       // CRITICAL: Always ensure the role is set to the selected account type when completing onboarding
       // Try multiple sources to determine the target role:
-      // 1. accountType state (set in step 1)
-      // 2. profile.role (if already updated)
+      // 1. accountType state (set in step 1) - can only be 'player' | 'parent' | null
+      // 2. profile.role (if already updated) - could be 'user', 'player', or 'parent'
       // 3. Infer from profile data (parent_name/child_name = parent, position/school = player)
-      let targetRole: 'player' | 'parent' | 'user' | null = accountType
+      let targetRole: 'player' | 'parent' | null = accountType
       
-      if (!targetRole || targetRole === 'user') {
+      // If accountType is not set, try to infer from profile
+      if (!targetRole) {
         if (profile.role && profile.role !== 'user') {
           targetRole = profile.role as 'player' | 'parent'
         } else if (profile.parent_name || profile.child_name) {
@@ -308,10 +309,10 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       }
       
       // Always update role if it's still 'user' or undefined and we have a target role
-      if (targetRole && targetRole !== 'user' && (profile.role === 'user' || !profile.role)) {
+      if (targetRole && (profile.role === 'user' || !profile.role)) {
         updateData.role = targetRole
         console.log('✅ Step 4: Setting role to', targetRole, 'from accountType:', accountType, 'profile.role:', profile.role)
-      } else if (!targetRole || targetRole === 'user') {
+      } else if (!targetRole) {
         console.warn('⚠️ Step 4: No valid target role found. accountType:', accountType, 'profile.role:', profile.role)
         setError('Unable to determine account type. Please go back to step 1 and select your account type.')
         setLoading(false)
