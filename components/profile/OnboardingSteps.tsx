@@ -124,13 +124,18 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
 
     try {
       // Update profile role
+      console.log('✅ Step 1: Setting role to', accountType)
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ role: accountType })
         .eq('user_id', profile.user_id)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('❌ Step 1: Error updating role:', updateError)
+        throw updateError
+      }
 
+      console.log('✅ Step 1: Role updated successfully')
       setCurrentStep(2)
     } catch (err: any) {
       setError(err.message || 'Failed to update account type')
@@ -205,6 +210,11 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         graduation_month: parseInt(graduationMonth),
       }
 
+      // Ensure role is set if accountType is selected (double-check in case step 1 didn't persist)
+      if (accountType && (profile.role === 'user' || !profile.role)) {
+        updateData.role = accountType
+      }
+
       // Upload player avatar for parent accounts
       if (accountType === 'parent' && playerAvatarFile) {
         const fileExt = playerAvatarFile.name.split('.').pop()
@@ -247,38 +257,46 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   }
 
   const handleStep4Submit = async (skip: boolean = false) => {
-    if (skip) {
-      router.refresh()
-      return
-    }
-
     setLoading(true)
     setError(null)
 
     try {
       const updateData: any = {}
       
-      if (gpa) updateData.gpa = parseFloat(gpa)
-      if (weight) updateData.weight = parseFloat(weight)
-      if (height) updateData.height = height.trim()
-      if (fortyYard) updateData.forty_yd_dash = parseFloat(fortyYard)
-      if (benchMax) updateData.bench_max = parseFloat(benchMax)
-      if (squatMax) updateData.squat_max = parseFloat(squatMax)
-      if (cleanMax) updateData.clean_max = parseFloat(cleanMax)
-      if (state) updateData.state = state.trim()
-      if (classification) updateData.classification = classification.trim()
-      if (collegeOffers) updateData.college_offers = collegeOffers.trim()
+      // CRITICAL: Always ensure the role is set to the selected account type when completing onboarding
+      // This ensures the role is set even if step 1's update didn't persist properly
+      if (accountType && (profile.role === 'user' || !profile.role)) {
+        updateData.role = accountType
+        console.log('✅ Step 4: Setting role to', accountType)
+      }
+      
+      if (!skip) {
+        // Only include athletic info if not skipping
+        if (gpa) updateData.gpa = parseFloat(gpa)
+        if (weight) updateData.weight = parseFloat(weight)
+        if (height) updateData.height = height.trim()
+        if (fortyYard) updateData.forty_yd_dash = parseFloat(fortyYard)
+        if (benchMax) updateData.bench_max = parseFloat(benchMax)
+        if (squatMax) updateData.squat_max = parseFloat(squatMax)
+        if (cleanMax) updateData.clean_max = parseFloat(cleanMax)
+        if (state) updateData.state = state.trim()
+        if (classification) updateData.classification = classification.trim()
+        if (collegeOffers) updateData.college_offers = collegeOffers.trim()
+      }
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('user_id', profile.user_id)
+      // Only update if there's data to update
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('user_id', profile.user_id)
 
-      if (updateError) throw updateError
+        if (updateError) throw updateError
+      }
 
       router.refresh()
     } catch (err: any) {
-      setError(err.message || 'Failed to save athletic info')
+      setError(err.message || 'Failed to save')
       setLoading(false)
     }
   }
