@@ -365,8 +365,9 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         localStorage.removeItem(`onboarding_accountType_${profile.user_id}`)
       }
       
-      // Refresh the page data
-      router.refresh()
+      // Force a hard refresh to reload the profile with updated role
+      // This ensures the onboarding section disappears since profile.role will no longer be 'user'
+      window.location.href = '/profile'
     } catch (err: any) {
       console.error('❌ Step 4: Error:', err)
       setError(err.message || 'Failed to save')
@@ -386,6 +387,12 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   }
 
   const progress = getStepProgress()
+
+  // If profile role is no longer 'user', onboarding is complete - hide the component
+  // This is a safety check in case the parent component's conditional rendering doesn't catch it
+  if (profile.role && profile.role !== 'user') {
+    return null
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 md:p-8 mb-8">
