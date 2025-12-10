@@ -291,9 +291,10 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       const updateData: any = {}
       
       // CRITICAL: Always ensure the role is set to the selected account type when completing onboarding
+      // The default role is 'user', and we need to update it to 'player' or 'parent' based on step 1 selection
       // Try multiple sources to determine the target role:
-      // 1. accountType state (set in step 1) - can only be 'player' | 'parent' | null
-      // 2. profile.role (if already updated) - could be 'user', 'player', or 'parent'
+      // 1. accountType state (set in step 1) - 'player' or 'parent' (never 'user')
+      // 2. profile.role (if already updated) - could be 'user' (default), 'player', or 'parent'
       // 3. Infer from profile data (parent_name/child_name = parent, position/school = player)
       let targetRole: 'player' | 'parent' | null = accountType
       
@@ -308,10 +309,12 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         }
       }
       
-      // Always update role if it's still 'user' or undefined and we have a target role
-      if (targetRole && (profile.role === 'user' || !profile.role)) {
+      // Always update role when completing onboarding if:
+      // - We have a target role (player or parent) AND
+      // - The profile role is still 'user' (default) or the targetRole differs from current role
+      if (targetRole && (profile.role === 'user' || !profile.role || profile.role !== targetRole)) {
         updateData.role = targetRole
-        console.log('✅ Step 4: Setting role to', targetRole, 'from accountType:', accountType, 'profile.role:', profile.role)
+        console.log('✅ Step 4: Updating role from', profile.role, 'to', targetRole, '(accountType:', accountType, ')')
       } else if (!targetRole) {
         console.warn('⚠️ Step 4: No valid target role found. accountType:', accountType, 'profile.role:', profile.role)
         setError('Unable to determine account type. Please go back to step 1 and select your account type.')
