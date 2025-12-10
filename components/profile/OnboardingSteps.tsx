@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import Image from 'next/image'
@@ -19,6 +19,7 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasInitialized = useRef(false)
   
   // Step 1: Account type
   const [accountType, setAccountType] = useState<'player' | 'parent' | null>(null)
@@ -50,28 +51,36 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   const [classification, setClassification] = useState(profile.classification || '')
   const [collegeOffers, setCollegeOffers] = useState(profile.college_offers || '')
 
-  // Detect current step based on profile data
+  // Detect current step based on profile data - only on initial mount
   useEffect(() => {
-    // If profile already has a role other than 'user', skip onboarding
-    if (profile.role && profile.role !== 'user') {
+    // Only run step detection once on mount to prevent resetting step when typing
+    if (hasInitialized.current) {
       return
     }
     
-    // Determine current step based on what's completed
-    if (!accountType && (!profile.role || profile.role === 'user')) {
+    // If profile already has a role other than 'user', skip onboarding
+    if (profile.role && profile.role !== 'user') {
+      hasInitialized.current = true
+      return
+    }
+    
+    // Determine current step based on what's completed in the profile (not local state)
+    if (!profile.role || profile.role === 'user') {
       setCurrentStep(1)
-    } else if (!hudlLink || !profile.hudl_link) {
+    } else if (!profile.hudl_link) {
       setCurrentStep(2)
     } else {
-      // Check what's missing for step 3
-      const hasBasicInfo = (socialLink || profile.social_link) || (position || profile.position) || (school || profile.school) || (graduationYear || profile.graduation_year)
+      // Check what's missing for step 3 - use profile fields only, not local state
+      const hasBasicInfo = profile.social_link || profile.position || profile.school || profile.graduation_year
       if (!hasBasicInfo) {
         setCurrentStep(3)
       } else {
         setCurrentStep(4)
       }
     }
-  }, [profile, accountType, hudlLink, socialLink, position, school, graduationYear])
+    
+    hasInitialized.current = true
+  }, [profile.role, profile.hudl_link, profile.social_link, profile.position, profile.school, profile.graduation_year])
 
   // Initialize from profile
   useEffect(() => {
