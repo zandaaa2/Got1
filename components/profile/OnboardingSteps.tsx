@@ -295,7 +295,7 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       // 1. accountType state (set in step 1)
       // 2. profile.role (if already updated)
       // 3. Infer from profile data (parent_name/child_name = parent, position/school = player)
-      let targetRole = accountType
+      let targetRole: 'player' | 'parent' | 'user' | null = accountType
       
       if (!targetRole || targetRole === 'user') {
         if (profile.role && profile.role !== 'user') {
