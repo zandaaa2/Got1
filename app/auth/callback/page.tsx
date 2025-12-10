@@ -420,8 +420,11 @@ function AuthCallbackContent() {
           await new Promise(resolve => setTimeout(resolve, 500))
           const retryCheck = await supabase.auth.getSession()
           if (!retryCheck.data.session) {
-            console.error('❌ Session still not found after retry, redirecting to welcome')
-            window.location.href = '/welcome'
+            console.error('❌ Session still not found after retry')
+            // Even if session check fails, try to redirect to browse
+            // The middleware will handle authentication
+            console.warn('⚠️ Redirecting to requested page anyway - middleware will verify auth')
+            window.location.replace(finalRedirect)
             return
           }
         }
@@ -431,6 +434,7 @@ function AuthCallbackContent() {
         const syncUrl = new URL(`/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`, window.location.origin).href
         console.log('✅ Redirecting to sync page:', syncUrl)
         console.log('✅ Final redirect destination will be:', finalRedirect)
+        console.log('✅ OAuth callback successful, session exists, proceeding to sync page')
         window.location.replace(syncUrl)
       } catch (error: any) {
         console.error('❌ OAuth callback error:', error)
