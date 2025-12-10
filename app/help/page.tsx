@@ -4,7 +4,6 @@ import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 const HelpContent = dynamicImport(() => import('@/components/help/HelpContent'), {
   ssr: false,
@@ -30,31 +29,7 @@ export default async function HelpPage() {
     userRole = profile?.role || null
   }
 
-  let profile = null
-  if (session) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, avatar_url, full_name, username')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-    profile = data
-  }
-
-  const headerContent = session ? (
-    profile ? (
-      <HeaderUserAvatar
-        userId={session.user.id}
-        avatarUrl={profile.avatar_url}
-        fullName={profile.full_name}
-        username={profile.username}
-        email={session.user.email}
-      />
-    ) : (
-      <HeaderUserAvatar userId={session.user.id} email={session.user.email} />
-    )
-  ) : (
-    <AuthButtons />
-  )
+  const headerContent = session ? null : <AuthButtons />
 
   return (
     <div className="min-h-screen bg-white flex">

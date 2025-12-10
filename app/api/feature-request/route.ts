@@ -19,37 +19,41 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     console.log('📧 Request body:', body)
-    const { message } = body
+    const { featureTitle, description } = body
 
-    if (!message || typeof message !== 'string') {
-      console.error('❌ Invalid message:', message)
+    if (!featureTitle || typeof featureTitle !== 'string' || !featureTitle.trim()) {
+      console.error('❌ Invalid feature title:', featureTitle)
       return NextResponse.json(
-        { error: 'Message is required' },
+        { error: 'Feature title is required' },
         { status: 400 }
       )
     }
 
-    if (message.length > 80) {
-      console.error('❌ Message too long:', message.length)
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      console.error('❌ Invalid description:', description)
       return NextResponse.json(
-        { error: 'Message must be 80 characters or less' },
+        { error: 'Description is required' },
         { status: 400 }
       )
     }
 
-    // Get user info if available (optional auth for feature requests)
-    // Feature requests can be submitted anonymously, so we don't require auth
+    // Get user info - feature requests require authentication
     const authResult = await requireAuth(request)
-    const userEmail = authResult.response ? 'Anonymous' : (authResult.session?.user?.email || 'Anonymous')
+    if (authResult.response) {
+      return authResult.response
+    }
+    
+    const userEmail = authResult.session?.user?.email || 'Unknown'
     const userAgent = request.headers.get('user-agent') || 'Unknown'
 
     console.log('📧 Sending email to zander@got1.app')
     console.log('📧 From user:', userEmail)
-    console.log('📧 Message:', message)
+    console.log('📧 Feature title:', featureTitle)
+    console.log('📧 Description:', description)
 
     // Send email to zander@got1.app
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@got1.app'
-    const replyTo = 'zander@got1.app'
+    const replyTo = userEmail
     
     console.log('📧 From email:', fromEmail)
     console.log('📧 Reply to:', replyTo)
@@ -58,7 +62,7 @@ export async function POST(request: NextRequest) {
       from: fromEmail,
       reply_to: replyTo,
       to: 'zander@got1.app',
-      subject: 'Feature Request from Got1',
+      subject: `Feature Request: ${featureTitle}`,
       headers: {
         'X-Entity-Ref-ID': `feature-request-${Date.now()}`,
       },
@@ -68,18 +72,20 @@ export async function POST(request: NextRequest) {
             New Feature Request
           </h2>
           <div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #000;">
-            <p style="font-size: 16px; color: #333; margin: 0;">
-              "${message}"
+            <h3 style="font-size: 18px; color: #000; margin: 0 0 10px 0; font-weight: bold;">
+              ${featureTitle}
+            </h3>
+            <p style="font-size: 16px; color: #333; margin: 0; white-space: pre-wrap;">
+              ${description}
             </p>
           </div>
           <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
             <p><strong>Submitted by:</strong> ${userEmail}</p>
-            <p><strong>User Agent:</strong> ${userAgent}</p>
             <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
           </div>
         </div>
       `,
-      text: `New Feature Request\n\n"${message}"\n\nSubmitted by: ${userEmail}\nTimestamp: ${new Date().toLocaleString()}`,
+      text: `New Feature Request\n\nTitle: ${featureTitle}\n\nDescription:\n${description}\n\nSubmitted by: ${userEmail}\nTimestamp: ${new Date().toLocaleString()}`,
     })
 
     if (error) {

@@ -62,7 +62,7 @@ export default function AuthInline({ mode }: AuthInlineProps) {
         setLoading(false)
         
         // Redirect through sync page to create sign-in notification
-        window.location.href = '/auth/sync?redirect=/browse'
+        window.location.href = '/auth/sync?redirect=/discover'
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')

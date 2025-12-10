@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/shared/Modal'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import AccountCreatedAnimation from '@/components/profile/AccountCreatedAnimation'
 
 const normalizeUsername = (value: string) => {
   return value
@@ -35,8 +36,26 @@ export default function UserSetupForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAgeRestrictionModal, setShowAgeRestrictionModal] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  /**
+   * Handles user sign out
+   */
+  const handleSignOut = async () => {
+    try {
+      setSigningOut(true)
+      await supabase.auth.signOut()
+      // Redirect to sign-in page
+      window.location.href = '/auth/signin'
+    } catch (error: any) {
+      console.error('Sign out error:', error)
+      setError('Failed to sign out. Please try again.')
+      setSigningOut(false)
+    }
+  }
 
   const initialUsername = normalizeUsername(userName || '')
   const [avatarUrl, setAvatarUrl] = useState<string>(userAvatar || '')
@@ -194,13 +213,35 @@ export default function UserSetupForm({
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
+      // CRITICAL FIX: Check if profile already exists with wrong role and fix it immediately
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      if (existingProfile && existingProfile.role === 'player') {
+        console.log('⚠️ UserSetupForm - Found existing profile with role=player, fixing to user immediately')
+        const { error: fixError } = await supabase
+          .from('profiles')
+          .update({ role: 'user' })
+          .eq('id', existingProfile.id)
+        
+        if (fixError) {
+          console.error('❌ UserSetupForm - Failed to fix existing profile role:', fixError)
+        } else {
+          console.log('✅ UserSetupForm - Fixed existing profile role from player to user')
+        }
+      }
+
       // Sanitize avatar URL
       const sanitizedAvatar = isMeaningfulAvatar(avatarUrl) ? avatarUrl : null
 
-      // Create base USER profile
+      // CRITICAL: Always create profile with role='user' initially
+      // The role will only change if user explicitly selected one on role-selection page
       const profileData: any = {
         user_id: session.user.id,
-        role: 'user', // Base role
+        role: 'user', // Always start as 'user' - role only changes when explicitly selected
         full_name: formData.full_name.trim(),
         username: normalizedUsername,
         avatar_url: sanitizedAvatar,
@@ -208,33 +249,87 @@ export default function UserSetupForm({
         updated_at: new Date().toISOString(),
       }
 
-      const { error: insertError } = await supabase
+      console.log('🔍 UserSetupForm - Attempting to insert profile with role:', profileData.role)
+      console.log('🔍 UserSetupForm - Full profileData:', JSON.stringify(profileData, null, 2))
+      
+      const { data: insertedData, error: insertError } = await supabase
         .from('profiles')
         .insert(profileData)
+        .select('id, role')
+        .single()
 
       if (insertError) {
+        console.error('❌ UserSetupForm - Insert error:', insertError)
+        console.error('❌ UserSetupForm - Error code:', insertError.code)
+        console.error('❌ UserSetupForm - Error message:', insertError.message)
+        
         // If profile already exists, update it
         if (insertError.code === '23505') { // Unique violation
-          const { error: updateError } = await supabase
+          console.log('⚠️ UserSetupForm - Profile already exists, updating instead')
+          
+          // CRITICAL: Always force role to 'user' when updating existing profile
+          // This ensures any profile created elsewhere (with wrong role) gets fixed
+          const { data: updatedData, error: updateError } = await supabase
             .from('profiles')
             .update({
               full_name: profileData.full_name,
               username: profileData.username,
               avatar_url: profileData.avatar_url,
               birthday: profileData.birthday,
-              role: 'user',
+              role: 'user', // ALWAYS set to 'user' - role only changes on role-selection page
               updated_at: profileData.updated_at,
             })
             .eq('user_id', session.user.id)
+            .select('id, role')
+            .single()
 
-          if (updateError) throw updateError
+          if (updateError) {
+            console.error('❌ UserSetupForm - Update error:', updateError)
+            throw updateError
+          }
+          
+          // Verify the role was actually set correctly
+          if (updatedData?.role !== 'user') {
+            console.error('❌ CRITICAL: Profile update returned wrong role! Expected "user", got:', updatedData?.role)
+            // Force fix it
+            await supabase
+              .from('profiles')
+              .update({ role: 'user' })
+              .eq('id', updatedData.id)
+          }
+          
+          console.log('✅ UserSetupForm - Profile updated, role:', updatedData?.role)
         } else {
           throw insertError
         }
+      } else {
+        console.log('✅ UserSetupForm - Profile inserted successfully, role:', insertedData?.role)
+        
+        // Verify the role was actually set correctly
+        if (insertedData?.role !== 'user') {
+          console.error('❌ CRITICAL: Profile was created with wrong role! Expected "user", got:', insertedData?.role)
+          // Force update to correct role
+          const { error: fixError } = await supabase
+            .from('profiles')
+            .update({ role: 'user' })
+            .eq('id', insertedData.id)
+          
+          if (fixError) {
+            console.error('❌ Failed to fix role:', fixError)
+          } else {
+            console.log('✅ Fixed role back to "user"')
+          }
+        }
       }
 
-      // Redirect to role selection (will be handled by the page)
-      router.push('/profile/role-selection')
+      // Clear any role selection from localStorage (we're going straight to profile for onboarding)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('selected_role')
+      }
+
+      // Show success animation, then redirect to profile
+      setShowSuccessAnimation(true)
+      setLoading(false)
     } catch (error: any) {
       console.error('Error creating user profile:', error)
       setError(error.message || 'Failed to create profile. Please try again.')
@@ -242,10 +337,18 @@ export default function UserSetupForm({
     }
   }
 
+  const handleAnimationComplete = () => {
+    router.push('/profile')
+    router.refresh()
+  }
+
   return (
     <>
+      {showSuccessAnimation && (
+        <AccountCreatedAnimation onComplete={handleAnimationComplete} />
+      )}
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">Complete Your Profile</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">Account info</h1>
         <p className="text-gray-600 mb-8">
           Let's start with the basics. You can add more details about being a player or scout later.
         </p>
@@ -347,13 +450,23 @@ export default function UserSetupForm({
           </div>
 
           {/* Submit Button */}
-          <div className="pt-4">
+          <div className="pt-4 space-y-3">
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Creating Profile...' : 'Continue'}
+            </button>
+            
+            {/* Sign Out Button */}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut || loading}
+              className="w-full py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {signingOut ? 'Signing out...' : 'Sign out'}
             </button>
           </div>
         </form>

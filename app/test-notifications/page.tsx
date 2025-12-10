@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import AuthButtons from '@/components/auth/AuthButtons'
 import { createClient } from '@/lib/supabase-client'
 import { useEffect } from 'react'
@@ -58,27 +57,11 @@ export default function TestNotificationsPage() {
     }
   }
 
-  const headerContent = session ? (
-    profile ? (
-      <HeaderUserAvatar
-        userId={session.user.id}
-        avatarUrl={profile.avatar_url}
-        fullName={profile.full_name}
-        username={profile.username}
-        email={session.user.email}
-      />
-    ) : (
-      <HeaderUserAvatar userId={session.user.id} email={session.user.email} />
-    )
-  ) : (
-    <AuthButtons />
-  )
-
   if (!session) {
     return (
       <div className="min-h-screen bg-white flex">
         <Sidebar activePage="notifications" />
-        <DynamicLayout header={headerContent}>
+        <DynamicLayout header={<AuthButtons />}>
           <div className="pt-8">
             <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">
               Test Notifications
@@ -93,7 +76,7 @@ export default function TestNotificationsPage() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="notifications" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <div className="pt-8">
           <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">
             Test Notifications

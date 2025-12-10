@@ -231,7 +231,7 @@ ${EMAIL_HEADER}
         Don't worry - you can still request evaluations from other scouts on the platform. Browse available scouts to find the right match for you.
       </p>
       <div style="margin-top: 30px; text-align: center;">
-        <a href="${getBaseUrl()}/browse" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Browse Scouts</a>
+        <a href="${getBaseUrl()}/discover" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Browse Scouts</a>
       </div>
       <p style="color: #666; font-size: 14px; margin-top: 30px;">
         Thank you for using Got1!
@@ -440,7 +440,7 @@ ${EMAIL_HEADER}
         It's always better to get a second opinion. Take a look at other great scouts on the platform.
       </p>
       <div style="margin-top: 30px; text-align: center;">
-        <a href="${getBaseUrl()}/browse?tab=scouts" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Browse Scouts</a>
+        <a href="${getBaseUrl()}/discover?category=pro" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Browse Scouts</a>
       </div>
       <p style="color: #666; font-size: 14px; margin-top: 20px;">
         Or view your evaluation: <a href="${evaluationUrl}" style="color: #000;">${evaluationUrl}</a>

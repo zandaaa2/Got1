@@ -92,24 +92,40 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }
 
   const loadProfiles = useCallback(async () => {
+    console.log('🔄 loadProfiles called')
+    setLoading(true)
     try {
+      console.log('🔄 Starting Supabase query...')
       // Build query step by step to avoid any construction issues
       const { data, error } = await supabase
         .from('profiles')
         .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until, positions, college_connections')
         .order('full_name', { ascending: true })
 
+      console.log('🔄 Query completed. Error:', error, 'Data length:', data?.length ?? 0)
+
       if (error) {
-        console.error('Error loading profiles:', error)
-        console.error('Error details:', JSON.stringify(error, null, 2))
-        console.error('Error code:', error.code)
-        console.error('Error message:', error.message)
+        console.error('❌ Error loading profiles:', error)
+        console.error('❌ Error details:', JSON.stringify(error, null, 2))
+        console.error('❌ Error code:', error.code)
+        console.error('❌ Error message:', error.message)
         setProfiles([])
+        setLoading(false)
         return
       }
       
       console.log('✅ Loaded profiles from database:', data?.length || 0)
-      console.log('Profiles data:', data?.map(p => ({ id: p.id, name: p.full_name, role: p.role, position: p.position, org: p.organization, school: p.school })))
+      if (data && data.length > 0) {
+        console.log('✅ First few profiles:', data.slice(0, 3).map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+        console.log('✅ Role distribution:', {
+          scout: data.filter(p => p.role === 'scout').length,
+          player: data.filter(p => p.role === 'player').length,
+          parent: data.filter(p => p.role === 'parent').length,
+          user: data.filter(p => p.role === 'user').length
+        })
+      } else {
+        console.warn('⚠️ Query returned 0 profiles from database')
+      }
       
       // Filter client-side: exclude suspended scouts (not players)
       // Note: suspended_until column may not exist yet - check for it before filtering
@@ -123,6 +139,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       const activeProfiles = (data || []).filter(p => {
         // Hide "ella k" in production (keep visible on localhost)
         if (isProduction && p.full_name?.toLowerCase() === 'ella k') {
+          return false
+        }
+        
+        // Hide "chasity" from scout listings
+        if (p.role === 'scout' && (p.full_name?.toLowerCase().includes('chasity') || p.username?.toLowerCase() === 'chasity')) {
           return false
         }
         
@@ -154,6 +175,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }, [supabase])
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered - calling loadProfiles')
     loadProfiles()
   }, [loadProfiles])
 
@@ -721,6 +743,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     !window.location.hostname.includes('127.0.0.1')
 
   const filteredProfiles = useMemo(() => {
+    console.log('🔍 filteredProfiles calculation:', {
+      profilesCount: profiles.length,
+      roleFilter,
+      trimmedQuery: trimmedQuery || '(none)',
+      viewMode
+    })
+    
     const filtered = profiles.filter((profile) => {
       // Hide "ella k" in production (keep visible on localhost)
       if (isProduction && profile.full_name?.toLowerCase() === 'ella k') {
@@ -867,6 +896,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       
       return matchesSearch && matchesRole
     })
+    
+    console.log('🔍 filteredProfiles result:', filtered.length, 'profiles after filtering')
     
     // Randomize order for scouts when showing all or scouts filter
     if (roleFilter === 'all' || roleFilter === 'scout') {

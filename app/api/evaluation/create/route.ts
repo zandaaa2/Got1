@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { session, supabase } = authResult
 
     const body = await request.json()
-    const { scoutId, price } = body
+    const { scoutId, price, playerId } = body
 
     if (!scoutId || !price) {
       return NextResponse.json(
@@ -59,20 +59,111 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid scout' }, { status: 400 })
     }
 
-    // Get player profile
-    const { data: player, error: playerError } = await supabase
+    // Get current user's profile to check if they're a parent
+    const { data: currentProfile, error: currentProfileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    if (playerError) {
-      console.error('Error fetching player:', playerError)
-      return NextResponse.json({ error: 'Failed to fetch player' }, { status: 500 })
+    if (currentProfileError) {
+      console.error('Error fetching current profile:', currentProfileError)
+      return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
     }
 
-    if (!player || player.role !== 'player') {
-      return NextResponse.json({ error: 'Invalid player' }, { status: 400 })
+    if (!currentProfile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 400 })
+    }
+
+    // Determine player and purchaser info
+    let player: any = null
+    let purchasedBy: string | null = null
+    let purchasedByType: 'player' | 'parent' | null = null
+
+    if (currentProfile.role === 'parent') {
+      // Parent is purchasing - use provided playerId or find their linked player
+      if (playerId) {
+        // Parent provided a specific player ID (from child selection)
+        const { data: playerProfile, error: playerError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', playerId)
+          .maybeSingle()
+
+        if (playerError) {
+          console.error('Error fetching player:', playerError)
+          return NextResponse.json({ error: 'Failed to fetch player' }, { status: 500 })
+        }
+
+        if (!playerProfile || playerProfile.role !== 'player') {
+          return NextResponse.json({ error: 'Invalid player page' }, { status: 400 })
+        }
+
+        // Verify this player is linked to the parent
+        const { data: parentLink } = await supabase
+          .from('parent_children')
+          .select('player_id')
+          .eq('parent_id', session.user.id)
+          .eq('player_id', playerProfile.user_id)
+          .maybeSingle()
+
+        if (!parentLink) {
+          return NextResponse.json({ 
+            error: 'This player is not linked to your account' 
+          }, { status: 403 })
+        }
+
+        player = playerProfile
+        purchasedBy = session.user.id
+        purchasedByType = 'parent'
+      } else {
+        // No playerId provided - find their linked player (backward compatibility)
+        const { data: parentLink, error: parentLinkError } = await supabase
+          .from('parent_children')
+          .select('player_id')
+          .eq('parent_id', session.user.id)
+          .maybeSingle()
+
+        if (parentLinkError) {
+          console.error('Error fetching parent link:', parentLinkError)
+          return NextResponse.json({ error: 'Failed to fetch parent relationship' }, { status: 500 })
+        }
+
+        if (!parentLink) {
+          return NextResponse.json({ 
+            error: 'No linked player found. Please link a player page first.' 
+          }, { status: 400 })
+        }
+
+        // Get the player profile
+        const { data: playerProfile, error: playerError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', parentLink.player_id)
+          .maybeSingle()
+
+        if (playerError) {
+          console.error('Error fetching player:', playerError)
+          return NextResponse.json({ error: 'Failed to fetch player' }, { status: 500 })
+        }
+
+        if (!playerProfile || playerProfile.role !== 'player') {
+          return NextResponse.json({ error: 'Invalid player page' }, { status: 400 })
+        }
+
+        player = playerProfile
+        purchasedBy = session.user.id
+        purchasedByType = 'parent'
+      }
+    } else if (currentProfile.role === 'player') {
+      // Player is purchasing for themselves
+      player = currentProfile
+      purchasedBy = session.user.id
+      purchasedByType = 'player'
+    } else {
+      return NextResponse.json({ 
+        error: 'Only players or parents can request evaluations' 
+      }, { status: 400 })
     }
 
     // Derive price server-side to protect against client tampering
@@ -157,6 +248,8 @@ export async function POST(request: NextRequest) {
         price: scoutPrice.toString(),
         scout_profile_id: scout.id, // Store profile ID for redirect
         action: 'upfront_payment', // Flag to indicate upfront payment flow
+        purchased_by: purchasedBy || player.user_id, // Who is purchasing (parent or player)
+        purchased_by_type: purchasedByType || 'player', // Type of purchaser
       },
     })
 

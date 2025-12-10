@@ -1,4 +1,4 @@
-export type UserRole = 'user' | 'player' | 'scout'
+export type UserRole = 'user' | 'player' | 'scout' | 'parent'
 
 export interface Profile {
   id: string
@@ -9,6 +9,10 @@ export interface Profile {
   username: string
   created_at: string
   updated_at: string
+  profile_claimed?: boolean | null
+  scout_category?: 'pro' | 'd1-college' | 'smaller-college' | null
+  bio?: string | null
+  credentials?: string | null
 }
 
 export interface PlayerProfile extends Profile {
@@ -29,6 +33,20 @@ export interface ScoutProfile extends Profile {
   username: string
   social_link: string | null
   turnaround_time: string | null
+  profile_claimed?: boolean | null
+  scout_category?: 'pro' | 'd1-college' | 'smaller-college' | null
+  offer_title?: string | null
+}
+
+export interface ParentProfile extends Profile {
+  role: 'parent'
+}
+
+export interface ParentChild {
+  id: string
+  parent_id: string
+  player_id: string
+  created_at: string
 }
 
 export interface Evaluation {
@@ -52,6 +70,8 @@ export interface Evaluation {
   denied_reason?: string | null
   cancelled_at?: string | null
   cancelled_reason?: string | null
+  purchased_by?: string | null
+  purchased_by_type?: 'player' | 'parent' | null
 }
 
 export interface ScoutApplication {

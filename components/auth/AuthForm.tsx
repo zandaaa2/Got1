@@ -11,13 +11,15 @@ interface AuthFormProps {
 export default function AuthForm({ mode }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [role, setRole] = useState<'player' | 'scout'>('player')
   const router = useRouter()
   const supabase = createClient()
 
   /**
    * Handles Google OAuth authentication.
    * Initiates the OAuth flow and redirects to Google for authentication.
+   * 
+   * NOTE: Role selection happens AFTER account info (name, username, birthday) is completed.
+   * Users will select their role on the role-selection page after completing user-setup.
    *
    * @returns {Promise<void>}
    */
@@ -25,6 +27,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       setLoading(true)
       setError(null)
+      
+      // Don't store role - role selection happens after account info is completed
+      // Clear any old signup_role from localStorage to prevent issues
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('signup_role')
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -43,38 +52,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
-        </div>
-      )}
-
-      {mode === 'signup' && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-black">
-            I am a:
-          </label>
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => setRole('player')}
-              className={`flex-1 py-2 px-4 rounded border ${
-                role === 'player'
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-black'
-              }`}
-            >
-              Player
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('scout')}
-              className={`flex-1 py-2 px-4 rounded border ${
-                role === 'scout'
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-black'
-              }`}
-            >
-              Scout
-            </button>
-          </div>
         </div>
       )}
 

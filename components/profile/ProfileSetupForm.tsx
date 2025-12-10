@@ -45,7 +45,12 @@ export default function ProfileSetupForm({
   const router = useRouter()
   const supabase = createClient()
 
-  const [role, setRole] = useState<'player' | 'scout' | 'user' | null>(null)
+  const [role, setRole] = useState<'player' | 'scout' | 'parent' | 'user' | null>(null)
+  const [parentAction, setParentAction] = useState<'create' | 'link' | null>(null) // For parent: create new player or link existing
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('')
+  const [playerSearchResults, setPlayerSearchResults] = useState<any[]>([])
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+  const [searchingPlayer, setSearchingPlayer] = useState(false)
   const initialUsername = normalizeUsername(userName || '')
   const sanitizedAvatar = isMeaningfulAvatar(userAvatar) ? userAvatar : null
 
@@ -82,6 +87,18 @@ export default function ProfileSetupForm({
       setFormData((prev) => ({ ...prev, username: normalizeUsername(formData.full_name) }))
     }
   }, [formData.full_name, formData.username])
+
+  // Read stored role from localStorage (set during signup) and pre-select it
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedRole = localStorage.getItem('signup_role')
+      if (storedRole && ['player', 'scout', 'parent'].includes(storedRole)) {
+        setRole(storedRole as 'player' | 'scout' | 'parent')
+        // Clear it after reading so it doesn't persist
+        localStorage.removeItem('signup_role')
+      }
+    }
+  }, [])
 
   // Load referrer info if referrerId is provided
   useEffect(() => {
@@ -263,6 +280,9 @@ export default function ProfileSetupForm({
         profileData.social_link = formData.social_link || null
         profileData.turnaround_time = formData.turnaround_time || null
         profileData.sports = Array.isArray(formData.sports) ? formData.sports : []
+      } else if (role === 'parent') {
+        // Parent profile - minimal data needed
+        // No additional fields required for parent role
       } else if (role === 'player') {
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
@@ -281,11 +301,34 @@ export default function ProfileSetupForm({
       }
       // If role is null/'user', don't set player or scout specific fields
 
-      const { error: insertError } = await supabase
+      const { error: insertError, data: insertedProfile } = await supabase
         .from('profiles')
         .insert(profileData)
+        .select()
+        .single()
 
       if (insertError) throw insertError
+
+      // Handle parent-specific flow: link to existing player
+      if (role === 'parent' && selectedPlayerId) {
+        // Create parent_children relationship
+        const { error: linkError } = await supabase
+          .from('parent_children')
+          .insert({
+            parent_id: session.user.id,
+            player_id: selectedPlayerId,
+          })
+
+        if (linkError) {
+          if (linkError.code === '23505') { // Unique constraint violation
+            setError('This player is already linked to another parent account')
+          } else {
+            throw linkError
+          }
+          setLoading(false)
+          return
+        }
+      }
 
       // REFERRAL PROCESS TEMPORARILY DISABLED
       // Create referral record if referrer was selected
@@ -393,6 +436,20 @@ export default function ProfileSetupForm({
             </button>
             <button
               type="button"
+              onClick={() => {
+                setRole('parent')
+                setParentAction(null)
+              }}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                role === 'parent'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white text-black border-black hover:bg-gray-50'
+              }`}
+            >
+              Parent
+            </button>
+            <button
+              type="button"
               onClick={() => setRole(null)}
               className={`flex-1 py-3 px-4 rounded-lg border-2 ${
                 role === null
@@ -407,6 +464,92 @@ export default function ProfileSetupForm({
             <p className="mt-2 text-xs text-gray-500">
               You can set up your profile later as a player or scout
             </p>
+          )}
+          {role === 'parent' && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 mb-3">
+                As a parent, you can manage your child's player page and purchase evaluations on their behalf.
+              </p>
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-black">
+                  Link to your child's player page:
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={playerSearchQuery}
+                    onChange={async (e) => {
+                      const query = e.target.value
+                      setPlayerSearchQuery(query)
+                      if (query.length >= 2) {
+                        setSearchingPlayer(true)
+                        const { data } = await supabase
+                          .from('profiles')
+                          .select('id, user_id, username, full_name, avatar_url')
+                          .eq('role', 'player')
+                          .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+                          .limit(10)
+                        setPlayerSearchResults(data || [])
+                        setSearchingPlayer(false)
+                      } else {
+                        setPlayerSearchResults([])
+                      }
+                    }}
+                    placeholder="Search for player username or name..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                  {playerSearchResults.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {playerSearchResults.map((player: any) => (
+                        <button
+                          key={player.user_id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPlayerId(player.user_id)
+                            setPlayerSearchQuery(player.username || player.full_name || '')
+                            setPlayerSearchResults([])
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                        >
+                          {player.avatar_url ? (
+                            <img
+                              src={player.avatar_url}
+                              alt=""
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-xs text-gray-500">
+                                {player.full_name?.charAt(0).toUpperCase() || '?'}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="font-medium text-black">
+                              {player.full_name || 'Unknown'}
+                            </div>
+                            {player.username && (
+                              <div className="text-sm text-gray-500">@{player.username}</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {selectedPlayerId && (
+                  <div className="flex items-center gap-2 text-sm text-green-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Player selected
+                  </div>
+                )}
+                <p className="text-xs text-gray-600 mt-2">
+                  Note: You can link a player page after creating your parent profile, or create a new player page from your parent dashboard. The player page must already exist to link it here.
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

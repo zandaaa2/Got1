@@ -12,7 +12,7 @@ import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
 
 interface MyEvalsContentProps {
-  role: 'player' | 'scout'
+  role: 'player' | 'scout' | 'parent'
   userId: string
 }
 
@@ -44,7 +44,7 @@ interface Evaluation {
  * Component for displaying evaluations for the current user.
  * Shows different tabs for in-progress and completed evaluations.
  * 
- * @param role - The user's role ('player' or 'scout')
+ * @param role - The user's role ('player', 'scout', or 'parent')
  * @param userId - The user's ID from auth.users
  */
 export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
@@ -73,11 +73,15 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
         // Try with share_token first
         let query = supabase
           .from('evaluations')
-          .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id, share_token')
+          .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id, share_token, purchased_by')
 
         if (role === 'scout') {
           query = query.eq('scout_id', userId)
+        } else if (role === 'parent') {
+          // Parents see evaluations they purchased (purchased_by = their user_id)
+          query = query.eq('purchased_by', userId)
         } else {
+          // Players see evaluations for themselves
           query = query.eq('player_id', userId)
         }
 

@@ -10,29 +10,51 @@ function HomeContent() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient()
-      
-      // Check for error parameter (from auth callbacks)
-      const error = searchParams.get('error')
-      if (error) {
-        // Handle auth errors by redirecting to sign-in
-        console.error('Auth error:', error)
-        router.replace('/auth/signin?error=' + encodeURIComponent(error))
-        return
-      }
+        // Add timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          console.warn('Auth check timeout - redirecting to welcome')
+          router.replace('/welcome')
+        }, 3000) // 3 second timeout
 
-      // Wait a moment for cookies to be available (especially after auth callbacks)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      try {
+        const supabase = createClient()
+        
+        // Check for error parameter (from auth callbacks)
+        const error = searchParams.get('error')
+        if (error) {
+          clearTimeout(timeoutId)
+          console.error('Auth error:', error)
+          router.replace('/auth/signin?error=' + encodeURIComponent(error))
+          return
+        }
 
-      // Check session client-side (cookies are always available here)
-      const { data: { session } } = await supabase.auth.getSession()
+        // Wait a moment for cookies to be available (especially after auth callbacks)
+        await new Promise(resolve => setTimeout(resolve, 100))
 
-      // If user is signed in, redirect to browse page
-      // Otherwise, redirect to "What's this" page as the default landing page
-      if (session) {
-        router.replace('/browse')
-      } else {
-        router.replace('/whats-this')
+        // Check session client-side (cookies are always available here)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        clearTimeout(timeoutId)
+        
+        if (sessionError) {
+          console.error('Error getting session:', sessionError)
+          // On error, redirect to welcome page
+          router.replace('/welcome')
+          return
+        }
+
+        // If user is signed in, redirect to browse page
+        // Otherwise, redirect to welcome page as the default landing page
+        if (session) {
+          router.replace('/browse')
+        } else {
+          router.replace('/welcome')
+        }
+      } catch (error) {
+        clearTimeout(timeoutId)
+        console.error('Error in checkAuth:', error)
+        // On any error, redirect to welcome page
+        router.replace('/welcome')
       }
     }
 

@@ -34,8 +34,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    // Verify user is not already a scout
+    // Users who clicked "Become a Scout" should have role='user' until approved
     if (profile.role === 'scout') {
       return NextResponse.json({ error: 'Already a scout' }, { status: 400 })
+    }
+
+    // Ensure profile role is 'user' (not 'player' or anything else)
+    // This prevents any edge cases where role might be incorrect
+    if (profile.role !== 'user') {
+      // Fix the role to 'user' if it's incorrect
+      await supabase
+        .from('profiles')
+        .update({ role: 'user' })
+        .eq('user_id', session.user.id)
     }
 
     // Check for existing pending application
@@ -54,6 +66,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create scout application
+    // IMPORTANT: This route only creates a pending application - it does NOT change the user's role.
+    // The user's role remains 'user' until an admin approves the application via
+    // /api/scout-application/[id]/decision, which is the ONLY place that sets role='scout'
     const { data: application, error: applicationError } = await supabase
       .from('scout_applications')
       .insert({

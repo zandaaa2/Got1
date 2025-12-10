@@ -1,9 +1,10 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
+import BackButton from '@/components/shared/BackButton'
 import Link from 'next/link'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import HeaderMenu from '@/components/shared/HeaderMenu'
@@ -17,6 +18,9 @@ import AuthModal from '@/components/auth/AuthModal'
 import { collegeEntries } from '@/lib/college-data'
 import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 import PlayerTabs from '@/components/profile/PlayerTabs'
+import JoinWaitlist from '@/components/profile/JoinWaitlist'
+import ScoutProfileSections from '@/components/profile/ScoutProfileSections'
+import PurchaseEvaluation from '@/components/profile/PurchaseEvaluation'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -138,6 +142,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   const [showSignUpModal, setShowSignUpModal] = useState(false)
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
   const [bioExpanded, setBioExpanded] = useState(false)
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const router = useRouter()
   const supabase = createClient()
   const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
@@ -194,15 +199,25 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     return testAccountNames.includes(fullName.toLowerCase())
   }
 
-  // Get current user ID
+  // Get current user ID and profile
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         setCurrentUserId(session.user.id)
         setIsSignedIn(true)
+        
+        // Load current user's profile for purchase evaluation
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+        
+        setCurrentUserProfile(userProfile)
       } else {
         setIsSignedIn(false)
+        setCurrentUserProfile(null)
       }
     }
     getCurrentUser()
@@ -371,6 +386,22 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     })
   }
 
+  // Helper function to find college match for team logo
+  const findCollegeMatch = useCallback((organization: string | null) => {
+    if (!organization) return null
+    const normalized = organization.toLowerCase().trim()
+    const normalizedSimple = normalized.replace(/[^a-z0-9]/g, '')
+    
+    return (
+      collegeEntries.find((college) => college.name.toLowerCase() === normalized) ||
+      collegeEntries.find((college) => normalized === college.name.toLowerCase().replace('university of ', '') && college.division === 'FBS') ||
+      collegeEntries.find((college) => normalized.includes(college.name.toLowerCase())) ||
+      collegeEntries.find((college) => college.name.toLowerCase().includes(normalized)) ||
+      collegeEntries.find((college) => normalizedSimple === college.name.toLowerCase().replace(/[^a-z0-9]/g, '')) ||
+      collegeEntries.find((college) => normalizedSimple.includes(college.name.toLowerCase().replace(/[^a-z0-9]/g, '')))
+    )
+  }, [])
+
   if (!isHydrated) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -383,25 +414,11 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     // Player View
     return (
       <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => router.back()}
-          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-        >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          <span className="md:hidden">Back</span>
-        </button>
+        {isSignedIn && (
+          <div className="mb-4 md:mb-6">
+            <BackButton fallbackUrl="/browse" />
+          </div>
+        )}
 
         {/* Player Profile Section */}
         <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-3 md:gap-4 mb-4 md:mb-6 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 md:p-6">
@@ -498,8 +515,76 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           </div>
         </div>
 
-        {/* Player Tabs - Only show for players */}
-        <PlayerTabs
+        {/* For unauthenticated users viewing player profiles: Show only profile card + blurred evaluations */}
+        {!isSignedIn ? (
+          <div className="mb-6 md:mb-8 mt-6 md:mt-8 relative min-h-[400px]">
+            {/* Blurred background content */}
+            <div className="filter blur-md pointer-events-none opacity-50">
+              {loading ? (
+                <EvaluationListSkeleton />
+              ) : evaluations.length > 0 ? (
+                <div className="space-y-6">
+                  {evaluations.slice(0, 3).map((evaluation) => (
+                    <div key={evaluation.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 md:p-6">
+                      <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                          <div className="h-3 bg-gray-200 rounded w-20"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 md:p-6">
+                  <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-200 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                      <div className="h-3 bg-gray-200 rounded w-20"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Sign in overlay - centered and properly positioned */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 md:p-8 max-w-md mx-4 text-center z-10">
+                <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
+                  Sign in to view evaluations
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Create an account or sign in to see detailed evaluations
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      setShowSignUpModal(true)
+                      setAuthMode('signup')
+                    }}
+                    className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSignUpModal(true)
+                      setAuthMode('signin')
+                    }}
+                    className="flex-1 px-6 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Player Tabs - Show for signed-in users or all scout profiles */
+          <PlayerTabs
           playerInfoContent={
             <>
               {/* Player Stats Section */}
@@ -610,7 +695,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                   action={
                     isOwnProfile ? (
                       <Link
-                        href="/browse?tab=profiles"
+                        href="/discover"
                         className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
                       >
                         Browse scouts
@@ -769,7 +854,8 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             </div>
           }
           evaluationsCount={evaluations.length}
-        />
+          />
+        )}
 
         {/* More Info Modal */}
         {showMoreInfo && (
@@ -853,433 +939,227 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   }
 
   // Scout/Pro View
-  return (
-    <div className="max-w-4xl mx-auto">
-      <button
-        onClick={() => router.back()}
-        className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-      >
-        <svg
-          className="w-5 h-5 md:w-6 md:h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        <span className="md:hidden">Back</span>
-      </button>
+  const isUnclaimed = profile.profile_claimed === false
+  const collegeMatch = findCollegeMatch(profile.organization)
+  const jobTitle = profile.position && profile.organization
+    ? `${profile.position} at ${profile.organization}`
+    : profile.position || profile.organization || 'Football Expert'
 
-      {/* "Ran by parent" banner - show at top for players with parent */}
-      {profile.role === 'player' && parentProfile && parentProfile.id && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-            {parentProfile.avatar_url && isMeaningfulAvatar(parentProfile.avatar_url) ? (
-              <Image
-                src={parentProfile.avatar_url}
-                alt={parentProfile.full_name || 'Parent'}
-                width={32}
-                height={32}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(parentProfile.id || 'default')}`}>
-                <span className="text-white text-sm font-semibold">
-                  {parentProfile.full_name?.charAt(0).toUpperCase() || '?'}
-                </span>
-              </div>
-            )}
-          </div>
-          <span className="text-sm text-gray-700">
-            ran by <span className="font-medium text-black">{parentProfile.full_name || 'Parent'}</span>
-          </span>
+  return (
+    <div className="max-w-6xl mx-auto relative">
+      {isSignedIn && (
+        <div className="mb-4 md:mb-6 relative z-30" style={{ pointerEvents: 'auto' }}>
+          <BackButton fallbackUrl="/browse" />
         </div>
       )}
 
-      {/* Profile Section */}
-      <div className="relative flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8">
-        {!isOwnProfile && (
-          <div className="absolute top-0 right-0 z-10">
-            <div className="relative">
-              <button
-                onClick={() => setShowShareMenu(!showShareMenu)}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="More options"
-              >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                </svg>
-              </button>
-              {showShareMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowShareMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                    <button
-                      onClick={async () => {
-                        await handleCopyProfileUrl()
-                        setShowShareMenu(false)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                      </svg>
-                      Share profile
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!isSignedIn) {
-                          router.push('/auth/signin')
-                          setShowShareMenu(false)
-                          return
-                        }
-                        setShowShareMenu(false)
-                        setShowReportModal(true)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-200"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      Report profile
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-        <div className="flex flex-col items-center md:items-start gap-2 flex-shrink-0 mx-auto md:mx-0">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden">
-            {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
-              <Image
-                src={profileAvatarUrl}
-                alt={profile.full_name || 'Scout'}
-                width={96}
-                height={96}
-                className="w-full h-full object-cover"
-                onError={() => {
-                  setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
-                }}
-                priority
-              />
-            ) : (
-              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
-                <span className="text-white text-3xl font-semibold">
-                  {profile.full_name?.charAt(0).toUpperCase() || '?'}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex-1 w-full text-left">
-          <div className="flex flex-wrap items-center gap-1 mb-1">
-            <h1 className="text-xl md:text-2xl font-bold text-black break-words">
-              {profile.full_name || 'Unknown Scout'}
-            </h1>
-            {profile.role === 'scout' && (
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 flex-shrink-0 whitespace-nowrap">
-                <VerificationBadge className="w-3.5 h-3.5" />
-                Scout
-              </span>
-            )}
-            {profile.role === 'player' && parentProfile && parentProfile.id && (
-              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded flex-shrink-0 whitespace-nowrap">
-                Parent Ran
-              </span>
-            )}
-            {isTestAccount(profile.full_name) && (
-              <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0 whitespace-nowrap">
-                test account
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-1">
-            {profile.username && <span className="text-gray-500">@{profile.username}</span>}
-            {!isOwnProfile && <span className="text-gray-400">•</span>}
+      {/* Main Layout: Left Sidebar + Right Purchase */}
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 mb-8">
+        {/* Left Sidebar - Profile Info */}
+        <div className="md:w-80 flex-shrink-0">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6 relative">
+            {/* Share Menu Button - Top Right inside profile card */}
             {!isOwnProfile && (
-              <button
-                onClick={() => setShowMoreInfo(true)}
-                className="interactive-press text-blue-600 hover:text-blue-800 underline font-medium"
-              >
-                Details
-              </button>
-            )}
-          </div>
-          {/* For scouts: show position at organization */}
-          {profile.role === 'scout' && (profile.position || profile.organization) && (
-            <p className="text-black mb-2">
-              {profile.position && profile.organization
-                ? `${profile.position} at ${profile.organization}`
-                : profile.position
-                ? profile.position
-                : profile.organization
-                ? profile.organization
-                : ''}
-            </p>
-          )}
-          {/* For players: show multiple positions if available, otherwise show single position */}
-          {profile.role === 'player' && (() => {
-            let positions: string[] = []
-            try {
-              // Try to load from positions JSONB array first (new format)
-              if (profile.positions && typeof profile.positions === 'string') {
-                positions = JSON.parse(profile.positions)
-              } else if (Array.isArray(profile.positions)) {
-                positions = profile.positions
-              } else if (profile.position) {
-                // Fall back to single position field (backward compatibility)
-                positions = [profile.position]
-              }
-            } catch {
-              // If parsing fails, fall back to single position
-              if (profile.position) {
-                positions = [profile.position]
-              }
-            }
-            
-            if (positions.length > 0) {
-              return (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {positions.map((pos) => (
-                    <span
-                      key={pos}
-                      className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
-                    >
-                      {pos}
-                    </span>
-                  ))}
-                </div>
-              )
-            }
-            return null
-          })()}
-        </div>
-        {!isOwnProfile && profile.role === 'scout' && currentUserId && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <HeaderMenu
-              userId={currentUserId}
-              scoutId={profile.user_id}
-              onCancelled={() => {
-                router.refresh()
-                loadEvaluations()
-              }}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Evaluation Offers Section - Show only for scout profiles */}
-      {profile.role === 'scout' && (
-        <div className="mb-6 md:mb-8">
-          {/* Section Header */}
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-black">
-              Evaluation Offers
-            </h2>
-            {!isOwnProfile && (
-              <>
-                {/* Desktop: text link */}
-                <button
-                  onClick={() => setShowHowItWorks(true)}
-                  className="interactive-press hidden text-sm font-medium text-gray-600 underline hover:text-black md:inline"
-                >
-                  Read payment flow
-                </button>
-                {/* Mobile: icon button inline with header */}
-                <button
-                  onClick={() => setShowHowItWorks(true)}
-                  className="interactive-press flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:text-black md:hidden flex-shrink-0"
-                  aria-label="Read payment flow"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
+              <div className="absolute top-4 right-4 z-10">
+                <div className="relative">
+                  <button
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="More options"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13 16h-1v-3h-1m1-4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
-                    />
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Grid layout for multiple offers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {/* Offer card - compact version */}
-            <div className="surface-card p-3 md:p-4 border border-gray-200 rounded-lg">
-              <div className="mb-3">
-                <h4 className="text-base md:text-lg font-bold text-black mb-1.5">
-                  Standard Evaluation
-                </h4>
-                {profile.bio && (() => {
-                  const bioText = profile.bio
-                  const shouldTruncate = bioText.length > 100 // Show "see more" if bio is longer than 100 chars
-                  const displayText = shouldTruncate && !bioExpanded 
-                    ? bioText.substring(0, 100).trim()
-                    : bioText
-                  
-                  return (
-                    <div className="text-xs md:text-sm text-gray-600 leading-relaxed">
-                      {shouldTruncate && !bioExpanded ? (
-                        <>
-                          <span>{displayText}</span>
-                          <span className="text-gray-400">... </span>
-                          <button
-                            onClick={() => setBioExpanded(!bioExpanded)}
-                            className="text-blue-600 hover:text-blue-700 font-medium inline cursor-pointer"
-                          >
-                            see more
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span>{displayText}</span>
-                          {shouldTruncate && (
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                  {showShareMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowShareMenu(false)}
+                      />
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                        <button
+                          onClick={async () => {
+                            await handleCopyProfileUrl()
+                            // Don't close menu immediately - show feedback first
+                            setTimeout(() => {
+                              setShowShareMenu(false)
+                            }, 2000)
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors relative"
+                        >
+                          {copyStatus === 'copied' ? (
                             <>
-                              {' '}
-                              <button
-                                onClick={() => setBioExpanded(!bioExpanded)}
-                                className="text-blue-600 hover:text-blue-700 font-medium inline cursor-pointer"
-                              >
-                                see less
-                              </button>
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span className="text-green-600 font-medium">Copied!</span>
+                            </>
+                          ) : copyStatus === 'error' ? (
+                            <>
+                              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              <span className="text-red-600">Failed</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                              </svg>
+                              Share profile
                             </>
                           )}
-                        </>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-
-              {/* Price and Turnaround in a row */}
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <p className="text-xs text-gray-600 mb-0.5">Price</p>
-                  <p className="text-base md:text-lg font-bold text-blue-600">${profile.price_per_eval || 99}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-0.5">Turnaround</p>
-                  <p className="text-base md:text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
-                </div>
-              </div>
-
-              {/* Positions display - show "All positions" if none selected */}
-              {(() => {
-                let positions: string[] = []
-                try {
-                  if (profile.positions && typeof profile.positions === 'string') {
-                    positions = JSON.parse(profile.positions)
-                  } else if (Array.isArray(profile.positions)) {
-                    positions = profile.positions
-                  }
-                } catch {
-                  positions = []
-                }
-                return (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {positions.length > 0 ? (
-                        positions.map((pos) => (
-                          <span
-                            key={pos}
-                            className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
-                          >
-                            {pos}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
-                          All positions
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {/* College Connections */}
-              <div className="pt-3 border-t border-gray-200 mb-3 space-y-2">
-                {/* Display College Connections */}
-                {(() => {
-                  let collegeSlugs: string[] = []
-                  try {
-                    if (profile.college_connections && typeof profile.college_connections === 'string') {
-                      collegeSlugs = JSON.parse(profile.college_connections)
-                    } else if (Array.isArray(profile.college_connections)) {
-                      collegeSlugs = profile.college_connections
-                    }
-                  } catch {
-                    collegeSlugs = []
-                  }
-                  return collegeSlugs.length > 0 ? (
-                    <div>
-                      <p className="text-xs text-gray-600 mb-1.5 font-medium">Connections:</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {collegeSlugs.map((slug) => {
-                          const college = collegeEntries.find((c) => c.slug === slug)
-                          if (!college) return null
-                          return (
-                            <div
-                              key={slug}
-                              className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-md border border-gray-200"
-                            >
-                              {college.logo && (
-                                <Image
-                                  src={college.logo}
-                                  alt={college.name}
-                                  width={20}
-                                  height={20}
-                                  className="object-contain"
-                                  unoptimized
-                                />
-                              )}
-                              <span className="text-xs text-gray-700">{college.name}</span>
-                            </div>
-                          )
-                        })}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!isSignedIn) {
+                              router.push('/auth/signin')
+                              setShowShareMenu(false)
+                              return
+                            }
+                            setShowShareMenu(false)
+                            setShowReportModal(true)
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          Report profile
+                        </button>
                       </div>
-                    </div>
-                  ) : null
-                })()}
+                    </>
+                  )}
+                </div>
               </div>
+            )}
 
-              {/* CTA Section */}
-              <div className="pt-3 border-t border-gray-200">
-                {isOwnProfile ? (
-                  <div className="w-full px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-medium text-sm text-center cursor-not-allowed">
-                    Your Profile
-                  </div>
+            {/* Scout Profile Picture - Large */}
+            <div className="flex justify-center">
+              <div className="w-32 h-32 rounded-full overflow-hidden">
+                {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
+                  <Image
+                    src={profileAvatarUrl}
+                    alt={profile.full_name || 'Scout'}
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                    onError={() => {
+                      setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                    }}
+                    priority
+                  />
                 ) : (
-                  <button
-                    onClick={handleRequestEvaluation}
-                    disabled={requesting}
-                    className="interactive-press w-full px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm md:text-base transition-colors text-center shadow-sm disabled:active:scale-100"
-                  >
-                    {requesting ? 'Processing...' : 'Request & Pay Now'}
-                  </button>
+                  <div className={`w-full h-full flex items-center justify-center text-5xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
+                    {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                  </div>
                 )}
               </div>
             </div>
+
+            {/* Role + Team */}
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <h1 className="text-xl font-bold text-black">
+                  {profile.full_name || 'Unknown Scout'}
+                </h1>
+                <VerificationBadge className="w-5 h-5" />
+              </div>
+              <p className="text-sm text-gray-600">{jobTitle}</p>
+              {collegeMatch && (
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  {collegeMatch.logo && (
+                    <div className="w-6 h-6 rounded-full bg-white border border-gray-200 overflow-hidden flex items-center justify-center">
+                      <Image
+                        src={collegeMatch.logo}
+                        alt={collegeMatch.name}
+                        width={24}
+                        height={24}
+                        className="object-contain w-full h-full"
+                        unoptimized
+                      />
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-500">{collegeMatch.name}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Divider Line */}
+            <div className="border-t border-gray-200"></div>
+
+            {/* Work History - Show for all users */}
+            {profile.work_history && (
+              <div>
+                <h3 className="text-sm font-semibold text-black mb-2">Work History</h3>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {profile.work_history}
+                </p>
+              </div>
+            )}
+
+            {/* Additional Info - Show under work history if available */}
+            {profile.additional_info && (
+              <div>
+                <h3 className="text-sm font-semibold text-black mb-2">Additional Information</h3>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {profile.additional_info}
+                </p>
+              </div>
+            )}
+
+            {/* Social Media Links */}
+            {profile.social_link && (
+              <div>
+                <h3 className="text-sm font-semibold text-black mb-2">Social Media</h3>
+                <a
+                  href={profile.social_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                >
+                  {profile.social_link.replace(/^https?:\/\//, '')}
+                </a>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Right Side - Purchase/JoinWaitlist */}
+        <div className="flex-1">
+          {isOwnProfile ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+              <p className="text-gray-600">This is your profile.</p>
+            </div>
+          ) : isUnclaimed ? (
+            <JoinWaitlist 
+              scoutId={profile.id} 
+              scoutName={profile.full_name || 'This scout'} 
+            />
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <PurchaseEvaluation 
+                scout={profile} 
+                player={currentUserProfile?.role === 'player' ? currentUserProfile : null}
+                isSignedIn={isSignedIn}
+                onSignInClick={() => {
+                  setShowSignUpModal(true)
+                  setAuthMode('signin')
+                }}
+                onSignUpClick={() => {
+                  setShowSignUpModal(true)
+                  setAuthMode('signup')
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Sections - Why Valuable, What to Expect, FAQ */}
+      {!isOwnProfile && (
+        <ScoutProfileSections scoutName={profile.full_name || 'This scout'} isSignedIn={isSignedIn} />
       )}
 
       {/* Edit Profile Button - Only for own profile */}
@@ -1484,8 +1364,8 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
       )}
 
       {/* Evaluations Contributed Section */}
-      <div className="mb-6 md:mb-8 relative">
-        <h2 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">
+      <div className="mt-8 md:mt-12 mb-12 md:mb-16 relative">
+        <h2 className="text-xl md:text-2xl font-bold text-black mb-6 md:mb-8">
           Evaluations Contributed ({evaluations.length})
         </h2>
         {loading ? (
@@ -1502,7 +1382,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             action={
               isOwnProfile ? (
                 <Link
-                  href="/browse?tab=profiles"
+                  href="/discover"
                   className="interactive-press inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
                 >
                   Find players to evaluate
@@ -1754,7 +1634,6 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           </div>
         )}
       </Modal>
-
 
       {/* Sign Up Modal for non-authenticated users */}
       <AuthModal

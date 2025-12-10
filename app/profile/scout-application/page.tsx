@@ -1,8 +1,10 @@
 import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
+import CombinedScoutApplicationForm from '@/components/profile/CombinedScoutApplicationForm'
 import ScoutApplicationForm from '@/components/profile/ScoutApplicationForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
+import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import Link from 'next/link'
 
 export default async function ScoutApplicationPage() {
@@ -19,61 +21,60 @@ export default async function ScoutApplicationPage() {
     .from('profiles')
     .select('*')
     .eq('user_id', session.user.id)
-    .single()
-
-  if (!profile) {
-    redirect('/profile/setup')
-  }
+    .maybeSingle()
 
   // If already a scout, redirect to profile
-  if (profile.role === 'scout') {
+  if (profile && profile.role === 'scout') {
     redirect('/profile')
   }
 
   // Check if already has pending application
-  const { data: existingApplication } = await supabase
-    .from('scout_applications')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .eq('status', 'pending')
-    .single()
+  if (profile) {
+    const { data: existingApplication } = await supabase
+      .from('scout_applications')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .eq('status', 'pending')
+      .maybeSingle()
 
-  if (existingApplication) {
-    redirect('/profile')
+    if (existingApplication) {
+      redirect('/profile')
+    }
   }
 
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('avatar_url')
-    .eq('user_id', session.user.id)
-    .single()
+  // Get user info from auth
+  const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || ''
+  const userAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || ''
 
-  const headerContent = (
-    <>
-      <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-        Share
-      </button>
-      <Link href="/profile" className="cursor-pointer hover:opacity-80 transition-opacity">
-        {userProfile?.avatar_url ? (
-          <img
-            src={userProfile.avatar_url}
-            alt="Profile"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-gray-600 font-semibold">P</span>
-          </div>
-        )}
-      </Link>
-    </>
+  const headerContent = profile ? (
+    <HeaderUserAvatar
+      userId={session.user.id}
+      avatarUrl={profile.avatar_url}
+      fullName={profile.full_name}
+      username={profile.username}
+      email={session.user.email}
+    />
+  ) : (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-gray-600">{session.user.email}</span>
+    </div>
   )
 
   return (
     <div className="min-h-screen bg-white flex">
-      <Sidebar activePage="browse" />
+      <Sidebar activePage="profile" />
       <DynamicLayout header={headerContent}>
-        <ScoutApplicationForm profile={profile} />
+        {profile && profile.full_name && profile.username && profile.birthday ? (
+          // Profile already has required fields, show scout application only
+          <ScoutApplicationForm profile={profile} />
+        ) : (
+          // Profile incomplete, show combined form
+          <CombinedScoutApplicationForm
+            userEmail={session.user.email || ''}
+            userName={userName}
+            userAvatar={userAvatar}
+          />
+        )}
       </DynamicLayout>
     </div>
   )

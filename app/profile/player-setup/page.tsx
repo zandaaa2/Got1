@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import PlayerSetupForm from '@/components/profile/PlayerSetupForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function PlayerSetupPage() {
   const supabase = createServerClient()
@@ -32,24 +31,10 @@ export default async function PlayerSetupPage() {
     redirect('/profile')
   }
 
-  // Get user info from auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={profile?.avatar_url}
-      fullName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name}
-      email={user?.email}
-    />
-  )
-
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <PlayerSetupForm profile={profile} />
       </DynamicLayout>
     </div>

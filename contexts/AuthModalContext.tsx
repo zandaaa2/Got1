@@ -6,6 +6,7 @@ import AuthModal from '@/components/auth/AuthModal'
 interface AuthModalContextType {
   openSignIn: () => void
   openSignUp: () => void
+  openSignUpOnly: () => void
   closeModals: () => void
 }
 
@@ -14,24 +15,38 @@ const AuthModalContext = createContext<AuthModalContextType | undefined>(undefin
 export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [signInOpen, setSignInOpen] = useState(false)
   const [signUpOpen, setSignUpOpen] = useState(false)
+  const [signUpOnlyOpen, setSignUpOnlyOpen] = useState(false)
 
   const openSignIn = () => {
     setSignUpOpen(false)
+    setSignUpOnlyOpen(false)
     setSignInOpen(true)
   }
 
   const openSignUp = () => {
     setSignInOpen(false)
+    setSignUpOnlyOpen(false)
     setSignUpOpen(true)
+  }
+
+  const openSignUpOnly = () => {
+    setSignInOpen(false)
+    setSignUpOpen(false)
+    // Store flag that user wants to become a scout
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('become_scout_signup', 'true')
+    }
+    setSignUpOnlyOpen(true)
   }
 
   const closeModals = () => {
     setSignInOpen(false)
     setSignUpOpen(false)
+    setSignUpOnlyOpen(false)
   }
 
   return (
-    <AuthModalContext.Provider value={{ openSignIn, openSignUp, closeModals }}>
+    <AuthModalContext.Provider value={{ openSignIn, openSignUp, openSignUpOnly, closeModals }}>
       {children}
       <AuthModal
         isOpen={signInOpen}
@@ -56,6 +71,13 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
             openSignIn()
           }
         }}
+      />
+      <AuthModal
+        isOpen={signUpOnlyOpen}
+        onClose={() => setSignUpOnlyOpen(false)}
+        mode="signup"
+        hideSignInLink={true}
+        onModeChange={undefined}
       />
     </AuthModalContext.Provider>
   )

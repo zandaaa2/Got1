@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import SelectReferrerContent from '@/components/profile/SelectReferrerContent'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
 
 export const dynamic = 'force-dynamic'
@@ -30,22 +29,11 @@ export default async function SelectReferrerPage() {
     redirect('/profile')
   }
 
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={profile?.avatar_url}
-      fullName={profile?.full_name}
-      username={profile?.username}
-      email={session.user.email}
-      showBorder
-    />
-  )
-
   return (
     <div className="min-h-screen bg-white flex">
       <AuthRefreshHandler />
       <Sidebar />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <SelectReferrerContent session={session} />
       </DynamicLayout>
     </div>

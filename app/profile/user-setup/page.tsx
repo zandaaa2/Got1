@@ -4,7 +4,6 @@ import Sidebar from '@/components/layout/Sidebar'
 import UserSetupForm from '@/components/profile/UserSetupForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import { isMeaningfulAvatar } from '@/lib/avatar'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function UserSetupPage({
   searchParams,
@@ -56,22 +55,14 @@ export default async function UserSetupPage({
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Get user avatar for header
+  // Get user avatar for form
   const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || profile?.avatar_url || null
   const sanitizedAvatar = isMeaningfulAvatar(rawAvatarUrl) ? rawAvatarUrl : null
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={rawAvatarUrl}
-      fullName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name}
-      email={user?.email}
-    />
-  )
 
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         {/* REFERRAL PROCESS TEMPORARILY DISABLED - referrerId prop removed */}
         <UserSetupForm
           userEmail={user?.email || ''}

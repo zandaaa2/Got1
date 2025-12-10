@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
-import AuthButtons from '@/components/auth/AuthButtons'
 
 export default async function ProfileEditPage() {
   const supabase = createServerClient()
@@ -35,22 +33,10 @@ export default async function ProfileEditPage() {
   // If updated_at is within 5 seconds of created_at, consider it unsaved
   const isNewProfile = timeDiff < 5000
 
-  const headerContent = session ? (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={profile.avatar_url}
-      fullName={profile.full_name}
-      username={profile.username}
-      email={session.user.email}
-    />
-  ) : (
-    <AuthButtons />
-  )
-
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <ProfileEditForm profile={profile} isNewProfile={isNewProfile} />
       </DynamicLayout>
     </div>

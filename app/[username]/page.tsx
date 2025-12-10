@@ -12,7 +12,8 @@ const ProfileView = dynamic(() => import('@/components/profile/ProfileView'), {
   ssr: false,
 }) as ComponentType<ProfileViewProps>
 import AuthButtons from '@/components/auth/AuthButtons'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+import WelcomeFooter from '@/components/welcome/WelcomeFooter'
+import Link from 'next/link'
 import type { Metadata } from 'next'
 
 const RESERVED_USERNAMES = new Set([
@@ -184,32 +185,36 @@ export default async function UsernameProfilePage({ params }: UsernamePageProps)
     }
   }
 
-  let userProfile = null
-  if (session) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('avatar_url, full_name, username')
-      .eq('user_id', session.user.id)
-      .single()
-    userProfile = data
+  // When there's no session, render without sidebar and with full-width layout
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <header className="fixed top-0 right-0 left-0 z-20 bg-white/90 backdrop-blur-sm px-4 py-3 md:px-8 md:py-4">
+          <div className="flex w-full items-center justify-between gap-3">
+            <Link
+              href="/welcome"
+              className="inline-flex items-center justify-center h-10 px-4 rounded-full text-sm font-medium text-gray-700 hover:text-black transition-colors border border-gray-300 hover:border-gray-400"
+            >
+              🏠 Take me home
+            </Link>
+            <AuthButtons />
+          </div>
+        </header>
+        <main className="flex-1 pt-16 md:pt-20 pb-8 px-4 md:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl">
+            <ProfileView profile={profile} isOwnProfile={isOwnProfile} parentProfile={parentProfile} />
+          </div>
+        </main>
+        <WelcomeFooter />
+      </div>
+    )
   }
 
-  const headerContent = session ? (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={userProfile?.avatar_url}
-      fullName={userProfile?.full_name || session.user.user_metadata?.full_name}
-      username={userProfile?.username}
-      email={session.user.email}
-    />
-  ) : (
-    <AuthButtons />
-  )
-
+  // When user is signed in, render with sidebar
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <ProfileView profile={profile} isOwnProfile={isOwnProfile} parentProfile={parentProfile} />
       </DynamicLayout>
     </div>

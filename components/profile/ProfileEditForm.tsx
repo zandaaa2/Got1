@@ -129,6 +129,9 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     classification: profile.classification || '',
     // Scout fields
     sports: (Array.isArray(profile.sports) ? profile.sports : []) as string[],
+    // Parent fields
+    email: profile.email || '',
+    phone: profile.phone || '',
   })
 
   useEffect(() => {
@@ -563,6 +566,9 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.clean_max = null
         updateData.state = null
         updateData.classification = null
+      } else if (profile.role === 'parent') {
+        updateData.email = formData.email?.trim() || null
+        updateData.phone = formData.phone?.trim() || null
       } else if (profile.role === 'player') {
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
@@ -1217,6 +1223,50 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                   placeholder="Any additional information you'd like to share..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Parent Info Section */}
+        {profile.role === 'parent' && (
+          <div>
+            <h2 className="text-xl font-bold text-black mb-4 md:mb-6">Contact Information</h2>
+            <div className="space-y-4 md:space-y-6">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-black mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your.email@example.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                <p className="mt-1 text-sm text-gray-600">
+                  Your contact email address.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-black mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="(555) 123-4567"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                <p className="mt-1 text-sm text-gray-600">
+                  Your contact phone number.
+                </p>
               </div>
             </div>
           </div>

@@ -218,7 +218,7 @@ export default async function EvaluationSharePage({
               Create Account
             </Link>
             <Link
-              href="/browse"
+              href="/discover"
               className="px-6 py-3 bg-white text-black border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
               Browse Scouts

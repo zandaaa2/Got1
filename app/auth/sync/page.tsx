@@ -167,66 +167,10 @@ function AuthSyncContent() {
       const remainingWait = Math.max(0, 1000 - elapsed)
       await new Promise(resolve => setTimeout(resolve, remainingWait))
 
-      // Determine final redirect based on redirect param or profile status
-      // If a redirect was explicitly provided (from OAuth callback), use it
-      // Otherwise, check profile and determine appropriate redirect
-      let finalRedirect = redirect
+      // Determine final redirect - always use provided redirect, or default to browse
+      let finalRedirect = redirect || '/browse'
       
-      // If no redirect was provided, or redirect is to browse/home, check profile
-      if (!redirect || redirect === '/browse' || redirect === '/') {
-        let { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, username, birthday, role')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-        
-        // CRITICAL FIX: If profile exists with role='player', fix it immediately
-        if (profile && profile.role === 'player') {
-          console.log('⚠️ Auth sync - Found profile with role=player, fixing to user')
-          await supabase
-            .from('profiles')
-            .update({ role: 'user' })
-            .eq('user_id', session.user.id)
-          // Re-fetch after fix
-          const { data: fixedProfile } = await supabase
-            .from('profiles')
-            .select('full_name, username, birthday, role')
-            .eq('user_id', session.user.id)
-            .maybeSingle()
-          profile = fixedProfile
-        }
-        
-        const hasRequiredFields = profile && 
-          profile.full_name && 
-          profile.username && 
-          profile.birthday
-        
-        if (!profile) {
-          // No profile exists - go to role selection first (NEW FLOW)
-          console.log('⚠️ No profile exists, redirecting to role-selection')
-          finalRedirect = '/profile/role-selection'
-        } else if (!hasRequiredFields) {
-          // Profile exists but missing required fields
-          console.log('⚠️ Profile missing required fields, redirecting to user-setup')
-          finalRedirect = '/profile/user-setup'
-        } else if (profile.role === 'user') {
-          // Profile complete but role is still 'user' - go to role selection
-          console.log('⚠️ Profile role is still "user", redirecting to role-selection')
-          finalRedirect = '/profile/role-selection'
-        } else if (profile.role === 'player') {
-          // Profile has wrong role - fix it and go to role selection
-          console.log('⚠️ Profile has wrong role=player, redirecting to role-selection')
-          finalRedirect = '/profile/role-selection'
-        } else {
-          // Profile is complete with a valid role - go to profile page
-          finalRedirect = '/profile'
-        }
-      } else {
-        // A redirect was explicitly provided (e.g., from OAuth callback)
-        // Use it directly - the OAuth callback already checked the profile
-        console.log('✅ Using explicit redirect from OAuth callback:', redirect)
-        finalRedirect = redirect
-      }
+      console.log('✅ Using redirect:', finalRedirect)
 
       console.log('✅ Auth sync: Cookies processed, redirecting to:', finalRedirect)
       

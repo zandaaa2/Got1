@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
     const { newRole, password } = body
 
     // Validate role
-    if (!newRole || !['user', 'player', 'scout'].includes(newRole)) {
+    if (!newRole || !['user', 'player', 'scout', 'parent'].includes(newRole)) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be user, player, or scout' },
+        { error: 'Invalid role. Must be user, player, scout, or parent' },
         { status: 400 }
       )
     }
@@ -102,6 +102,24 @@ export async function POST(request: NextRequest) {
       if (!profile.social_link) {
         updateData.social_link = null
       }
+    } else if (newRole === 'parent') {
+      // Clear player-specific fields
+      updateData.hudl_link = null
+      updateData.hudl_links = null
+      updateData.sport = null
+      updateData.position = null
+      updateData.school = null
+      updateData.graduation_year = null
+      updateData.graduation_month = null
+      // Clear scout-specific fields
+      updateData.organization = null
+      updateData.sports = null
+      updateData.price_per_eval = null
+      updateData.turnaround_time = null
+      // Keep social_link if it exists
+      if (!profile.social_link) {
+        updateData.social_link = null
+      }
     }
 
     // Update profile
@@ -148,12 +166,14 @@ export async function POST(request: NextRequest) {
       // Don't fail role conversion if notification fails
     }
 
-    // If converting to player or scout, redirect to setup page
+    // If converting to player, scout, or parent, redirect to setup page
     let redirectUrl = '/profile'
     if (newRole === 'player') {
       redirectUrl = '/profile/player-setup'
     } else if (newRole === 'scout') {
       redirectUrl = '/profile/scout-setup'
+    } else if (newRole === 'parent') {
+      redirectUrl = '/profile/parent-setup'
     }
 
     return successResponse({

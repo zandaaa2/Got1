@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
       const priceStr = session.metadata?.price
       const action = session.metadata?.action // 'upfront_payment' or 'scout_confirmed'
       const evaluationId = session.metadata?.evaluation_id // For old flow (scout_confirmed)
+      const purchasedBy = session.metadata?.purchased_by // Parent or player user_id
+      const purchasedByType = session.metadata?.purchased_by_type as 'player' | 'parent' | undefined
 
       // For upfront_payment flow, create evaluation here
       // For scout_confirmed flow, evaluation_id should exist and we update it
@@ -144,6 +146,8 @@ export async function POST(request: NextRequest) {
               payment_intent_id: session.payment_intent as string,
               platform_fee: platformFee,
               scout_payout: scoutPayout,
+              purchased_by: purchasedBy || playerId, // Who purchased (parent or player)
+              purchased_by_type: purchasedByType || 'player', // Type of purchaser
             })
             .select()
             .single()

@@ -13,6 +13,8 @@ import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
 import CollegeMultiSelect from '@/components/profile/CollegeMultiSelect'
 import { collegeEntries } from '@/lib/college-data'
 import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
+import ParentDashboard from '@/components/profile/ParentDashboard'
+import OnboardingSteps from '@/components/profile/OnboardingSteps'
 
 interface ProfileContentProps {
   profile: any
@@ -121,7 +123,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [isEditingPricing, setIsEditingPricing] = useState(false)
-  const [offerTitle, setOfferTitle] = useState('Standard Evaluation')
+  const [offerTitle, setOfferTitle] = useState(profile.offer_title || 'Standard Evaluation')
   const [offerBio, setOfferBio] = useState(profile.bio || '')
   const [pricePerEval, setPricePerEval] = useState(profile.price_per_eval?.toString() || '99')
   const [turnaroundTime, setTurnaroundTime] = useState(profile.turnaround_time || '72 hrs')
@@ -333,6 +335,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
           price_per_eval: price,
           turnaround_time: turnaroundTime || null,
           bio: offerBio || null, // Save bio (for now, later it will be per-offer)
+          offer_title: offerTitle || 'Standard Evaluation',
           positions: selectedPositions.length > 0 ? JSON.stringify(selectedPositions) : null,
           college_connections: selectedCollegeSlugs.length > 0 ? JSON.stringify(selectedCollegeSlugs) : null,
           updated_at: new Date().toISOString(),
@@ -656,7 +659,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
                 setPricePerEval(profile.price_per_eval?.toString() || '99')
                 setTurnaroundTime(profile.turnaround_time || '72 hrs')
                 setOfferBio(profile.bio || '')
-                setOfferTitle('Standard Evaluation')
+                setOfferTitle(profile.offer_title || 'Standard Evaluation')
                 setIsBioExpanded(false)
                 setSaveMessage(null)
                 // Reset positions and colleges to saved values
@@ -1500,7 +1503,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
               type: 'scout_ready_to_earn',
               title: 'Congratulations! You\'re Ready to Earn',
               message: 'Your Stripe account is fully set up! You can now start receiving evaluation requests and earning money.',
-              link: '/browse',
+              link: '/discover',
               metadata: {
                 chargesEnabled: accountStatus.chargesEnabled,
                 payoutsEnabled: accountStatus.payoutsEnabled,
@@ -1746,9 +1749,23 @@ function StripeConnectSection({ profile }: { profile: any }) {
 }
 
 export default function ProfileContent({ profile, hasPendingApplication, needsReferrerSelection = false }: ProfileContentProps) {
+  useEffect(() => {
+    console.log('ProfileContent mounted', { profileId: profile?.id, role: profile?.role })
+  }, [profile])
+  
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  
+  // Early return if profile is missing
+  if (!profile) {
+    console.error('ProfileContent: No profile provided')
+    return (
+      <div className="p-8">
+        <p className="text-red-600">Error: Profile not found</p>
+      </div>
+    )
+  }
   const [pricePerEval, setPricePerEval] = useState(profile.price_per_eval?.toString() || '99')
   const [turnaroundTime, setTurnaroundTime] = useState(profile.turnaround_time || '72 hrs')
   const [saving, setSaving] = useState(false)
@@ -2031,6 +2048,7 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
         .update({
           price_per_eval: price,
           turnaround_time: turnaroundTime || null,
+          offer_title: offerTitle || 'Standard Evaluation',
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', session.user.id)
@@ -2163,7 +2181,7 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
     copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Try again' : 'Copy'
 
   const profileLinkElement = (
-    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+    <div className="mt-1 md:mt-2 flex flex-wrap items-center gap-1.5 md:gap-2 text-xs md:text-sm">
       <a
         href={fullProfileUrl}
         target="_blank"
@@ -2175,12 +2193,12 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
       <button
         type="button"
         onClick={handleCopyProfileUrl}
-        className="interactive-press inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        className="interactive-press inline-flex items-center gap-0.5 md:gap-1 rounded-full border border-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 text-[10px] md:text-xs font-medium text-gray-700 hover:bg-gray-50"
         aria-live="polite"
         aria-label="Copy profile link"
       >
         <svg
-          className="h-3.5 w-3.5"
+          className="h-3 w-3 md:h-3.5 md:w-3.5"
           viewBox="0 0 20 20"
           fill="none"
           stroke="currentColor"
@@ -2198,7 +2216,7 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
   )
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div>
       <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
 
       {/* Pending Scout Application Banner */}
@@ -2233,8 +2251,8 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
       )}
 
       {/* Profile Card */}
-      <div className="surface-card flex flex-row flex-wrap md:flex-nowrap items-start gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6">
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
+      <div className="surface-card flex flex-row flex-wrap md:flex-nowrap items-start gap-3 md:gap-6 mb-6 md:mb-8 p-3 md:p-6">
+        <div className="w-14 h-14 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
           {isMeaningfulAvatar(profile.avatar_url) && !imageErrors.has(`profile-${profile.id}`) ? (
             <Image
               src={profile.avatar_url}
@@ -2252,23 +2270,23 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
             />
           ) : (
             <div className={`w-full h-full flex items-center justify-center ${getGradientForId(profileGradientKey)}`}>
-              <span className="text-white text-3xl font-semibold">
+              <span className="text-white text-xl md:text-3xl font-semibold">
                 {profile.full_name?.charAt(0).toUpperCase() || '?'}
               </span>
             </div>
           )}
         </div>
-        <div className="flex-1 text-left">
-          <h2 className="text-xl font-bold text-black mb-1">
+        <div className="flex-1 text-left min-w-0">
+          <h2 className="text-base md:text-xl font-bold text-black mb-0.5 md:mb-1">
             {profile.full_name || 'Unknown'}
           </h2>
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-gray-600 mb-0.5 md:mb-1">
             {profile.username && <span className="text-gray-500">@{profile.username}</span>}
           </div>
           {profileLinkElement}
           {profile.role === 'scout' ? (
             (profile.position || profile.organization) && (
-              <p className="text-black mb-1">
+              <p className="text-xs md:text-base text-black mb-0.5 md:mb-1">
                 {profile.position && profile.organization
                   ? `${profile.position} at ${profile.organization}`
                   : profile.position || profile.organization}
@@ -2277,10 +2295,10 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
           ) : (
             <>
               {profile.position && (
-                <p className="text-black mb-1">{profile.position}</p>
+                <p className="text-xs md:text-base text-black mb-0.5 md:mb-1">{profile.position}</p>
               )}
               {profile.school && (
-                <p className="text-black mb-1">
+                <p className="text-xs md:text-base text-black mb-0.5 md:mb-1">
                   {profile.school}
                   {profile.graduation_year && `, ${profile.graduation_year}`}
                 </p>
@@ -2290,7 +2308,7 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
         </div>
         <Link
           href="/profile/edit"
-          className="interactive-press inline-flex items-center justify-center h-10 px-5 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="interactive-press inline-flex items-center justify-center h-8 md:h-10 px-3 md:px-5 rounded-full border border-gray-200 bg-white text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-50 w-full md:w-auto"
         >
           Edit
         </Link>
@@ -2301,6 +2319,9 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
 
       {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
       {profile.role === 'scout' && <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />}
+
+      {/* Parent Dashboard - Only show for parents */}
+      {profile.role === 'parent' && <ParentDashboard profile={profile} />}
 
       {/* College Offers Section - Only show for players */}
       {profile.role === 'player' && (
@@ -2432,55 +2453,37 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
         </div>
       )}
 
-      {/* Scout Status Section - Only show if user is a base user (not player or scout) */}
+      {/* 4-Step Onboarding System - Show when user has role='user' */}
       {profile.role === 'user' && (
+        <OnboardingSteps profile={profile} />
+      )}
+
+      {/* Scout Application Section - Show if user wants to become a scout */}
+      {profile.role !== 'scout' && profile.role !== 'user' && (
         <div className="surface-card mb-8 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-black">Scout Status</h3>
-            <button
-              onClick={() => setIsScoutStatusMinimized(!isScoutStatusMinimized)}
-              className="text-gray-500 hover:text-black transition-colors"
-              aria-label={isScoutStatusMinimized ? 'Expand' : 'Minimize'}
-            >
-              <svg
-                className={`w-5 h-5 transition-transform ${isScoutStatusMinimized ? '' : 'rotate-180'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
+            <h3 className="text-xl font-bold text-black">Become a Scout</h3>
           </div>
-          {!isScoutStatusMinimized && (
-            <>
-              <p className="text-black mb-4 leading-relaxed">
-                I would like to apply to become a scout on Got1. I understand this role is for
-                individuals that are currently working as a player personnel employee, assistant, or
-                intern at a D1-D2 level or a professional level. Other jobs could include directing of
-                recruiting, general manager, assistant general manager, etc.
+          <p className="text-black mb-4 leading-relaxed">
+            I would like to apply to become a scout on Got1. I understand this role is for
+            individuals that are currently working as a player personnel employee, assistant, or
+            intern at a D1-D2 level or a professional level. Other jobs could include directing of
+            recruiting, general manager, assistant general manager, etc.
+          </p>
+          {hasPendingApplication ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-yellow-800">
+                Your scout application is pending review. You will be notified once a decision has
+                been made.
               </p>
-              {hasPendingApplication ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-yellow-800">
-                    Your scout application is pending review. You will be notified once a decision has
-                    been made.
-                  </p>
-                </div>
-              ) : (
-                <Link
-                  href="/profile/scout-application"
-                  className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
-                >
-                  Apply
-                </Link>
-              )}
-            </>
+            </div>
+          ) : (
+            <Link
+              href="/profile/scout-application"
+              className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
+            >
+              Apply to Become a Scout
+            </Link>
           )}
         </div>
       )}
@@ -2497,13 +2500,22 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
                 Schedule a 15-minute call with the founder to walk through anything you’re stuck on.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={openCalendly30Min}
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              Schedule
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link
+                href="/faq"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                FAQ
+              </Link>
+              <a
+                href="https://calendly.com/zander-got1/30min"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Schedule
+              </a>
+            </div>
           </div>
 
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
@@ -2554,7 +2566,11 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
             <div className="flex-1 min-w-0 pr-2">
               <h3 className="font-bold text-black mb-1 text-sm md:text-base">Account Type</h3>
               <p className="text-xs md:text-sm text-gray-600 break-words">
-                {profile.role === 'user' ? 'User' : profile.role === 'player' ? 'Player' : 'Scout'}
+                {profile.role === 'user' ? 'User' 
+                 : profile.role === 'player' ? 'Player' 
+                 : profile.role === 'parent' ? 'Parent'
+                 : profile.role === 'scout' ? 'Scout'
+                 : 'User'}
               </p>
             </div>
             <Link
@@ -2578,7 +2594,53 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
             </Link>
           </div>
 
-          <div className="rounded-2xl bg-white p-4 md:p-4 shadow-sm flex flex-col items-end gap-3">
+          {/* Make a Claim - Only show to players and parents */}
+          {(profile.role === 'player' || profile.role === 'parent') && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Make a Claim</h3>
+                <p className="text-xs md:text-sm text-gray-600 break-words">Submit a claim for a recent evaluation if you're not satisfied</p>
+              </div>
+              <Link
+                href="/make-a-claim"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+              >
+                View
+              </Link>
+            </div>
+          )}
+
+          {/* Suggest a Feature */}
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Suggest a Feature</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">Share your ideas to help us improve Got1</p>
+            </div>
+            <Link
+              href="/suggest-feature"
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+            >
+              View
+            </Link>
+          </div>
+
+          {/* Referral Program - Only show to Chasity and Zander */}
+          {userEmail && (userEmail === 'douyonchasity@gmail.com' || userEmail === 'zander@got1.app') && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Referral Program</h3>
+                <p className="text-xs md:text-sm text-gray-600 break-words">Earn money by referring scouts and players to Got1</p>
+              </div>
+              <Link
+                href="/make-money"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-green-600 bg-green-600 text-sm font-medium text-white hover:bg-green-700 flex-shrink-0"
+              >
+                View
+              </Link>
+            </div>
+          )}
+
+          <div className="rounded-2xl bg-white p-4 md:p-4 shadow-sm flex flex-col items-start gap-3">
             {userEmail === 'zander@got1.app' && (
               <Link
                 href="/admin/scouts"

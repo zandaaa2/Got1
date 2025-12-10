@@ -5,6 +5,15 @@ import { NextResponse, type NextRequest } from 'next/server'
  * Next.js middleware that handles Supabase session management.
  * Refreshes user sessions and ensures authentication cookies are properly set.
  * Only runs on non-API routes to avoid interfering with API request handling.
+ * 
+ * Authentication Rules:
+ * - Public routes (no auth required):
+ *   - /welcome (landing page)
+ *   - /[username] (user profile pages - scouts/players/parents/schools)
+ *   - /teams/[slug] (school/team pages)
+ *   - /faq, /about, /blog, /terms-of-service, /privacy-policy (standalone pages)
+ *   - /auth/* (auth routes)
+ * - Protected routes (auth required): All other routes
  *
  * @param {NextRequest} request - The incoming request
  * @returns {Promise<NextResponse>} Response with updated cookies if session is refreshed
@@ -16,19 +25,41 @@ export async function middleware(request: NextRequest) {
     },
   })
 
+  const pathname = request.nextUrl.pathname
+
+  // Define public routes that don't require authentication
+  const publicRoutePrefixes = [
+    '/welcome',
+    '/auth',
+    '/faq',
+    '/about',
+    '/blog',
+    '/terms-of-service',
+    '/privacy-policy',
+    '/teams',
+  ]
+
+  // Check if pathname matches a username route (e.g., /john-doe)
+  // Username routes are public (scout/player/parent profile pages)
+  // They match: /username (single segment, no dots, not a reserved route)
+  const reservedRoutes = ['profile', 'profiles', 'browse', 'discover', 'my-evals', 'notifications', 'admin', 'evaluations']
+  const isUsernameRoute = pathname.match(/^\/[^\/]+$/) && 
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/_next') &&
+    !pathname.includes('.') &&
+    !reservedRoutes.some(route => pathname.startsWith(`/${route}`)) &&
+    !publicRoutePrefixes.some(route => pathname.startsWith(route))
+
+  // Check if pathname is a public route
+  const isPublicRoute = publicRoutePrefixes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  ) || isUsernameRoute
+
   try {
     // Only run on non-API routes
     if (!request.nextUrl.pathname.startsWith('/api')) {
-      // Debug: Check what cookies we have
       const allCookies = request.cookies.getAll()
       const supabaseCookies = allCookies.filter(c => c.name.startsWith('sb-'))
-      if (process.env.NODE_ENV === 'development' && supabaseCookies.length > 0) {
-        console.log('Middleware: Found Supabase cookies:', supabaseCookies.map(c => c.name))
-        // Check if we have the required session cookies
-        const hasToken0 = supabaseCookies.some(c => c.name.includes('auth-token.0'))
-        const hasToken1 = supabaseCookies.some(c => c.name.includes('auth-token.1'))
-        console.log('Middleware: Has token.0:', hasToken0, 'Has token.1:', hasToken1)
-      }
 
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,7 +72,6 @@ export async function middleware(request: NextRequest) {
             setAll(cookiesToSet) {
               cookiesToSet.forEach(({ name, value, options }) => {
                 request.cookies.set(name, value)
-                // Ensure cookies are set with proper options for Next.js
                 response.cookies.set(name, value, {
                   ...options,
                   sameSite: 'lax',
@@ -55,50 +85,86 @@ export async function middleware(request: NextRequest) {
         }
       )
 
-      // Always try to refresh the session if we have auth cookies
-      // This ensures cookies set client-side are immediately available to server components
-      if (supabaseCookies.length > 0) {
-        // Try getSession first
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession().catch((err) => {
-          return { data: { session: null }, error: err }
+      // Try to get session (always attempt, even if no cookies, to handle edge cases)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession().catch((err) => {
+        return { data: { session: null }, error: err }
+      })
+
+      // If route is protected and user is not authenticated, redirect to sign in
+      if (!isPublicRoute && !session) {
+        const signInUrl = new URL('/auth/signin', request.url)
+        signInUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(signInUrl)
+      }
+
+      // If user is authenticated, handle session refresh and profile checks
+      if (session) {
+        // Verify the session is valid by getting the user
+        const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
+          return { data: { user: null }, error: err }
         })
-        
-        if (session) {
-          // Verify the session is valid by getting the user
-          const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
-            return { data: { user: null }, error: err }
+
+        // If getUser fails, refresh the session
+        if (userError || !user) {
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session).catch((err) => {
+            return { data: { session: null }, error: err }
           })
-          
-          // If getUser fails, refresh the session
-          if (userError || !user) {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session).catch((err) => {
-              return { data: { session: null }, error: err }
-            })
-            
-            if (refreshData?.session) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshData.session.user.id)
-              }
-            } else if (refreshError && process.env.NODE_ENV === 'development') {
-              console.log('Middleware: Session refresh error:', refreshError.message)
-            }
-          } else if (process.env.NODE_ENV === 'development') {
-            console.log('Middleware: Session valid, user ID:', user.id)
+
+          if (refreshData?.session && process.env.NODE_ENV === 'development') {
+            console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshData.session.user.id)
+          } else if (refreshError && process.env.NODE_ENV === 'development') {
+            console.log('Middleware: Session refresh error:', refreshError.message)
           }
-        } else {
-          // No session found - try getUser as a fallback
-          const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
-            return { data: { user: null }, error: err }
-          })
-          
-          if (process.env.NODE_ENV === 'development') {
-            if (sessionError) {
-              console.log('Middleware: getSession error:', sessionError.message)
+        } else if (process.env.NODE_ENV === 'development') {
+          console.log('Middleware: Session valid, user ID:', user.id)
+        }
+
+        // For authenticated users on protected routes, check profile completion
+        if (!isPublicRoute && user) {
+          // Profile setup routes should be allowed without completion check
+          const profileSetupRoutes = [
+            '/profile/role-selection',
+            '/profile/user-setup',
+            '/profile/parent-setup',
+            '/profile/parent/create-player',
+          ]
+          const isProfileSetupRoute = profileSetupRoutes.some(route => pathname.startsWith(route))
+
+          if (!isProfileSetupRoute) {
+            // Check if profile has required fields
+            let { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, username, birthday, role')
+              .eq('user_id', user.id)
+              .maybeSingle()
+
+            // CRITICAL FIX: If profile exists with role='player', fix it immediately
+            if (profile && profile.role === 'player') {
+              console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
+              await supabase
+                .from('profiles')
+                .update({ role: 'user' })
+                .eq('user_id', user.id)
+              // Re-fetch profile after fix
+              const { data: fixedProfile } = await supabase
+                .from('profiles')
+                .select('full_name, username, birthday, role')
+                .eq('user_id', user.id)
+                .maybeSingle()
+              profile = fixedProfile
             }
-            if (user) {
-              console.log('Middleware: User found via getUser fallback:', user.id)
-            } else {
-              console.log('Middleware: No session or user found')
+
+            const hasRequiredFields = profile && 
+              profile.full_name && 
+              profile.username && 
+              profile.birthday
+
+            if (!hasRequiredFields) {
+              // Redirect to role-selection if profile is incomplete
+              if (pathname !== '/profile/role-selection') {
+                const redirectUrl = new URL('/profile/role-selection', request.url)
+                return NextResponse.redirect(redirectUrl)
+              }
             }
           }
         }
@@ -124,4 +190,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
-

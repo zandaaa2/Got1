@@ -3,7 +3,6 @@ import { redirect, notFound } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import PurchaseEvaluation from '@/components/profile/PurchaseEvaluation'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 export default async function PurchasePage({
   params,
@@ -29,37 +28,29 @@ export default async function PurchasePage({
     notFound()
   }
 
-  // Check if user is a player
-  const { data: playerProfile } = await supabase
+  // Check if user is a player or parent
+  const { data: userProfile } = await supabase
     .from('profiles')
     .select('*')
     .eq('user_id', session.user.id)
     .single()
 
-  if (!playerProfile || playerProfile.role !== 'player') {
-    redirect('/browse')
+  if (!userProfile) {
+    redirect('/discover')
   }
 
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('avatar_url, full_name, username')
-    .eq('user_id', session.user.id)
-    .single()
+  // Allow players and parents to purchase
+  if (userProfile.role !== 'player' && userProfile.role !== 'parent') {
+    redirect('/discover')
+  }
 
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={userProfile?.avatar_url}
-      fullName={userProfile?.full_name}
-      username={userProfile?.username}
-      email={session.user.email}
-    />
-  )
+  // For players, pass the player profile. For parents, pass null (they'll select children)
+  const playerProfile = userProfile.role === 'player' ? userProfile : null
 
   return (
     <div className="min-h-screen bg-white flex">
-      <Sidebar activePage="browse" />
-      <DynamicLayout header={headerContent}>
+      <Sidebar activePage="discover" />
+      <DynamicLayout header={null}>
         <PurchaseEvaluation scout={profile} player={playerProfile} />
       </DynamicLayout>
     </div>

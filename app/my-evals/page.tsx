@@ -5,7 +5,6 @@ import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthInline from '@/components/auth/AuthInline'
 import AuthButtons from '@/components/auth/AuthButtons'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 import { Suspense } from 'react'
 
 const MyEvalsContent = dynamicImport(() => import('@/components/my-evals/MyEvalsContent'), {
@@ -54,23 +53,13 @@ export default async function MyEvalsPage() {
     redirect('/profile/setup')
   }
 
-  // Ensure role is valid (should be 'player' or 'scout')
-  const validRole = profile.role === 'scout' ? 'scout' : 'player'
-
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={profile.avatar_url}
-      fullName={profile.full_name}
-      username={profile.username}
-      email={session.user.email}
-    />
-  )
+  // Determine valid role - parents should see evaluations they purchased
+  const validRole = profile.role === 'scout' ? 'scout' : profile.role === 'parent' ? 'parent' : 'player'
 
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="my-evals" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">My Evals</h1>
           <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>

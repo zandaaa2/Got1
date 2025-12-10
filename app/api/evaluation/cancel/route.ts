@@ -40,9 +40,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Evaluation not found' }, { status: 404 })
     }
 
-    if (evaluation.player_id !== session.user.id) {
+    // Check if user is the player OR the parent who purchased it
+    const isPlayer = evaluation.player_id === session.user.id
+    const isParentPurchaser = evaluation.purchased_by === session.user.id && evaluation.purchased_by_type === 'parent'
+    
+    if (!isPlayer && !isParentPurchaser) {
       return NextResponse.json(
-        { error: 'Only the requesting player can cancel this evaluation.' },
+        { error: 'Only the requesting player or purchasing parent can cancel this evaluation.' },
         { status: 403 }
       )
     }

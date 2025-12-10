@@ -4,7 +4,6 @@ import dynamicImport from 'next/dynamic'
 import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
 
 const EvaluationDetail = dynamicImport(() => import('@/components/evaluations/EvaluationDetail'), {
   ssr: false,
@@ -108,20 +107,10 @@ export default async function EvaluationPage({
     .eq('user_id', session.user.id)
     .maybeSingle()
 
-  const headerContent = (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={profile?.avatar_url}
-      fullName={profile?.full_name}
-      username={profile?.username}
-      email={session.user.email}
-    />
-  )
-
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="my-evals" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading...</div>}>
           <EvaluationDetail
             evaluation={evaluationWithProfiles}

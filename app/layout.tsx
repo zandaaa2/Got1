@@ -5,7 +5,11 @@ import './globals.css'
 import AuthModalProvider from '@/components/providers/AuthModalProvider'
 import { Analytics } from '@vercel/analytics/react'
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' })
+const inter = Inter({ 
+  subsets: ['latin'], 
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'),
@@ -57,7 +61,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${inter.className} font-sans`}>
         <AuthModalProvider>
           {children}
         </AuthModalProvider>

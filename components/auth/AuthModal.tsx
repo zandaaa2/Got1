@@ -9,9 +9,10 @@ interface AuthModalProps {
   onClose: () => void
   mode: 'signin' | 'signup'
   onModeChange?: (mode: 'signin' | 'signup') => void
+  hideSignInLink?: boolean
 }
 
-export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSignInLink = false }: AuthModalProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -82,8 +83,21 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         setLoading(false)
         onClose() // Close modal on successful signin
         
+        // Check for stored redirect destination (e.g., from protected footer links)
+        const storedRedirect = typeof window !== 'undefined' 
+          ? localStorage.getItem('postSignUpRedirect') 
+          : null
+        
+        // Use stored redirect if available, otherwise default to /browse
+        const redirectDestination = storedRedirect || '/browse'
+        
+        // Clear the stored redirect after reading it
+        if (storedRedirect && typeof window !== 'undefined') {
+          localStorage.removeItem('postSignUpRedirect')
+        }
+        
         // Redirect through sync page to create sign-in notification
-        window.location.href = '/auth/sync?redirect=/browse'
+        window.location.href = `/auth/sync?redirect=${encodeURIComponent(redirectDestination)}`
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')
@@ -283,32 +297,33 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
               <span>{mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}</span>
             </button>
 
-            {/* Sign in / Sign up toggle link */}
-            {onModeChange && (
+            {/* Sign in link at bottom when in signup mode - hidden if hideSignInLink is true */}
+            {mode === 'signup' && onModeChange && !hideSignInLink && (
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-center text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => onModeChange('signin')}
+                    className="text-black font-medium underline hover:no-underline"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              </div>
+            )}
+
+            {/* Sign up toggle link - only show when NOT in signup mode */}
+            {mode === 'signin' && onModeChange && (
               <p className="text-center text-sm text-gray-600">
-                {mode === 'signup' ? (
-                  <>
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => onModeChange('signin')}
-                      className="text-black font-medium underline hover:no-underline"
-                    >
-                      Sign in instead
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Don't have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => onModeChange('signup')}
-                      className="text-black font-medium underline hover:no-underline"
-                    >
-                      Sign up instead
-                    </button>
-                  </>
-                )}
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => onModeChange('signup')}
+                  className="text-black font-medium underline hover:no-underline"
+                >
+                  Sign up instead
+                </button>
               </p>
             )}
           </>

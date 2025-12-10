@@ -7,7 +7,8 @@ import dynamicImport from 'next/dynamic'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthButtons from '@/components/auth/AuthButtons'
-import HeaderUserAvatar from '@/components/layout/HeaderUserAvatar'
+import WelcomeFooter from '@/components/welcome/WelcomeFooter'
+import BackButton from '@/components/shared/BackButton'
 import { colleges } from '@/lib/colleges'
 import { createServerClient } from '@/lib/supabase'
 import TeamTabs from '@/components/teams/TeamTabs'
@@ -169,30 +170,91 @@ export default async function TeamPage({ params }: PageParams) {
     )
   })
 
-  const headerContent = session ? (
-    <HeaderUserAvatar
-      userId={session.user.id}
-      avatarUrl={userProfile?.avatar_url}
-      fullName={userProfile?.full_name || session.user.user_metadata?.full_name}
-      username={userProfile?.username}
-      email={session.user.email}
-    />
-  ) : (
-    <AuthButtons />
-  )
+  // When there's no session, render without sidebar and with full-width layout
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="w-full">
+          <header className="fixed top-0 right-0 left-0 z-20 bg-white/90 backdrop-blur-sm px-4 py-3 md:px-8 md:py-4">
+            <div className="flex w-full items-center justify-between gap-3">
+              <Link
+                href="/welcome"
+                className="inline-flex items-center justify-center h-10 px-4 rounded-full text-sm font-medium text-gray-700 hover:text-black transition-colors border border-gray-300 hover:border-gray-400"
+              >
+                🏠 Take me home
+              </Link>
+              <AuthButtons />
+            </div>
+          </header>
+          <main className="pt-16 md:pt-20 pb-8 px-4 md:px-6 lg:px-8">
+            <div className="max-w-5xl mx-auto space-y-10">
 
+              <div className="relative flex flex-col md:flex-row md:items-start gap-4 md:gap-6 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 md:p-6">
+                <div className="w-16 h-16 md:w-20 md:h-20 mx-auto md:mx-0 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {team.logo ? (
+                    <Image
+                      src={team.logo}
+                      alt={team.name}
+                      width={80}
+                      height={80}
+                      className="object-contain"
+                    />
+                  ) : (
+                    <span className="text-2xl font-semibold text-gray-600">
+                      {team.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 text-center md:text-left relative flex items-center">
+                  <div className="absolute top-0 right-0">
+                    <TeamMenu 
+                      teamSlug={team.slug}
+                      teamName={team.name}
+                      isSignedIn={!!session}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h1 className="text-xl md:text-2xl font-bold text-black mb-1.5">
+                      {team.name}
+                    </h1>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-xs md:text-sm text-gray-600">
+                      {team.conference && (
+                        <span className="font-medium text-black">
+                          {team.conference}
+                        </span>
+                      )}
+                      {team.division && (
+                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
+                          {team.division}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs Component */}
+              <TeamTabs 
+                connections={connections}
+                employees={employees}
+                teamName={team.name}
+              />
+            </div>
+          </main>
+          <WelcomeFooter />
+        </div>
+      </div>
+    )
+  }
+
+  // When user is signed in, render with sidebar
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activePage="browse" />
-      <DynamicLayout header={headerContent}>
+      <DynamicLayout header={null}>
         <div className="max-w-5xl mx-auto space-y-10 px-4 sm:px-0">
           <div className="flex justify-start">
-            <Link
-              href="/browse"
-              className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black transition-colors"
-            >
-              Back
-            </Link>
+            <BackButton fallbackUrl="/browse" className="text-sm font-medium text-gray-600 hover:text-black transition-colors" />
           </div>
 
           <div className="relative flex flex-col md:flex-row md:items-start gap-4 md:gap-6 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 md:p-6">

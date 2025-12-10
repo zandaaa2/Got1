@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import Image from 'next/image'
@@ -21,9 +21,14 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
 
+  useEffect(() => {
+    // Log component mount for debugging
+    console.log('WhatsThisContent mounted', { organizations: organizations.length, profileAvatars: profileAvatars.length, hasSession })
+  }, [organizations, profileAvatars, hasSession])
+
   const handleFindScout = () => {
     if (hasSession) {
-      router.push('/browse')
+      router.push('/discover')
     } else {
       openSignUp()
     }

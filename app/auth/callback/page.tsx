@@ -48,6 +48,12 @@ function AuthCallbackContent() {
 
           console.log('✅ Email confirmation session created, user ID:', session.user.id)
 
+          // CRITICAL: Clear any stale localStorage data to ensure clean state
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('selected_role')
+            localStorage.removeItem('signup_role')
+          }
+
           // Wait for cookies to be set
           await new Promise(resolve => setTimeout(resolve, 300))
 
@@ -69,17 +75,38 @@ function AuthCallbackContent() {
 
           console.log('✅ User validated successfully:', verifyUser.id)
 
-          // Check if profile exists
-          const { data: profile } = await supabase
+          // Check if profile exists and has required fields
+          let { data: profile } = await supabase
             .from('profiles')
-            .select('*')
+            .select('full_name, username, birthday, role')
             .eq('user_id', session.user.id)
             .maybeSingle()
 
-          // Determine redirect URL
-          const finalRedirect = !profile 
-            ? '/profile/user-setup'
-            : '/browse'
+          // CRITICAL FIX: If profile exists with role='player', fix it immediately
+          if (profile && profile.role === 'player') {
+            console.log('⚠️ Auth callback (email) - Found profile with role=player, fixing to user')
+            await supabase
+              .from('profiles')
+              .update({ role: 'user' })
+              .eq('user_id', session.user.id)
+            // Re-fetch profile after fix
+            const { data: fixedProfile } = await supabase
+              .from('profiles')
+              .select('full_name, username, birthday, role')
+              .eq('user_id', session.user.id)
+              .maybeSingle()
+            profile = fixedProfile
+          }
+
+          // Check for stored redirect destination (e.g., from protected footer links)
+          let finalRedirect = '/browse'
+          if (typeof window !== 'undefined') {
+            const storedRedirect = localStorage.getItem('postSignUpRedirect')
+            if (storedRedirect) {
+              finalRedirect = storedRedirect
+              localStorage.removeItem('postSignUpRedirect')
+            }
+          }
 
           console.log('✅ Email verification session verified, redirecting through sync page to:', finalRedirect)
           
@@ -277,6 +304,12 @@ function AuthCallbackContent() {
 
         console.log('✅ Session created, user ID:', data.session.user.id)
 
+        // CRITICAL: Clear any stale localStorage data to ensure clean state
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('selected_role')
+          localStorage.removeItem('signup_role')
+        }
+
         // Wait for cookies to be set by the browser client
         // createBrowserClient from @supabase/ssr sets cookies automatically
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -298,17 +331,49 @@ function AuthCallbackContent() {
         }
         console.log('✅ User validated successfully:', verifyUser.id)
 
-        // Check if profile exists
-        const { data: profile } = await supabase
+        // Check if profile exists and has required fields
+        let { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select('full_name, username, birthday, role')
           .eq('user_id', data.session.user.id)
           .maybeSingle()
 
-        // Determine redirect URL
-        const finalRedirect = !profile 
-          ? '/profile/user-setup'
-          : '/browse'
+        // CRITICAL FIX: If profile exists with role='player', fix it immediately
+        if (profile && profile.role === 'player') {
+          console.log('⚠️ Auth callback (OAuth) - Found profile with role=player, fixing to user')
+          await supabase
+            .from('profiles')
+            .update({ role: 'user' })
+            .eq('user_id', data.session.user.id)
+          // Re-fetch profile after fix
+          const { data: fixedProfile } = await supabase
+            .from('profiles')
+            .select('full_name, username, birthday, role')
+            .eq('user_id', data.session.user.id)
+            .maybeSingle()
+          profile = fixedProfile
+        }
+
+        // Determine redirect destination with priority:
+        // 1. postSignUpRedirect (from protected footer links like "Make a claim")
+        // 2. become_scout_signup (from "Become a Scout" button)
+        // 3. Default to /browse
+        let finalRedirect = '/browse'
+        if (typeof window !== 'undefined') {
+          // First check for postSignUpRedirect (highest priority)
+          const storedRedirect = localStorage.getItem('postSignUpRedirect')
+          if (storedRedirect) {
+            finalRedirect = storedRedirect
+            localStorage.removeItem('postSignUpRedirect')
+          } else {
+            // Then check for become_scout_signup
+            const becomeScoutSignup = localStorage.getItem('become_scout_signup')
+            if (becomeScoutSignup === 'true') {
+              localStorage.removeItem('become_scout_signup')
+              finalRedirect = '/profile/scout-application'
+            }
+          }
+        }
 
         console.log('✅ Session verified, redirecting through sync page to:', finalRedirect)
         
