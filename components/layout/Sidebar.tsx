@@ -45,43 +45,108 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
   // Get user ID and role
   // Re-check when pathname changes (e.g., after sign-in redirect)
   useEffect(() => {
-    const loadUserData = async () => {
+    const supabase = createClient()
+    
+    const loadUserData = async (retryCount = 0) => {
       try {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
+        // Try getUser() first as it's more reliable for checking auth state
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
         
-        if (session?.user?.id) {
-          setUserId(session.user.id)
-          setUserEmail(session.user.email || null)
+        if (userError) {
+          // If getUser fails, fall back to getSession
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+          
+          if (sessionError) {
+            console.error('Error getting session in Sidebar:', sessionError)
+            // If both fail and we haven't retried, try again
+            if (retryCount < 3) {
+              console.log(`⏳ Sidebar: Auth check failed, retrying (${retryCount + 1}/3)...`)
+              setTimeout(() => {
+                loadUserData(retryCount + 1)
+              }, 500)
+              return
+            }
+            // Clear user data if auth fails after retries
+            setUserId(null)
+            setUserEmail(null)
+            setUserRole(null)
+            return
+          }
+          
+          if (session?.user?.id) {
+            console.log('✅ Sidebar: Session found via getSession, user ID:', session.user.id)
+            setUserId(session.user.id)
+            setUserEmail(session.user.email || null)
+            
+            // Get user's role
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .maybeSingle()
+            
+            if (profile) {
+              setUserRole(profile.role)
+            }
+            return
+          }
+        }
+        
+        // If getUser succeeded
+        if (user?.id) {
+          console.log('✅ Sidebar: User found via getUser, user ID:', user.id)
+          setUserId(user.id)
+          setUserEmail(user.email || null)
           
           // Get user's role
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
-            .eq('user_id', session.user.id)
+            .eq('user_id', user.id)
             .maybeSingle()
           
           if (profile) {
             setUserRole(profile.role)
           }
         } else {
-          // Clear user data if no session
+          // If no user found but we haven't retried, try again after a delay
+          // This handles the case where cookies are still being set after redirect
+          if (retryCount < 3) {
+            console.log(`⏳ Sidebar: No user yet, retrying (${retryCount + 1}/3)...`)
+            setTimeout(() => {
+              loadUserData(retryCount + 1)
+            }, 500)
+            return
+          }
+          
+          // Clear user data if no user after retries
+          console.log('⚠️ Sidebar: No user found after retries')
           setUserId(null)
           setUserEmail(null)
           setUserRole(null)
         }
       } catch (error) {
         console.error('Error loading user data:', error)
+        // Retry on error
+        if (retryCount < 3) {
+          setTimeout(() => {
+            loadUserData(retryCount + 1)
+          }, 500)
+        }
       }
     }
     
-    loadUserData()
+    // Initial load with a small delay to allow cookies to propagate after redirect
+    // Then check immediately and with retries
+    const timeoutId = setTimeout(() => {
+      loadUserData()
+    }, 100)
     
     // Also set up an auth state change listener to update when session changes
-    const supabase = createClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Sidebar: Auth state changed:', event, session?.user?.id || 'no session')
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        loadUserData()
+        loadUserData(0) // Reset retry count
       } else if (event === 'SIGNED_OUT') {
         setUserId(null)
         setUserEmail(null)
@@ -90,6 +155,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     })
     
     return () => {
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [pathname]) // Re-check when pathname changes (e.g., after sign-in)
