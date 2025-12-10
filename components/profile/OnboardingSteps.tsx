@@ -367,7 +367,7 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         
         // Wait longer for the update to fully propagate in Supabase
         console.log('⏳ Step 4: Waiting for update to propagate...')
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve => setTimeout(resolve, 1500))
       } else {
         console.warn('⚠️ Step 4: No data to update')
         throw new Error('No data to update - role should have been set')
@@ -378,10 +378,10 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         localStorage.removeItem(`onboarding_accountType_${profile.user_id}`)
       }
       
-      console.log('🔄 Step 4: Redirecting to profile page...')
-      // Force a full page reload with cache bust to ensure fresh data is fetched
+      console.log('🔄 Step 4: Onboarding complete! Redirecting to profile...')
+      // Force a hard reload to ensure fresh data is fetched from server
       // This ensures the onboarding section disappears since profile.role will no longer be 'user'
-      window.location.href = '/profile?onboarding=complete&t=' + Date.now()
+      window.location.replace('/profile')
     } catch (err: any) {
       console.error('❌ Step 4: Error:', err)
       setError(err.message || 'Failed to save')

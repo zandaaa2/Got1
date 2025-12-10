@@ -127,6 +127,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     clean_max: profile.clean_max?.toString() || '',
     state: profile.state || '',
     classification: profile.classification || '',
+    college_offers: profile.college_offers || '',
     // Scout fields
     sports: (Array.isArray(profile.sports) ? profile.sports : []) as string[],
     // Parent fields
@@ -537,6 +538,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.clean_max = null
         updateData.state = null
         updateData.classification = null
+        updateData.college_offers = null
       } else if (profile.role === 'scout') {
         updateData.organization = formData.organization || null
         updateData.price_per_eval = formData.price_per_eval ? parseFloat(formData.price_per_eval.toString()) : null
@@ -598,6 +600,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         updateData.clean_max = formData.clean_max ? parseInt(formData.clean_max.toString()) : null
         updateData.state = formData.state || null
         updateData.classification = formData.classification || null
+        updateData.college_offers = formData.college_offers || null
         // Clear scout-specific fields
         updateData.organization = null
         updateData.price_per_eval = null
@@ -1090,6 +1093,21 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                       <option value="7A">7A</option>
                       <option value="8A">8A</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="college_offers" className="block text-sm font-medium text-black mb-2">
+                      College Offers
+                    </label>
+                    <textarea
+                      id="college_offers"
+                      name="college_offers"
+                      value={formData.college_offers}
+                      onChange={handleChange}
+                      placeholder="List any college offers you've received"
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    />
                   </div>
                 </div>
               </div>
