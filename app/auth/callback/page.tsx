@@ -22,8 +22,13 @@ function AuthCallbackContent() {
      * @returns {Promise<void>}
      */
     const handleCallback = async () => {
+      console.log('🚀 Auth callback started')
+      console.log('🚀 Callback params:', { code: !!code, token_hash: !!token_hash, type_param })
+      console.log('🚀 Current URL:', window.location.href)
+      
       // Handle email confirmation (token_hash)
       if (token_hash && type_param) {
+        console.log('📧 Handling email confirmation callback...')
         const supabase = createClient()
         try {
           console.log('Handling email confirmation callback...')
@@ -145,17 +150,21 @@ function AuthCallbackContent() {
       }
 
       // Handle OAuth callback (code)
+      console.log('🔍 Checking for OAuth code...')
       if (!code) {
         const errorParam = searchParams.get('error')
+        console.log('❌ No code found, error param:', errorParam)
         if (errorParam) {
           console.error('❌ OAuth error:', errorParam)
           window.location.href = `/auth/signin?error=${encodeURIComponent(errorParam)}`
         } else {
-          console.error('❌ OAuth callback: No code parameter')
+          console.error('❌ OAuth callback: No code parameter - redirecting to signin')
           window.location.href = `/auth/signin?error=no_code`
         }
         return
       }
+      
+      console.log('✅ OAuth code found, processing...')
 
       // Wait a moment to ensure localStorage and cookies are accessible
       await new Promise(resolve => setTimeout(resolve, 200))
