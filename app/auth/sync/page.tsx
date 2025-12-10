@@ -14,24 +14,26 @@ function AuthSyncContent() {
   console.log('🔵 AuthSyncContent component rendered')
 
   useEffect(() => {
-    console.log('🔵 AuthSyncContent useEffect triggered')
-    console.log('🔵 Redirect param:', searchParams.get('redirect'))
-    
-    const syncAuth = async () => {
-      console.log('🔵 syncAuth function called')
-      // Check localStorage for post-signup redirect (e.g., from "Become a Scout" button)
-      const postSignUpRedirect = typeof window !== 'undefined' 
-        ? localStorage.getItem('postSignUpRedirect') 
-        : null
+      console.log('🔵 AuthSyncContent useEffect triggered')
+      console.log('🔵 Redirect param:', searchParams.get('redirect'))
       
-      // Use redirect from localStorage if available, otherwise use query param
-      // Don't default to '/browse' - let the profile check determine the redirect
-      const redirect = postSignUpRedirect || searchParams.get('redirect') || null
-      
-      // Clear the localStorage redirect after using it
-      if (postSignUpRedirect && typeof window !== 'undefined') {
-        localStorage.removeItem('postSignUpRedirect')
-      }
+      const syncAuth = async () => {
+        console.log('🔵 syncAuth function called')
+        
+        // Priority: query param (from callback) > localStorage (from button clicks)
+        // Query param is more reliable as it comes directly from the auth callback
+        const queryRedirect = searchParams.get('redirect')
+        const postSignUpRedirect = typeof window !== 'undefined' 
+          ? localStorage.getItem('postSignUpRedirect') 
+          : null
+        
+        // Use query param first (from callback), then localStorage, then default to /browse
+        const redirect = queryRedirect || postSignUpRedirect || '/browse'
+        
+        // Clear the localStorage redirect after using it (if it was used)
+        if (postSignUpRedirect && typeof window !== 'undefined' && redirect === postSignUpRedirect) {
+          localStorage.removeItem('postSignUpRedirect')
+        }
       
       const supabase = createClient()
       
@@ -167,10 +169,17 @@ function AuthSyncContent() {
       const remainingWait = Math.max(0, 1000 - elapsed)
       await new Promise(resolve => setTimeout(resolve, remainingWait))
 
-      // Determine final redirect - always use provided redirect, or default to browse
+      // Determine final redirect - use the redirect we determined above
+      // Always default to /browse if somehow redirect is still null/empty
       let finalRedirect = redirect || '/browse'
       
-      console.log('✅ Using redirect:', finalRedirect)
+      // Ensure we never redirect authenticated users to /welcome
+      if (finalRedirect === '/welcome') {
+        console.warn('⚠️ Preventing redirect to /welcome for authenticated user, defaulting to /browse')
+        finalRedirect = '/browse'
+      }
+      
+      console.log('✅ Using redirect:', finalRedirect, 'from query param:', queryRedirect, 'from localStorage:', postSignUpRedirect)
 
       console.log('✅ Auth sync: Cookies processed, redirecting to:', finalRedirect)
       

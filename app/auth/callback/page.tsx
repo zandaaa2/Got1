@@ -98,13 +98,24 @@ function AuthCallbackContent() {
             profile = fixedProfile
           }
 
-          // Check for stored redirect destination (e.g., from protected footer links)
+          // Determine redirect destination with priority:
+          // 1. postSignUpRedirect (from protected footer links like "Make a claim")
+          // 2. become_scout_signup (from "Become a Scout" button)
+          // 3. Default to /browse
           let finalRedirect = '/browse'
           if (typeof window !== 'undefined') {
+            // First check for postSignUpRedirect (highest priority)
             const storedRedirect = localStorage.getItem('postSignUpRedirect')
             if (storedRedirect) {
               finalRedirect = storedRedirect
               localStorage.removeItem('postSignUpRedirect')
+            } else {
+              // Then check for become_scout_signup
+              const becomeScoutSignup = localStorage.getItem('become_scout_signup')
+              if (becomeScoutSignup === 'true') {
+                localStorage.removeItem('become_scout_signup')
+                finalRedirect = '/profile/scout-application'
+              }
             }
           }
 

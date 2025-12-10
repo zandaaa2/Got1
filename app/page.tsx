@@ -29,15 +29,34 @@ function HomeContent() {
         }
 
         // Wait a moment for cookies to be available (especially after auth callbacks)
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // Increase wait time after sign-in to ensure session is fully established
+        await new Promise(resolve => setTimeout(resolve, 500))
 
         // Check session client-side (cookies are always available here)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        // Try multiple times if session is not immediately available (race condition after sign-in)
+        let session = null
+        let sessionError = null
+        let attempts = 0
+        const maxAttempts = 3
+        
+        while (attempts < maxAttempts && !session) {
+          const result = await supabase.auth.getSession()
+          session = result.data.session
+          sessionError = result.error
+          
+          if (session) break
+          
+          // Wait a bit longer before retrying
+          if (attempts < maxAttempts - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300))
+          }
+          attempts++
+        }
         
         clearTimeout(timeoutId)
         
-        if (sessionError) {
-          console.error('Error getting session:', sessionError)
+        if (sessionError && !session) {
+          console.error('Error getting session after retries:', sessionError)
           // On error, redirect to welcome page
           router.replace('/welcome')
           return
