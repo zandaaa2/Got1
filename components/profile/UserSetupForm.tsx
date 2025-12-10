@@ -350,7 +350,7 @@ export default function UserSetupForm({
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">Account info</h1>
         <p className="text-gray-600 mb-8">
-          Let's start with the basics. You can add more details about being a player or scout later.
+          Just the basics. You can add more details about being a player or parent later.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
