@@ -208,7 +208,9 @@ function AuthSyncContent() {
 
       // Re-check session one more time before redirecting to ensure it's still valid
       const { data: { session: finalSessionCheck } } = await supabase.auth.getSession()
-      if (!finalSessionCheck) {
+      let validSession = finalSessionCheck
+      
+      if (!validSession) {
         console.error('❌ Session lost before redirect! Retrying once more...')
         // Wait and retry once more
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -218,6 +220,7 @@ function AuthSyncContent() {
           window.location.href = '/welcome'
           return
         }
+        validSession = retrySessionCheck
       }
 
       // Determine final redirect - use the redirect we determined above
@@ -243,11 +246,11 @@ function AuthSyncContent() {
         postSignUpRedirect,
         intermediateRedirect: redirect,
         finalRedirect,
-        sessionUserId: finalSessionCheck.user.id
+        sessionUserId: validSession?.user?.id || 'unknown'
       })
 
       console.log('✅ Auth sync: Cookies processed, redirecting to:', finalRedirect)
-      console.log('✅ Session confirmed, user ID:', finalSessionCheck.user.id)
+      console.log('✅ Session confirmed, user ID:', validSession?.user?.id || 'unknown')
       
       // Use absolute URL to ensure proper redirect
       const absoluteUrl = new URL(finalRedirect, window.location.origin).href
