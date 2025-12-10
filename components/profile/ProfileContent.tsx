@@ -2197,37 +2197,6 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
     <div>
       <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-8">Profile</h1>
 
-      {/* Pending Scout Application Banner */}
-      {hasPendingApplication && (
-        <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 md:p-6 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              <svg
-                className="w-6 h-6 text-amber-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-amber-900 mb-1">
-                Scout Application Pending Review
-              </h3>
-              <p className="text-amber-800">
-                Your scout application is currently being reviewed by our admin team. You will be notified once a decision has been made.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Profile Card */}
       <div className="surface-card flex flex-row flex-wrap md:flex-nowrap items-start gap-3 md:gap-6 mb-6 md:mb-8 p-3 md:p-6">
         <div className="w-14 h-14 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
@@ -2434,36 +2403,6 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
       {/* 4-Step Onboarding System - Show when user has role='user' */}
       {profile.role === 'user' && (
         <OnboardingSteps profile={profile} />
-      )}
-
-      {/* Scout Application Section - Show only for basic users (role='user') */}
-      {profile.role === 'user' && (
-        <div className="surface-card mb-8 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-black">Become a Scout</h3>
-          </div>
-          <p className="text-black mb-4 leading-relaxed">
-            I would like to apply to become a scout on Got1. I understand this role is for
-            individuals that are currently working as a player personnel employee, assistant, or
-            intern at a D1-D2 level or a professional level. Other jobs could include directing of
-            recruiting, general manager, assistant general manager, etc.
-          </p>
-          {hasPendingApplication ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-yellow-800">
-                Your scout application is pending review. You will be notified once a decision has
-                been made.
-              </p>
-            </div>
-          ) : (
-            <Link
-              href="/profile/scout-application"
-              className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
-            >
-              Apply to Become a Scout
-            </Link>
-          )}
-        </div>
       )}
 
       {/* General Info Section */}
