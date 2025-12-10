@@ -238,7 +238,7 @@ export default function UserSetupForm({
       const sanitizedAvatar = isMeaningfulAvatar(avatarUrl) ? avatarUrl : null
 
       // CRITICAL: Always create profile with role='user' initially
-      // The role will only change if user explicitly selected one on role-selection page
+      // The role will only change if user explicitly selected one on their profile page
       const profileData: any = {
         user_id: session.user.id,
         role: 'user', // Always start as 'user' - role only changes when explicitly selected
@@ -276,7 +276,7 @@ export default function UserSetupForm({
               username: profileData.username,
               avatar_url: profileData.avatar_url,
               birthday: profileData.birthday,
-              role: 'user', // ALWAYS set to 'user' - role only changes on role-selection page
+              role: 'user', // ALWAYS set to 'user' - role only changes on profile page
               updated_at: profileData.updated_at,
             })
             .eq('user_id', session.user.id)

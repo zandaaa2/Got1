@@ -18,8 +18,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
    * Handles Google OAuth authentication.
    * Initiates the OAuth flow and redirects to Google for authentication.
    * 
-   * NOTE: Role selection happens AFTER account info (name, username, birthday) is completed.
-   * Users will select their role on the role-selection page after completing user-setup.
+   * NOTE: Role selection happens on the profile page after account info is completed.
+   * Users will complete user-setup first, then can select their role on their profile.
    *
    * @returns {Promise<void>}
    */

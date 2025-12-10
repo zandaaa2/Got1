@@ -143,7 +143,6 @@ export async function middleware(request: NextRequest) {
         if (!isPublicRoute && user) {
           // Profile setup routes should be allowed without completion check
           const profileSetupRoutes = [
-            '/profile/role-selection',
             '/profile/user-setup',
             '/profile/parent-setup',
             '/profile/parent/create-player',
@@ -180,9 +179,9 @@ export async function middleware(request: NextRequest) {
               profile.birthday
 
             if (!hasRequiredFields) {
-              // Redirect to role-selection if profile is incomplete
-              if (pathname !== '/profile/role-selection') {
-                const redirectUrl = new URL('/profile/role-selection', request.url)
+              // Redirect to user-setup if profile is incomplete
+              if (pathname !== '/profile/user-setup') {
+                const redirectUrl = new URL('/profile/user-setup', request.url)
                 return NextResponse.redirect(redirectUrl)
               }
             }
