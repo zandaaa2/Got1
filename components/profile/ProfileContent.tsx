@@ -2018,32 +2018,76 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
     try {
       console.log('🚪 Signing out...')
       
-      // Sign out from Supabase
+      // First, sign out client-side
       const { error: signOutError } = await supabase.auth.signOut()
       
       if (signOutError) {
-        console.error('❌ Sign out error:', signOutError)
-        throw signOutError
+        console.error('❌ Client sign out error:', signOutError)
       }
       
-      console.log('✅ Signed out successfully')
-      
-      // Wait a moment to ensure cookies are cleared
-      await new Promise(resolve => setTimeout(resolve, 200))
-      
-      // Verify session is cleared
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        console.warn('⚠️ Session still exists after signOut, forcing redirect anyway')
+      // Also call the API route to ensure server-side cookies are cleared
+      try {
+        const response = await fetch('/api/auth/signout', {
+          method: 'POST',
+          credentials: 'include',
+        })
+        if (!response.ok) {
+          console.warn('⚠️ API signout returned error, continuing anyway')
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API signout failed, continuing anyway:', apiError)
       }
       
-      // Use window.location.href for a hard redirect to /welcome
-      // This ensures we clear any cached state and go directly to the welcome page
-      window.location.href = '/welcome'
+      // Manually clear all Supabase-related cookies
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';')
+        cookies.forEach(cookie => {
+          const eqPos = cookie.indexOf('=')
+          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim()
+          // Clear all cookies that start with 'sb-' (Supabase cookies)
+          if (name.startsWith('sb-')) {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`
+          }
+        })
+      }
+      
+      // Clear localStorage items related to auth
+      if (typeof window !== 'undefined') {
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && (key.startsWith('sb-') || key.includes('auth') || key.includes('supabase'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+      }
+      
+      console.log('✅ Signed out successfully, clearing cookies and redirecting...')
+      
+      // Wait a moment to ensure everything is cleared
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Use window.location.replace for a hard redirect to /welcome
+      // This ensures we clear any cached state and don't add to history
+      window.location.replace('/welcome')
     } catch (error) {
       console.error('❌ Logout error:', error)
-      // Even if there's an error, try to redirect to welcome
-      window.location.href = '/welcome'
+      // Even if there's an error, clear cookies and redirect to welcome
+      if (typeof window !== 'undefined') {
+        // Clear cookies
+        document.cookie.split(';').forEach(cookie => {
+          const eqPos = cookie.indexOf('=')
+          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim()
+          if (name.startsWith('sb-')) {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+          }
+        })
+        // Redirect
+        window.location.replace('/welcome')
+      }
     }
   }
 
