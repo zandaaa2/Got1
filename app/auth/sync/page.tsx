@@ -37,12 +37,49 @@ function AuthSyncContent() {
       
       const supabase = createClient()
       
-      // Verify session exists client-side
-      const { data: { session } } = await supabase.auth.getSession()
+      // Verify session exists client-side - retry with delays since cookies might not be set yet
+      let session = null
+      let user = null
+      let attempts = 0
+      const maxAttempts = 5
+      
+      while (attempts < maxAttempts && !session) {
+        // Try getUser() first as it's more reliable
+        const userResult = await supabase.auth.getUser()
+        user = userResult.data.user
+        
+        if (user) {
+          // If we have a user, get the session
+          const sessionResult = await supabase.auth.getSession()
+          session = sessionResult.data.session
+          
+          if (session) {
+            console.log('✅ Auth sync: Session found via getUser on attempt', attempts + 1)
+            break
+          }
+        } else {
+          // Fall back to getSession if getUser fails
+          const sessionResult = await supabase.auth.getSession()
+          session = sessionResult.data.session
+          
+          if (session) {
+            console.log('✅ Auth sync: Session found via getSession on attempt', attempts + 1)
+            break
+          }
+        }
+        
+        if (attempts < maxAttempts - 1) {
+          console.log(`⏳ Auth sync: No session yet, retrying (${attempts + 1}/${maxAttempts})...`)
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+        attempts++
+      }
       
       if (!session) {
-        console.error('No session found on sync page')
-        window.location.href = '/auth/signin'
+        console.error('❌ No session found on sync page after retries')
+        console.error('❌ This might indicate the OAuth callback failed or cookies are not being set')
+        // Don't redirect to signin - instead redirect to welcome to avoid redirect loops
+        window.location.href = '/welcome'
         return
       }
 
@@ -172,9 +209,15 @@ function AuthSyncContent() {
       // Re-check session one more time before redirecting to ensure it's still valid
       const { data: { session: finalSessionCheck } } = await supabase.auth.getSession()
       if (!finalSessionCheck) {
-        console.error('❌ Session lost before redirect!')
-        window.location.href = '/auth/signin'
-        return
+        console.error('❌ Session lost before redirect! Retrying once more...')
+        // Wait and retry once more
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const { data: { session: retrySessionCheck } } = await supabase.auth.getSession()
+        if (!retrySessionCheck) {
+          console.error('❌ Session still not found after retry')
+          window.location.href = '/welcome'
+          return
+        }
       }
 
       // Determine final redirect - use the redirect we determined above
