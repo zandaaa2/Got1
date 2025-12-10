@@ -16,14 +16,32 @@ export async function POST(request: NextRequest) {
     
     if (error) {
       console.error('Sign out error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      // Still redirect even if there's an error
     }
     
-    // Return success - client will handle redirect
-    return NextResponse.json({ success: true })
+    // Create redirect response to /welcome
+    const redirectUrl = new URL('/welcome', request.url)
+    const response = NextResponse.redirect(redirectUrl)
+    
+    // Manually clear all Supabase cookies
+    const allCookies = cookies().getAll()
+    allCookies.forEach(cookie => {
+      if (cookie.name.startsWith('sb-')) {
+        // Clear cookie by setting it to expire in the past
+        response.cookies.set(cookie.name, '', {
+          expires: new Date(0),
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        })
+      }
+    })
+    
+    return response
   } catch (error: any) {
     console.error('Sign out error:', error)
-    return NextResponse.json({ error: error.message || 'Failed to sign out' }, { status: 500 })
+    // Even on error, redirect to welcome
+    return NextResponse.redirect(new URL('/welcome', request.url))
   }
 }
 
