@@ -154,9 +154,16 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
       }
     })
     
+    // Also check when window regains focus (in case session became available)
+    const handleFocus = () => {
+      loadUserData(0)
+    }
+    window.addEventListener('focus', handleFocus)
+    
     return () => {
       clearTimeout(timeoutId)
       subscription.unsubscribe()
+      window.removeEventListener('focus', handleFocus)
     }
   }, [pathname]) // Re-check when pathname changes (e.g., after sign-in)
   
