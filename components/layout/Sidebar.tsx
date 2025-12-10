@@ -43,6 +43,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
   const [isMobile, setIsMobile] = useState(false)
   
   // Get user ID and role
+  // Re-check when pathname changes (e.g., after sign-in redirect)
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -63,6 +64,11 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
           if (profile) {
             setUserRole(profile.role)
           }
+        } else {
+          // Clear user data if no session
+          setUserId(null)
+          setUserEmail(null)
+          setUserRole(null)
         }
       } catch (error) {
         console.error('Error loading user data:', error)
@@ -70,7 +76,23 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     }
     
     loadUserData()
-  }, [])
+    
+    // Also set up an auth state change listener to update when session changes
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        loadUserData()
+      } else if (event === 'SIGNED_OUT') {
+        setUserId(null)
+        setUserEmail(null)
+        setUserRole(null)
+      }
+    })
+    
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [pathname]) // Re-check when pathname changes (e.g., after sign-in)
   
   useEffect(() => {
     const checkMobile = () => {
