@@ -22,7 +22,21 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   const hasInitialized = useRef(false)
   
   // Step 1: Account type
-  const [accountType, setAccountType] = useState<'player' | 'parent' | null>(null)
+  // Persist accountType in localStorage to survive re-renders
+  const [accountType, setAccountType] = useState<'player' | 'parent' | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`onboarding_accountType_${profile.user_id}`)
+      return stored === 'player' || stored === 'parent' ? stored : null
+    }
+    return null
+  })
+  
+  // Sync accountType to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && accountType) {
+      localStorage.setItem(`onboarding_accountType_${profile.user_id}`, accountType)
+    }
+  }, [accountType, profile.user_id])
   
   // Step 2: HUDL link (required for both)
   const [hudlLink, setHudlLink] = useState(profile.hudl_link || '')
@@ -82,10 +96,17 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
     hasInitialized.current = true
   }, [profile.role, profile.hudl_link, profile.social_link, profile.position, profile.school, profile.graduation_year])
 
-  // Initialize from profile
+  // Initialize from profile and localStorage
   useEffect(() => {
+    // First try profile role
     if (profile.role && profile.role !== 'user') {
       setAccountType(profile.role as 'player' | 'parent')
+    } else if (typeof window !== 'undefined') {
+      // Fallback to localStorage if profile role is still 'user'
+      const stored = localStorage.getItem(`onboarding_accountType_${profile.user_id}`)
+      if (stored === 'player' || stored === 'parent') {
+        setAccountType(stored)
+      }
     }
     
     // Initialize form fields from existing profile data
@@ -136,6 +157,12 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       }
 
       console.log('✅ Step 1: Role updated successfully')
+      
+      // Persist accountType to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`onboarding_accountType_${profile.user_id}`, accountType)
+      }
+      
       setCurrentStep(2)
     } catch (err: any) {
       setError(err.message || 'Failed to update account type')
@@ -264,10 +291,31 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       const updateData: any = {}
       
       // CRITICAL: Always ensure the role is set to the selected account type when completing onboarding
-      // This ensures the role is set even if step 1's update didn't persist properly
-      if (accountType && (profile.role === 'user' || !profile.role)) {
-        updateData.role = accountType
-        console.log('✅ Step 4: Setting role to', accountType)
+      // Try multiple sources to determine the target role:
+      // 1. accountType state (set in step 1)
+      // 2. profile.role (if already updated)
+      // 3. Infer from profile data (parent_name/child_name = parent, position/school = player)
+      let targetRole = accountType
+      
+      if (!targetRole || targetRole === 'user') {
+        if (profile.role && profile.role !== 'user') {
+          targetRole = profile.role as 'player' | 'parent'
+        } else if (profile.parent_name || profile.child_name) {
+          targetRole = 'parent'
+        } else if (profile.position || profile.school) {
+          targetRole = 'player'
+        }
+      }
+      
+      // Always update role if it's still 'user' or undefined and we have a target role
+      if (targetRole && targetRole !== 'user' && (profile.role === 'user' || !profile.role)) {
+        updateData.role = targetRole
+        console.log('✅ Step 4: Setting role to', targetRole, 'from accountType:', accountType, 'profile.role:', profile.role)
+      } else if (!targetRole || targetRole === 'user') {
+        console.warn('⚠️ Step 4: No valid target role found. accountType:', accountType, 'profile.role:', profile.role)
+        setError('Unable to determine account type. Please go back to step 1 and select your account type.')
+        setLoading(false)
+        return
       }
       
       if (!skip) {
@@ -284,19 +332,42 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         if (collegeOffers) updateData.college_offers = collegeOffers.trim()
       }
 
-      // Only update if there's data to update
+      // Always update - even if just setting the role
+      console.log('📝 Step 4: Update data:', updateData)
+      console.log('📝 Step 4: Profile user_id:', profile.user_id)
+      
       if (Object.keys(updateData).length > 0) {
-        const { error: updateError } = await supabase
+        const { error: updateError, data } = await supabase
           .from('profiles')
           .update(updateData)
           .eq('user_id', profile.user_id)
+          .select()
 
-        if (updateError) throw updateError
+        if (updateError) {
+          console.error('❌ Step 4: Update error:', updateError)
+          throw updateError
+        }
+        
+        console.log('✅ Step 4: Update successful, data:', data)
+        
+        // Wait a bit for the update to propagate, then refresh
+        await new Promise(resolve => setTimeout(resolve, 500))
+      } else {
+        console.warn('⚠️ Step 4: No data to update')
       }
 
+      // Clear localStorage since onboarding is complete
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`onboarding_accountType_${profile.user_id}`)
+      }
+      
+      // Refresh the page data
       router.refresh()
     } catch (err: any) {
+      console.error('❌ Step 4: Error:', err)
       setError(err.message || 'Failed to save')
+    } finally {
+      // Always clear loading state
       setLoading(false)
     }
   }
