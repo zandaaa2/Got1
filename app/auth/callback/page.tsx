@@ -429,13 +429,27 @@ function AuthCallbackContent() {
           }
         }
         
-        // Redirect through sync page which will ensure cookies are set server-side
-        // before doing the final redirect - use absolute URL
-        const syncUrl = new URL(`/auth/sync?redirect=${encodeURIComponent(finalRedirect)}`, window.location.origin).href
-        console.log('✅ Redirecting to sync page:', syncUrl)
-        console.log('✅ Final redirect destination will be:', finalRedirect)
-        console.log('✅ OAuth callback successful, session exists, proceeding to sync page')
-        window.location.replace(syncUrl)
+        // For OAuth, session is already set, so we can redirect directly
+        // Create notification in the background (don't block redirect)
+        fetch('/api/notifications/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            type: 'user_signed_in',
+            title: 'Welcome Back!',
+            message: 'You have successfully signed in.',
+            link: '/',
+          }),
+        }).catch(() => {
+          // Ignore errors - notification is not critical
+        })
+        
+        // Redirect directly to the destination (skip sync page for OAuth)
+        // The session is already set, so we can go straight to browse
+        console.log('✅ OAuth callback successful, redirecting directly to:', finalRedirect)
+        console.log('✅ Session confirmed, user ID:', verifyUser.id)
+        window.location.replace(finalRedirect)
       } catch (error: any) {
         console.error('❌ OAuth callback error:', error)
         console.error('❌ Error stack:', error?.stack)
