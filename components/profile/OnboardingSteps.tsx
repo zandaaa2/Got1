@@ -352,12 +352,25 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
           throw updateError
         }
         
-        console.log('✅ Step 4: Update successful, data:', data)
+        if (!data || data.length === 0) {
+          throw new Error('Update completed but no data was returned')
+        }
         
-        // Wait a bit for the update to propagate, then refresh
-        await new Promise(resolve => setTimeout(resolve, 500))
+        const updatedProfile = data[0]
+        console.log('✅ Step 4: Update successful, updated profile:', updatedProfile)
+        
+        // Verify the role was actually updated
+        if (updateData.role && updatedProfile.role !== updateData.role) {
+          console.error('❌ Step 4: Role was not updated correctly. Expected:', updateData.role, 'Got:', updatedProfile.role)
+          throw new Error('Role update verification failed')
+        }
+        
+        // Wait longer for the update to fully propagate in Supabase
+        console.log('⏳ Step 4: Waiting for update to propagate...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
       } else {
         console.warn('⚠️ Step 4: No data to update')
+        throw new Error('No data to update - role should have been set')
       }
 
       // Clear localStorage since onboarding is complete
@@ -365,9 +378,10 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         localStorage.removeItem(`onboarding_accountType_${profile.user_id}`)
       }
       
-      // Force a hard refresh to reload the profile with updated role
+      console.log('🔄 Step 4: Redirecting to profile page...')
+      // Force a full page reload to ensure fresh data is fetched
       // This ensures the onboarding section disappears since profile.role will no longer be 'user'
-      window.location.href = '/profile'
+      window.location.reload()
     } catch (err: any) {
       console.error('❌ Step 4: Error:', err)
       setError(err.message || 'Failed to save')
