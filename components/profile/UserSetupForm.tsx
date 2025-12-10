@@ -38,6 +38,7 @@ export default function UserSetupForm({
   const [showAgeRestrictionModal, setShowAgeRestrictionModal] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+  const [showLoading, setShowLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -337,16 +338,35 @@ export default function UserSetupForm({
     }
   }
 
-  const handleAnimationComplete = () => {
-    router.push('/profile')
-    router.refresh()
+  const handleAnimationComplete = async () => {
+    // Show loading state after animation
+    setShowLoading(true)
+    
+    // Wait a moment to ensure animation fully completes
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Use window.location.href for a hard redirect to ensure we navigate away
+    // This prevents the page from reverting back to /user-setup
+    window.location.href = '/profile'
   }
 
   return (
     <>
-      {showSuccessAnimation && (
+      {showSuccessAnimation && !showLoading && (
         <AccountCreatedAnimation onComplete={handleAnimationComplete} />
       )}
+      {showLoading && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="relative w-12 h-12 mx-auto">
+              <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p className="text-lg font-medium text-gray-900">Loading your profile...</p>
+          </div>
+        </div>
+      )}
+      {!showSuccessAnimation && !showLoading && (
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">Account info</h1>
         <p className="text-gray-600 mb-8">
@@ -471,6 +491,7 @@ export default function UserSetupForm({
           </div>
         </form>
       </div>
+      )}
 
       {/* Age Restriction Modal */}
       <Modal
