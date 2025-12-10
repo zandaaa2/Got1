@@ -216,19 +216,19 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
 
   return (
     <>
-      <div className="mb-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl md:text-2xl font-bold text-black">My Players</h2>
-          <div className="flex gap-2">
+      <div className="mb-8 space-y-4 md:space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+          <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black">My Players</h2>
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleTagPlayer}
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="interactive-press inline-flex items-center justify-center h-10 md:h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Tag Existing Player
             </button>
             <button
               onClick={handleCreatePlayer}
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-black text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+              className="interactive-press inline-flex items-center justify-center h-10 md:h-9 px-4 rounded-full bg-black text-sm font-medium text-white hover:bg-gray-800 transition-colors"
             >
               Create Player Page
             </button>
@@ -236,14 +236,14 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
         </div>
 
         {linkedChildren.length === 0 ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-gray-600 mb-2">No player pages linked yet.</p>
-            <p className="text-sm text-gray-500">
+          <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-6 md:p-8 text-center shadow-sm">
+            <p className="text-gray-600 mb-2 text-sm md:text-base">No player pages linked yet.</p>
+            <p className="text-xs md:text-sm text-gray-500">
               Tag an existing player page or create a new one to get started.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {linkedChildren.map((player) => {
               const playerPath = getProfilePath(player.id, player.username)
               const playerGradientKey = player.user_id || player.id
@@ -252,12 +252,12 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
               return (
                 <div
                   key={player.id}
-                  className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:border-gray-300 transition-colors"
+                  className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-3 md:p-4 shadow-sm hover:border-gray-300 transition-colors"
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 md:gap-4">
                     {/* Player Avatar */}
                     <Link href={playerPath} className="flex-shrink-0">
-                      <div className="w-16 h-16 rounded-full overflow-hidden">
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden">
                         {playerAvatarUrl ? (
                           <Image
                             src={playerAvatarUrl}
@@ -268,7 +268,7 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
                           />
                         ) : (
                           <div className={`w-full h-full flex items-center justify-center ${getGradientForId(playerGradientKey)}`}>
-                            <span className="text-white text-xl font-semibold">
+                            <span className="text-white text-lg md:text-xl font-semibold">
                               {player.full_name?.charAt(0).toUpperCase() || '?'}
                             </span>
                           </div>
@@ -279,15 +279,15 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
                     {/* Player Info */}
                     <div className="flex-1 min-w-0">
                       <Link href={playerPath} className="block hover:opacity-80 transition-opacity">
-                        <h3 className="text-lg font-semibold text-black mb-1">
+                        <h3 className="text-base md:text-lg font-semibold text-black mb-0.5 md:mb-1">
                           {player.full_name || 'Unknown Player'}
                         </h3>
                         {player.username && (
-                          <p className="text-sm text-gray-500 mb-2">@{player.username}</p>
+                          <p className="text-xs md:text-sm text-gray-500 mb-1.5 md:mb-2">@{player.username}</p>
                         )}
-                        <div className="flex flex-wrap gap-2 text-sm text-gray-600">
+                        <div className="flex flex-wrap gap-1.5 md:gap-2 text-xs md:text-sm text-gray-600">
                           {player.position && (
-                            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                            <span className="px-2 py-0.5 md:py-1 bg-blue-50 text-blue-700 rounded text-xs md:text-sm">
                               {player.position}
                             </span>
                           )}
@@ -306,15 +306,19 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
                       <button
                         onClick={() => handleUnlinkPlayer(player.user_id)}
                         disabled={unlinkingPlayerId === player.user_id}
-                        className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-red-200 bg-white text-sm font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="interactive-press inline-flex items-center justify-center h-8 md:h-9 px-3 md:px-4 rounded-full border border-red-200 bg-white text-xs md:text-sm font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                       >
                         {unlinkingPlayerId === player.user_id ? (
                           <>
-                            <div className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin mr-2"></div>
-                            Unlinking...
+                            <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin mr-1.5 md:mr-2"></div>
+                            <span className="hidden sm:inline">Unlinking...</span>
+                            <span className="sm:hidden">...</span>
                           </>
                         ) : (
-                          'Unlink Player'
+                          <>
+                            <span className="hidden sm:inline">Unlink Player</span>
+                            <span className="sm:hidden">Unlink</span>
+                          </>
                         )}
                       </button>
                     </div>

@@ -2436,8 +2436,8 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
         <OnboardingSteps profile={profile} />
       )}
 
-      {/* Scout Application Section - Show if user wants to become a scout */}
-      {profile.role !== 'scout' && profile.role !== 'user' && (
+      {/* Scout Application Section - Show only for basic users (role='user') */}
+      {profile.role === 'user' && (
         <div className="surface-card mb-8 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-black">Become a Scout</h3>
