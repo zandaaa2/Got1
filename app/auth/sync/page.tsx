@@ -78,9 +78,31 @@ function AuthSyncContent() {
       if (!session) {
         console.error('❌ No session found on sync page after retries')
         console.error('❌ This might indicate the OAuth callback failed or cookies are not being set')
-        // Don't redirect to signin - instead redirect to welcome to avoid redirect loops
-        window.location.href = '/welcome'
-        return
+        
+        // If we have a redirect param, we're in the middle of an auth flow
+        // Try one more time with a longer wait, or redirect to browse anyway
+        const redirectParam = searchParams.get('redirect')
+        if (redirectParam) {
+          console.log('⏳ Auth flow detected, waiting longer for session...')
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Final attempt
+          const finalAttempt = await supabase.auth.getSession()
+          if (finalAttempt.data.session) {
+            session = finalAttempt.data.session
+            console.log('✅ Session found on final attempt!')
+          } else {
+            // If still no session but we have a redirect, go to browse anyway
+            // The middleware will handle redirecting to sign-in if needed
+            console.warn('⚠️ No session found but redirecting to requested page anyway')
+            window.location.href = redirectParam || '/browse'
+            return
+          }
+        } else {
+          // No redirect param, not in auth flow, go to welcome
+          window.location.href = '/welcome'
+          return
+        }
       }
 
       console.log('✅ Auth sync: Session found, waiting for cookies to process...')
@@ -217,7 +239,14 @@ function AuthSyncContent() {
         const { data: { session: retrySessionCheck } } = await supabase.auth.getSession()
         if (!retrySessionCheck) {
           console.error('❌ Session still not found after retry')
-          window.location.href = '/welcome'
+          // If we have a redirect param, redirect there anyway (middleware will handle auth)
+          const redirectParam = searchParams.get('redirect')
+          if (redirectParam) {
+            console.warn('⚠️ Redirecting to requested page despite no session - middleware will handle')
+            window.location.href = redirectParam
+          } else {
+            window.location.href = '/welcome'
+          }
           return
         }
         validSession = retrySessionCheck
