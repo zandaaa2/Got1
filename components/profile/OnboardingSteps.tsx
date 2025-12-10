@@ -379,9 +379,9 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       }
       
       console.log('🔄 Step 4: Redirecting to profile page...')
-      // Force a full page reload to ensure fresh data is fetched
+      // Force a full page reload with cache bust to ensure fresh data is fetched
       // This ensures the onboarding section disappears since profile.role will no longer be 'user'
-      window.location.reload()
+      window.location.href = '/profile?onboarding=complete&t=' + Date.now()
     } catch (err: any) {
       console.error('❌ Step 4: Error:', err)
       setError(err.message || 'Failed to save')
