@@ -369,6 +369,13 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       // Always update - even if just setting the role
       console.log('📝 Step 4: Update data:', updateData)
       console.log('📝 Step 4: Profile user_id:', profile.user_id)
+      console.log('📝 Step 4: Role in updateData?', 'role' in updateData, 'value:', updateData.role)
+      
+      // CRITICAL CHECK: Ensure role is in the update
+      if (!('role' in updateData)) {
+        console.error('❌ Step 4: CRITICAL ERROR - role is NOT in updateData! This should never happen.')
+        throw new Error('Role update is missing from the update data. This is a critical error.')
+      }
       
       if (Object.keys(updateData).length > 0) {
         const { error: updateError, data } = await supabase
