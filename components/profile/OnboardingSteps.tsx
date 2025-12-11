@@ -19,6 +19,7 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [onboardingComplete, setOnboardingComplete] = useState(false)
   const hasInitialized = useRef(false)
   
   // Step 1: Account type
@@ -365,6 +366,10 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
           throw new Error('Role update verification failed')
         }
         
+        // Mark onboarding as complete immediately to hide the component
+        console.log('✅ Step 4: Role verified - hiding onboarding section')
+        setOnboardingComplete(true)
+        
         // Wait longer for the update to fully propagate in Supabase
         console.log('⏳ Step 4: Waiting for update to propagate...')
         await new Promise(resolve => setTimeout(resolve, 1500))
@@ -402,9 +407,9 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
 
   const progress = getStepProgress()
 
-  // If profile role is no longer 'user', onboarding is complete - hide the component
-  // This is a safety check in case the parent component's conditional rendering doesn't catch it
-  if (profile.role && profile.role !== 'user') {
+  // If onboarding was just completed or profile role is no longer 'user', hide the component
+  // This provides immediate feedback and handles cases where the profile prop hasn't refreshed yet
+  if (onboardingComplete || (profile.role && profile.role !== 'user')) {
     return null
   }
 

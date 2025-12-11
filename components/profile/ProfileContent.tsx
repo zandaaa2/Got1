@@ -1805,6 +1805,36 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
   const displayProfileUrl = `${appUrl.replace(/^https?:\/\//, '')}${profilePath}`
   const profileGradientKey =
     profile.user_id || profile.id || profile.username || profile.full_name || 'profile'
+  
+  // Helper function to parse positions from profile
+  const getDisplayPositions = () => {
+    try {
+      if (profile.positions && typeof profile.positions === 'string') {
+        const parsed = JSON.parse(profile.positions)
+        return Array.isArray(parsed) ? parsed : []
+      } else if (Array.isArray(profile.positions)) {
+        return profile.positions
+      }
+      return profile.position ? [profile.position] : []
+    } catch {
+      return profile.position ? [profile.position] : []
+    }
+  }
+
+  // Helper function to get HUDL links
+  const getDisplayHudlLinks = () => {
+    if (profile.hudl_links && Array.isArray(profile.hudl_links) && profile.hudl_links.length > 0) {
+      return profile.hudl_links.map((hl: any) => ({
+        link: hl.link || hl.url || hl,
+        sport: hl.sport || ''
+      }))
+    }
+    if (profile.hudl_link) {
+      return [{ link: profile.hudl_link, sport: '' }]
+    }
+    return []
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
@@ -2260,6 +2290,171 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
           Edit
         </Link>
       </div>
+
+      {/* Profile Information Display Sections - Show for players and parents */}
+      {(profile.role === 'player' || profile.role === 'parent') && (
+        <>
+          {/* Basic Information */}
+          <div className="surface-card mb-8 p-6">
+            <h3 className="text-xl font-bold text-black mb-4">Basic Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
+                <p className="text-black">{profile.full_name || 'Not set'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Username</label>
+                <p className="text-black">@{profile.username || 'Not set'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
+                <p className="text-black">
+                  {profile.birthday 
+                    ? new Date(profile.birthday).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    : 'Not set'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Player Information */}
+          <div className="surface-card mb-8 p-6">
+            <h3 className="text-xl font-bold text-black mb-4">Player Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {profile.social_link && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Social Media Link</label>
+                  <a 
+                    href={profile.social_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline break-all"
+                  >
+                    {profile.social_link}
+                  </a>
+                </div>
+              )}
+              
+              {getDisplayHudlLinks().length > 0 && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-600 mb-2">HUDL Links</label>
+                  <div className="space-y-2">
+                    {getDisplayHudlLinks().map((hudlLink: any, index: number) => (
+                      <a
+                        key={index}
+                        href={hudlLink.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-blue-600 hover:underline break-all"
+                      >
+                        {hudlLink.link} {hudlLink.sport ? `(${hudlLink.sport})` : ''}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {getDisplayPositions().length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Position</label>
+                  <p className="text-black">{getDisplayPositions().join(', ')}</p>
+                </div>
+              )}
+
+              {profile.school && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">School</label>
+                  <p className="text-black">{profile.school}</p>
+                </div>
+              )}
+
+              {(profile.graduation_month || profile.graduation_year) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Graduation Date</label>
+                  <p className="text-black">
+                    {profile.graduation_month && profile.graduation_year
+                      ? `${new Date(2000, parseInt(profile.graduation_month) - 1).toLocaleString('default', { month: 'long' })} ${profile.graduation_year}`
+                      : profile.graduation_year
+                      ? profile.graduation_year
+                      : 'Not set'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Athletic Information */}
+          {(profile.gpa || profile.weight || profile.height || profile.forty_yd_dash || 
+            profile.bench_max || profile.squat_max || profile.clean_max || profile.state || 
+            profile.classification || profile.college_offers) && (
+            <div className="surface-card mb-8 p-6">
+              <h3 className="text-xl font-bold text-black mb-4">Athletic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {profile.gpa && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">GPA</label>
+                    <p className="text-black">{profile.gpa}</p>
+                  </div>
+                )}
+                {profile.weight && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Weight</label>
+                    <p className="text-black">{profile.weight} lbs</p>
+                  </div>
+                )}
+                {profile.height && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Height</label>
+                    <p className="text-black">{profile.height}</p>
+                  </div>
+                )}
+                {profile.forty_yd_dash && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">40-Yard Dash</label>
+                    <p className="text-black">{profile.forty_yd_dash} seconds</p>
+                  </div>
+                )}
+                {profile.bench_max && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Bench Max</label>
+                    <p className="text-black">{profile.bench_max} lbs</p>
+                  </div>
+                )}
+                {profile.squat_max && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Squat Max</label>
+                    <p className="text-black">{profile.squat_max} lbs</p>
+                  </div>
+                )}
+                {profile.clean_max && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Clean Max</label>
+                    <p className="text-black">{profile.clean_max} lbs</p>
+                  </div>
+                )}
+                {profile.state && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">State</label>
+                    <p className="text-black">{profile.state}</p>
+                  </div>
+                )}
+                {profile.classification && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Classification</label>
+                    <p className="text-black">{profile.classification}</p>
+                  </div>
+                )}
+                {profile.college_offers && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">College Offers</label>
+                    <p className="text-black whitespace-pre-wrap">{profile.college_offers}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Scout Setup Progress - Only show for scouts */}
       {profile.role === 'scout' && <ScoutSetupProgress key={`setup-${refreshKey}`} profile={profile} />}
