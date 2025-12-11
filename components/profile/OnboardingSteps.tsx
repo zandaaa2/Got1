@@ -19,7 +19,13 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [onboardingComplete, setOnboardingComplete] = useState(false)
+  const [onboardingComplete, setOnboardingComplete] = useState(() => {
+    // Check sessionStorage for completion flag (persists across redirects)
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(`onboarding_complete_${profile.user_id}`) === 'true'
+    }
+    return false
+  })
   const hasInitialized = useRef(false)
   
   // Step 1: Account type
@@ -366,13 +372,46 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
           throw new Error('Role update verification failed')
         }
         
-        // Mark onboarding as complete immediately to hide the component
-        console.log('✅ Step 4: Role verified - hiding onboarding section')
-        setOnboardingComplete(true)
-        
-        // Wait longer for the update to fully propagate in Supabase
+        // Wait for the update to fully propagate in Supabase
         console.log('⏳ Step 4: Waiting for update to propagate...')
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        // Double-check the role was actually saved by fetching the profile again
+        let verificationAttempts = 0
+        let roleVerified = false
+        while (verificationAttempts < 3 && !roleVerified) {
+          const { data: verifyData, error: verifyError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('user_id', profile.user_id)
+            .single()
+          
+          if (verifyError) {
+            console.error('❌ Step 4: Error verifying role update (attempt', verificationAttempts + 1, '):', verifyError)
+          } else if (verifyData && verifyData.role === updateData.role) {
+            console.log('✅ Step 4: Role verified as', verifyData.role)
+            roleVerified = true
+          } else if (verifyData && verifyData.role !== updateData.role) {
+            console.warn('⚠️ Step 4: Role mismatch. Expected:', updateData.role, 'Got:', verifyData.role, '(attempt', verificationAttempts + 1, ')')
+          }
+          
+          if (!roleVerified && verificationAttempts < 2) {
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
+          verificationAttempts++
+        }
+        
+        if (!roleVerified) {
+          console.error('❌ Step 4: Role verification failed after 3 attempts')
+          throw new Error('Role update did not persist. Please refresh the page and try again.')
+        }
+        
+        // Mark onboarding as complete and persist in sessionStorage
+        console.log('✅ Step 4: Role verified - marking onboarding complete')
+        setOnboardingComplete(true)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`onboarding_complete_${profile.user_id}`, 'true')
+        }
       } else {
         console.warn('⚠️ Step 4: No data to update')
         throw new Error('No data to update - role should have been set')
@@ -383,10 +422,10 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         localStorage.removeItem(`onboarding_accountType_${profile.user_id}`)
       }
       
-      console.log('🔄 Step 4: Onboarding complete! Redirecting to profile...')
-      // Force a hard reload to ensure fresh data is fetched from server
-      // This ensures the onboarding section disappears since profile.role will no longer be 'user'
-      window.location.replace('/profile')
+      console.log('🔄 Step 4: Onboarding complete! Redirecting...')
+      // Redirect with cache bust to ensure fresh data
+      // The sessionStorage flag will keep the section hidden even if profile hasn't refreshed yet
+      window.location.replace(`/profile?onboarding=complete&t=${Date.now()}`)
     } catch (err: any) {
       console.error('❌ Step 4: Error:', err)
       setError(err.message || 'Failed to save')
@@ -407,9 +446,14 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
 
   const progress = getStepProgress()
 
-  // If onboarding was just completed or profile role is no longer 'user', hide the component
-  // This provides immediate feedback and handles cases where the profile prop hasn't refreshed yet
-  if (onboardingComplete || (profile.role && profile.role !== 'user')) {
+  // If onboarding was just completed (from sessionStorage or state) or profile role is no longer 'user', hide the component
+  // Check sessionStorage on every render to handle redirects
+  const isCompleteFromStorage = typeof window !== 'undefined' && sessionStorage.getItem(`onboarding_complete_${profile.user_id}`) === 'true'
+  if (onboardingComplete || isCompleteFromStorage || (profile.role && profile.role !== 'user')) {
+    // Clear sessionStorage if role is confirmed to be updated (cleanup)
+    if (typeof window !== 'undefined' && profile.role && profile.role !== 'user') {
+      sessionStorage.removeItem(`onboarding_complete_${profile.user_id}`)
+    }
     return null
   }
 

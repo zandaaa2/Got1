@@ -135,14 +135,90 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
     phone: profile.phone || '',
   })
 
+  // Sync form data when profile prop changes (important after onboarding completes)
   useEffect(() => {
-    if (!profile.username && profile.full_name && !formData.username) {
+    // Update all form fields when profile changes
+    setFormData((prev) => ({
+      ...prev,
+      full_name: profile.full_name || prev.full_name,
+      username: profile.username || prev.username,
+      bio: profile.bio || prev.bio,
+      avatar_url: isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : prev.avatar_url,
+      organization: profile.organization || prev.organization,
+      price_per_eval: profile.price_per_eval?.toString() || prev.price_per_eval,
+      social_link: profile.social_link || prev.social_link,
+      turnaround_time: profile.turnaround_time || prev.turnaround_time,
+      birthday: profile.birthday || prev.birthday,
+      position: profile.position || prev.position,
+      work_history: profile.work_history || prev.work_history,
+      additional_info: profile.additional_info || prev.additional_info,
+      hudl_link: profile.hudl_link || prev.hudl_link,
+      hudl_links: (() => {
+        if (profile.hudl_links && Array.isArray(profile.hudl_links) && profile.hudl_links.length > 0) {
+          return profile.hudl_links.map((hl: any) => ({
+            link: hl.link || hl.url || '',
+            sport: hl.sport || ''
+          }))
+        }
+        if (profile.hudl_link) {
+          return [{ link: profile.hudl_link, sport: profile.sport || '' }]
+        }
+        return prev.hudl_links.length > 0 ? prev.hudl_links : [{ link: '', sport: '' }]
+      })(),
+      school: profile.school || prev.school,
+      graduation_year: profile.graduation_year?.toString() || prev.graduation_year,
+      graduation_month: profile.graduation_month?.toString() || prev.graduation_month,
+      parent_name: profile.parent_name || prev.parent_name,
+      sport: profile.sport || prev.sport,
+      gpa: profile.gpa?.toString() || prev.gpa,
+      weight: profile.weight?.toString() || prev.weight,
+      height: profile.height || prev.height,
+      forty_yard_dash: profile.forty_yd_dash?.toString() || prev.forty_yard_dash,
+      bench_max: profile.bench_max?.toString() || prev.bench_max,
+      squat_max: profile.squat_max?.toString() || prev.squat_max,
+      clean_max: profile.clean_max?.toString() || prev.clean_max,
+      state: profile.state || prev.state,
+      classification: profile.classification || prev.classification,
+      college_offers: profile.college_offers || prev.college_offers,
+      sports: Array.isArray(profile.sports) ? profile.sports : prev.sports,
+      email: profile.email || prev.email,
+      phone: profile.phone || prev.phone,
+    }))
+    
+    // Update player positions if profile has positions
+    if (profile.role === 'player') {
+      try {
+        if (profile.positions && typeof profile.positions === 'string') {
+          const parsed = JSON.parse(profile.positions)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setPlayerPositions(parsed)
+          }
+        } else if (Array.isArray(profile.positions) && profile.positions.length > 0) {
+          setPlayerPositions(profile.positions)
+        } else if (profile.position) {
+          setPlayerPositions([profile.position])
+        }
+      } catch {
+        if (profile.position) {
+          setPlayerPositions([profile.position])
+        }
+      }
+    }
+    
+    // Update avatar preview
+    if (isMeaningfulAvatar(profile.avatar_url)) {
+      setAvatarPreview(profile.avatar_url)
+    }
+    
+    // Username suggestion
+    if (!profile.username && profile.full_name) {
       const suggestion = normalizeUsername(profile.full_name.replace(/\s+/g, ''))
-      if (suggestion) {
+      if (suggestion && !formData.username) {
         setFormData((prev) => ({ ...prev, username: suggestion }))
       }
     }
-  }, [profile.username, profile.full_name])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.id, profile.role, profile.full_name, profile.social_link, profile.hudl_link, profile.school, profile.graduation_year, profile.gpa, profile.weight, profile.height])
 
   /**
    * Handles input field changes and updates form state.
