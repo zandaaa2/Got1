@@ -153,17 +153,28 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
     try {
       // Update profile role
       console.log('✅ Step 1: Setting role to', accountType)
-      const { error: updateError } = await supabase
+      const { error: updateError, data } = await supabase
         .from('profiles')
         .update({ role: accountType })
         .eq('user_id', profile.user_id)
+        .select()
 
       if (updateError) {
         console.error('❌ Step 1: Error updating role:', updateError)
         throw updateError
       }
 
-      console.log('✅ Step 1: Role updated successfully')
+      if (!data || data.length === 0) {
+        throw new Error('Role update completed but no data was returned')
+      }
+
+      const updatedProfile = data[0]
+      if (updatedProfile.role !== accountType) {
+        console.error('❌ Step 1: Role update verification failed. Expected:', accountType, 'Got:', updatedProfile.role)
+        throw new Error('Role was not updated correctly')
+      }
+
+      console.log('✅ Step 1: Role updated and verified successfully:', updatedProfile.role)
       
       // Persist accountType to localStorage
       if (typeof window !== 'undefined') {
@@ -316,13 +327,13 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         }
       }
       
-      // If still not set, try to infer from profile
+      // If still not set, try to infer from profile data OR local state (in case profile hasn't refreshed)
       if (!targetRole) {
         if (profile.role && profile.role !== 'user') {
           targetRole = profile.role as 'player' | 'parent'
-        } else if (profile.parent_name || profile.child_name) {
+        } else if (profile.parent_name || profile.child_name || playerName) {
           targetRole = 'parent'
-        } else if (profile.position || profile.school) {
+        } else if (profile.position || profile.school || position || school) {
           targetRole = 'player'
         }
       }
