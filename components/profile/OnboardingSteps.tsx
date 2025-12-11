@@ -378,54 +378,88 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       }
       
       if (Object.keys(updateData).length > 0) {
-        const { error: updateError, data } = await supabase
+        // Log exactly what we're sending
+        console.log('🔍 Step 4: Sending update to Supabase:')
+        console.log('  - Table: profiles')
+        console.log('  - Where: user_id =', profile.user_id)
+        console.log('  - Update data:', JSON.stringify(updateData, null, 2))
+        console.log('  - Role value:', updateData.role)
+        
+        const { error: updateError, data, status, statusText } = await supabase
           .from('profiles')
           .update(updateData)
           .eq('user_id', profile.user_id)
           .select()
 
+        console.log('🔍 Step 4: Supabase response:')
+        console.log('  - Status:', status)
+        console.log('  - Status Text:', statusText)
+        console.log('  - Error:', updateError)
+        console.log('  - Data:', data)
+
         if (updateError) {
           console.error('❌ Step 4: Update error:', updateError)
+          console.error('❌ Step 4: Error details:', JSON.stringify(updateError, null, 2))
+          setError(`Update failed: ${updateError.message || 'Unknown error'}. Please try again or contact support.`)
           throw updateError
         }
         
         if (!data || data.length === 0) {
+          console.error('❌ Step 4: No data returned from update')
           throw new Error('Update completed but no data was returned')
         }
         
         const updatedProfile = data[0]
         console.log('✅ Step 4: Update successful, updated profile:', updatedProfile)
+        console.log('✅ Step 4: Updated profile role:', updatedProfile.role)
+        console.log('✅ Step 4: Expected role:', updateData.role)
         
         // Verify the role was actually updated
         if (updateData.role && updatedProfile.role !== updateData.role) {
-          console.error('❌ Step 4: Role was not updated correctly. Expected:', updateData.role, 'Got:', updatedProfile.role)
+          console.error('❌ Step 4: Role was not updated correctly.')
+          console.error('  - Expected:', updateData.role)
+          console.error('  - Got:', updatedProfile.role)
+          console.error('  - Full updated profile:', JSON.stringify(updatedProfile, null, 2))
+          setError(`Role update failed. Expected '${updateData.role}' but got '${updatedProfile.role}'. This may be a database constraint issue.`)
           throw new Error('Role update verification failed')
         }
+        
+        console.log('✅ Step 4: Role verification passed! Role is:', updatedProfile.role)
         
         // Wait for the update to fully propagate in Supabase
         console.log('⏳ Step 4: Waiting for update to propagate...')
         await new Promise(resolve => setTimeout(resolve, 2000))
         
         // Double-check the role was actually saved by fetching the profile again
+        console.log('🔍 Step 4: Starting verification loop...')
         let verificationAttempts = 0
         let roleVerified = false
         while (verificationAttempts < 3 && !roleVerified) {
+          console.log(`🔍 Step 4: Verification attempt ${verificationAttempts + 1}...`)
           const { data: verifyData, error: verifyError } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, user_id, full_name')
             .eq('user_id', profile.user_id)
             .single()
+          
+          console.log('🔍 Step 4: Verification response:', { verifyData, verifyError })
           
           if (verifyError) {
             console.error('❌ Step 4: Error verifying role update (attempt', verificationAttempts + 1, '):', verifyError)
           } else if (verifyData && verifyData.role === updateData.role) {
-            console.log('✅ Step 4: Role verified as', verifyData.role)
+            console.log('✅ Step 4: Role verified as', verifyData.role, 'on attempt', verificationAttempts + 1)
             roleVerified = true
           } else if (verifyData && verifyData.role !== updateData.role) {
-            console.warn('⚠️ Step 4: Role mismatch. Expected:', updateData.role, 'Got:', verifyData.role, '(attempt', verificationAttempts + 1, ')')
+            console.warn('⚠️ Step 4: Role mismatch on attempt', verificationAttempts + 1)
+            console.warn('  - Expected:', updateData.role)
+            console.warn('  - Got:', verifyData.role)
+            console.warn('  - Full verify data:', JSON.stringify(verifyData, null, 2))
+          } else {
+            console.warn('⚠️ Step 4: No verification data returned')
           }
           
           if (!roleVerified && verificationAttempts < 2) {
+            console.log('⏳ Step 4: Waiting 1 second before next verification attempt...')
             await new Promise(resolve => setTimeout(resolve, 1000))
           }
           verificationAttempts++
@@ -433,8 +467,12 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         
         if (!roleVerified) {
           console.error('❌ Step 4: Role verification failed after 3 attempts')
+          console.error('❌ Step 4: Final state - Expected role:', updateData.role)
+          setError(`Role update did not persist after multiple attempts. Expected '${updateData.role}' but database may have a different value. Please check the database directly or contact support.`)
           throw new Error('Role update did not persist. Please refresh the page and try again.')
         }
+        
+        console.log('✅✅✅ Step 4: Role verification PASSED after', verificationAttempts, 'attempt(s)')
         
         // Mark onboarding as complete and persist in sessionStorage
         console.log('✅ Step 4: Role verified - marking onboarding complete')
