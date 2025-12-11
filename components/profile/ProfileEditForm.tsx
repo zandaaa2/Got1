@@ -218,7 +218,32 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.id, profile.role, profile.full_name, profile.social_link, profile.hudl_link, profile.school, profile.graduation_year, profile.gpa, profile.weight, profile.height])
+  }, [
+    profile.id, 
+    profile.role, 
+    profile.full_name, 
+    profile.username,
+    profile.birthday,
+    profile.social_link, 
+    profile.hudl_link, 
+    profile.hudl_links,
+    profile.position,
+    profile.positions,
+    profile.school, 
+    profile.graduation_year,
+    profile.graduation_month,
+    profile.gpa, 
+    profile.weight, 
+    profile.height,
+    profile.forty_yd_dash,
+    profile.bench_max,
+    profile.squat_max,
+    profile.clean_max,
+    profile.state,
+    profile.classification,
+    profile.college_offers,
+    profile.avatar_url
+  ])
 
   /**
    * Handles input field changes and updates form state.

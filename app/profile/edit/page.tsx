@@ -4,6 +4,9 @@ import Sidebar from '@/components/layout/Sidebar'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function ProfileEditPage() {
   const supabase = createServerClient()
   const {

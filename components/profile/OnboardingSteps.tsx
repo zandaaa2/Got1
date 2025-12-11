@@ -299,13 +299,24 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
       
       // CRITICAL: Always ensure the role is set to the selected account type when completing onboarding
       // The default role is 'user', and we need to update it to 'player' or 'parent' based on step 1 selection
-      // Try multiple sources to determine the target role:
-      // 1. accountType state (set in step 1) - 'player' or 'parent' (never 'user')
-      // 2. profile.role (if already updated) - could be 'user' (default), 'player', or 'parent'
-      // 3. Infer from profile data (parent_name/child_name = parent, position/school = player)
+      // Try multiple sources to determine the target role (in priority order):
+      // 1. accountType state (set in step 1) - most reliable source
+      // 2. localStorage (backup if accountType state was lost)
+      // 3. profile.role (if already updated) - could be 'user' (default), 'player', or 'parent'
+      // 4. Infer from profile data (parent_name/child_name = parent, position/school = player)
       let targetRole: 'player' | 'parent' | null = accountType
       
-      // If accountType is not set, try to infer from profile
+      // If accountType is not set, check localStorage
+      if (!targetRole && typeof window !== 'undefined') {
+        const stored = localStorage.getItem(`onboarding_accountType_${profile.user_id}`)
+        if (stored === 'player' || stored === 'parent') {
+          targetRole = stored
+          console.log('✅ Step 4: Restored accountType from localStorage:', targetRole)
+          setAccountType(targetRole) // Update state for consistency
+        }
+      }
+      
+      // If still not set, try to infer from profile
       if (!targetRole) {
         if (profile.role && profile.role !== 'user') {
           targetRole = profile.role as 'player' | 'parent'
@@ -316,18 +327,19 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
         }
       }
       
-      // Always update role when completing onboarding if:
-      // - We have a target role (player or parent) AND
-      // - The profile role is still 'user' (default) or the targetRole differs from current role
-      if (targetRole && (profile.role === 'user' || !profile.role || profile.role !== targetRole)) {
-        updateData.role = targetRole
-        console.log('✅ Step 4: Updating role from', profile.role, 'to', targetRole, '(accountType:', accountType, ')')
-      } else if (!targetRole) {
-        console.warn('⚠️ Step 4: No valid target role found. accountType:', accountType, 'profile.role:', profile.role)
+      // CRITICAL: Always update role if we're completing onboarding and role is still 'user'
+      // This ensures the role gets set even if there were issues with accountType state
+      if (!targetRole) {
+        console.error('❌ Step 4: CRITICAL - No target role found! accountType:', accountType, 'profile.role:', profile.role)
         setError('Unable to determine account type. Please go back to step 1 and select your account type.')
         setLoading(false)
         return
       }
+      
+      // CRITICAL: Always update role when completing onboarding - ensure it's set correctly
+      // Even if step 1 set it, we want to make sure it persists when completing step 4
+      updateData.role = targetRole
+      console.log('✅ Step 4: Ensuring role is set to', targetRole, '(current profile.role:', profile.role, ', accountType:', accountType, ')')
       
       if (!skip) {
         // Only include athletic info if not skipping
