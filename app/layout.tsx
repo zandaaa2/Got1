@@ -23,12 +23,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icons/icon-32x32.png', type: 'image/png', sizes: '32x32' },
-      { url: '/icons/icon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/got1app.png', sizes: 'any' },
+      { url: '/got1app.png', type: 'image/png', sizes: '32x32' },
+      { url: '/got1app.png', type: 'image/png', sizes: '16x16' },
     ],
     apple: [
-      { url: '/icons/icon-180x180.png', sizes: '180x180', type: 'image/png' },
+      { url: '/got1app.png', sizes: '180x180', type: 'image/png' },
     ],
     other: [
       { rel: 'mask-icon', url: '/icons/safari-pinned-tab.svg', color: '#0B63F6' },
