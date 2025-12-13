@@ -35,11 +35,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
   }
 
   const handleBecomeScout = () => {
-    if (hasSession) {
-      router.push('/profile/scout-application')
-    } else {
-      openSignUp()
-    }
+    router.push('/scout')
   }
 
   return (

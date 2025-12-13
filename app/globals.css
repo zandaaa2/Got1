@@ -74,6 +74,15 @@ html, body {
   }
 }
 
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.2s ease-out forwards;
 }
@@ -95,6 +104,10 @@ html, body {
   will-change: transform;
 }
 
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
 .team-logos-scroll {
   animation: scrollHorizontal var(--animation-duration, 20s) linear infinite;
   will-change: transform;
@@ -112,6 +125,7 @@ html, body {
   .animate-scale-in,
   .animate-scroll,
   .animate-scroll-horizontal,
+  .animate-slide-in-right,
   .team-logos-scroll {
     animation: none !important;
   }

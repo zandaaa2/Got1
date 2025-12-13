@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const { session, supabase } = authResult
 
     const body = await request.json()
-    const { current_workplace, current_position, work_history, additional_info } = body
+    const { current_workplace, current_position, work_history, social_link, additional_info } = body
 
     if (!current_workplace || !current_position || !work_history) {
       return NextResponse.json(
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         current_workplace,
         current_position,
         work_history,
+        social_link: social_link || null,
         additional_info: additional_info || null,
         status: 'pending',
       })

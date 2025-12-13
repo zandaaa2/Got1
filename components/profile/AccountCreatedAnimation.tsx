@@ -5,9 +5,15 @@ import { useRouter } from 'next/navigation'
 
 interface AccountCreatedAnimationProps {
   onComplete: () => void
+  title?: string
+  message?: string
 }
 
-export default function AccountCreatedAnimation({ onComplete }: AccountCreatedAnimationProps) {
+export default function AccountCreatedAnimation({ 
+  onComplete, 
+  title = "Account Created!",
+  message = "Redirecting to your profile..."
+}: AccountCreatedAnimationProps) {
   const [showAnimation, setShowAnimation] = useState(true)
 
   useEffect(() => {
@@ -47,10 +53,10 @@ export default function AccountCreatedAnimation({ onComplete }: AccountCreatedAn
         {/* Success Message */}
         <div className="space-y-2">
           <h2 className="text-3xl md:text-4xl font-bold text-black">
-            Account Created!
+            {title}
           </h2>
           <p className="text-lg text-gray-600">
-            Redirecting to your profile...
+            {message}
           </p>
         </div>
       </div>

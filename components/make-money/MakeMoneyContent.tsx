@@ -433,7 +433,7 @@ export default function MakeMoneyContent({ session }: MakeMoneyContentProps) {
             To participate in the referral program, you need to be a verified scout. Apply for scout status to get started.
           </p>
           <button
-            onClick={() => router.push('/profile/scout-application')}
+            onClick={() => router.push('/scout')}
             className="interactive-press px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
             Apply for Scout Status

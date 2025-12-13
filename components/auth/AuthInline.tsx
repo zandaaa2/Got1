@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
+import Logo from '@/components/shared/Logo'
 
 interface AuthInlineProps {
   mode: 'signin' | 'signup'
@@ -104,7 +105,7 @@ export default function AuthInline({ mode }: AuthInlineProps) {
       <div className="bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
         <div className="space-y-6">
           {/* Title */}
-          <h1 className="text-2xl font-bold text-black">Got1</h1>
+          <Logo variant="regular" size="lg" linkToHome={false} />
 
           {/* Main Instruction - only show for signin */}
           {mainInstruction && (

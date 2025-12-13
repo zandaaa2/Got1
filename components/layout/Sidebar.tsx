@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import Modal from '@/components/shared/Modal'
+import Logo from '@/components/shared/Logo'
 
 interface SidebarProps {
   activePage?: 'discover' | 'browse' | 'my-evals' | 'notifications' | 'profile' | 'make-money' | 'help'
@@ -193,9 +194,6 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
     setIsCollapsed(!isCollapsed)
   }
 
-  const PRIMARY_LOGO_SRC = '/got1-logos/wide.png'
-  const COMPACT_LOGO_SRC = '/got1-logos/number.png'
-
   return (
     <>
       {/* Sidebar - Hidden on mobile, shown on desktop */}
@@ -207,19 +205,12 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
         }`}
       >
       <div className={`p-4 md:p-6 flex-shrink-0 ${!isCollapsed ? 'flex items-center justify-between' : 'flex flex-col items-center gap-4'}`}>
-        <Link 
-          href="/" 
-          className="hover:opacity-70 transition-opacity"
-        >
-          <Image
-            src={!isCollapsed ? PRIMARY_LOGO_SRC : COMPACT_LOGO_SRC}
-            alt="Got1"
-            width={isCollapsed ? 48 : 140}
-            height={isCollapsed ? 48 : 40}
-            className="object-contain"
-            priority
-          />
-        </Link>
+        <Logo
+          variant="regular"
+          width={isCollapsed ? 48 : 140}
+          height={isCollapsed ? 48 : 40}
+          linkToHome={true}
+        />
         <button
           onClick={toggleSidebar}
           className="p-2 hover:bg-gray-100 rounded transition-colors"

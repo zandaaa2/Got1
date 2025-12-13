@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation'
 
 interface AuthFormProps {
   mode: 'signin' | 'signup'
+  redirectParam?: string
 }
 
-export default function AuthForm({ mode }: AuthFormProps) {
+export default function AuthForm({ mode, redirectParam }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -32,12 +33,22 @@ export default function AuthForm({ mode }: AuthFormProps) {
       // Clear any old signup_role from localStorage to prevent issues
       if (typeof window !== 'undefined') {
         localStorage.removeItem('signup_role')
+        
+        // If there's a redirect param, preserve it
+        if (redirectParam) {
+          localStorage.setItem('scout_onboarding', 'true')
+        }
       }
+      
+      // Build redirect URL with redirect parameter if provided
+      const redirectUrl = redirectParam
+        ? `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectParam)}`
+        : `${window.location.origin}/api/auth/callback`
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: redirectUrl,
         },
       })
       if (error) throw error

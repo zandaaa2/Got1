@@ -10,6 +10,7 @@ function AuthCallbackContent() {
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type_param = searchParams.get('type')
+  const redirectParam = searchParams.get('redirect')
 
   useEffect(() => {
     /**
@@ -104,22 +105,36 @@ function AuthCallbackContent() {
           }
 
           // Determine redirect destination with priority:
-          // 1. postSignUpRedirect (from protected footer links like "Make a claim")
-          // 2. become_scout_signup (from "Become a Scout" button)
-          // 3. Default to /browse
+          // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)
+          // 2. postSignUpRedirect (from protected footer links like "Make a claim")
+          // 3. become_scout_signup (from "Become a Scout" button)
+          // 4. scout_onboarding (from scout onboarding flow)
+          // 5. Default to /browse
           let finalRedirect = '/browse'
           if (typeof window !== 'undefined') {
-            // First check for postSignUpRedirect (highest priority)
-            const storedRedirect = localStorage.getItem('postSignUpRedirect')
-            if (storedRedirect) {
-              finalRedirect = storedRedirect
-              localStorage.removeItem('postSignUpRedirect')
+            // First check for redirect query parameter (highest priority)
+            if (redirectParam) {
+              finalRedirect = redirectParam
+              console.log('✅ Using redirect parameter from URL:', finalRedirect)
             } else {
-              // Then check for become_scout_signup
-              const becomeScoutSignup = localStorage.getItem('become_scout_signup')
-              if (becomeScoutSignup === 'true') {
-                localStorage.removeItem('become_scout_signup')
-                finalRedirect = '/profile/scout-application'
+              // Check for postSignUpRedirect
+              const storedRedirect = localStorage.getItem('postSignUpRedirect')
+              if (storedRedirect) {
+                finalRedirect = storedRedirect
+                localStorage.removeItem('postSignUpRedirect')
+              } else {
+                // Then check for become_scout_signup (legacy - redirect to new flow)
+                const becomeScoutSignup = localStorage.getItem('become_scout_signup')
+                if (becomeScoutSignup === 'true') {
+                  localStorage.removeItem('become_scout_signup')
+                  finalRedirect = '/scout'
+                }
+                // Check for scout onboarding flag
+                const scoutOnboarding = localStorage.getItem('scout_onboarding')
+                if (scoutOnboarding === 'true') {
+                  localStorage.removeItem('scout_onboarding')
+                  finalRedirect = '/scout?step=3'
+                }
               }
             }
           }
@@ -151,15 +166,25 @@ function AuthCallbackContent() {
 
       // Handle OAuth callback (code)
       console.log('🔍 Checking for OAuth code...')
+      console.log('🔍 Redirect param:', redirectParam)
+      console.log('🔍 Scout onboarding flag:', typeof window !== 'undefined' ? localStorage.getItem('scout_onboarding') : 'N/A')
+      
       if (!code) {
         const errorParam = searchParams.get('error')
         console.log('❌ No code found, error param:', errorParam)
+        
+        // Preserve redirect parameter even on error
+        const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
+        const scoutOnboarding = typeof window !== 'undefined' ? localStorage.getItem('scout_onboarding') : null
+        const finalRedirect = redirectParam || (scoutOnboarding === 'true' ? '/scout?step=3' : '')
+        const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+        
         if (errorParam) {
           console.error('❌ OAuth error:', errorParam)
-          window.location.href = `/auth/signin?error=${encodeURIComponent(errorParam)}`
+          window.location.href = `/auth/signin?error=${encodeURIComponent(errorParam)}${redirectSuffix}`
         } else {
           console.error('❌ OAuth callback: No code parameter - redirecting to signin')
-          window.location.href = `/auth/signin?error=no_code`
+          window.location.href = `/auth/signin?error=no_code${redirectSuffix}`
         }
         return
       }
@@ -244,7 +269,11 @@ function AuthCallbackContent() {
         console.error('❌ Code verifier not found in localStorage or cookies')
         console.error('This will cause exchangeCodeForSession to fail')
         console.error('Please ensure OAuth flow initiated from same origin')
-        window.location.href = '/auth/signin?error=verifier_not_found'
+        
+        // Preserve redirect on error
+        const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+        const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+        window.location.href = `/auth/signin?error=verifier_not_found${redirectSuffix}`
         return
       }
 
@@ -254,7 +283,9 @@ function AuthCallbackContent() {
       // Verify the code is actually present
       if (!code || code.trim().length === 0) {
         console.error('❌ Code parameter is empty or missing')
-        window.location.href = '/auth/signin?error=code_missing'
+        const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+        const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+        window.location.href = `/auth/signin?error=code_missing${redirectSuffix}`
         return
       }
 
@@ -262,7 +293,9 @@ function AuthCallbackContent() {
       const codeValue = String(code).trim()
       if (!codeValue || codeValue.length === 0) {
         console.error('❌ Code is empty after conversion to string')
-        window.location.href = '/auth/signin?error=code_invalid'
+        const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+        const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+        window.location.href = `/auth/signin?error=code_invalid${redirectSuffix}`
         return
       }
 
@@ -270,7 +303,9 @@ function AuthCallbackContent() {
       const verifierCheck = localStorage.getItem(verifierKey)
       if (!verifierCheck) {
         console.error('❌ Verifier disappeared from localStorage!')
-        window.location.href = '/auth/signin?error=verifier_lost'
+        const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+        const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+        window.location.href = `/auth/signin?error=verifier_lost${redirectSuffix}`
         return
       }
 
@@ -292,7 +327,9 @@ function AuthCallbackContent() {
       const finalVerifierCheck = localStorage.getItem(verifierKey)
       if (!finalVerifierCheck) {
         console.error('❌ Verifier not accessible right before exchange!')
-        window.location.href = '/auth/signin?error=verifier_not_accessible'
+        const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+        const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+        window.location.href = `/auth/signin?error=verifier_not_accessible${redirectSuffix}`
         return
       }
       
@@ -324,13 +361,17 @@ function AuthCallbackContent() {
         if (error) {
           console.error('Exchange error:', error)
           console.error('Error details:', JSON.stringify(error, null, 2))
-          window.location.href = '/auth/signin?error=auth_failed'
+          const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+          const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+          window.location.href = `/auth/signin?error=auth_failed${redirectSuffix}`
           return
         }
 
         if (!data.session) {
           console.error('❌ No session in response from exchangeCodeForSession')
-          window.location.href = '/auth/signin?error=no_session'
+          const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+          const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+          window.location.href = `/auth/signin?error=no_session${redirectSuffix}`
           return
         }
 
@@ -350,7 +391,9 @@ function AuthCallbackContent() {
         const { data: { session: verifySession } } = await supabase.auth.getSession()
         if (!verifySession) {
           console.error('❌ Session not found after exchange')
-          window.location.href = '/auth/signin?error=session_not_persisted'
+          const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+          const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+          window.location.href = `/auth/signin?error=session_not_persisted${redirectSuffix}`
           return
         }
 
@@ -358,7 +401,9 @@ function AuthCallbackContent() {
         const { data: { user: verifyUser }, error: userError } = await supabase.auth.getUser()
         if (userError || !verifyUser) {
           console.error('❌ getUser failed after session exchange:', userError?.message)
-          window.location.href = '/auth/signin?error=user_validation_failed'
+          const finalRedirect = redirectParam || (typeof window !== 'undefined' && localStorage.getItem('scout_onboarding') === 'true' ? '/scout?step=3' : '')
+          const redirectSuffix = finalRedirect ? `&redirect=${encodeURIComponent(finalRedirect)}` : ''
+          window.location.href = `/auth/signin?error=user_validation_failed${redirectSuffix}`
           return
         }
         console.log('✅ User validated successfully:', verifyUser.id)
@@ -387,22 +432,36 @@ function AuthCallbackContent() {
         }
 
         // Determine redirect destination with priority:
-        // 1. postSignUpRedirect (from protected footer links like "Make a claim")
-        // 2. become_scout_signup (from "Become a Scout" button)
-        // 3. Default to /browse
+        // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)
+        // 2. postSignUpRedirect (from protected footer links like "Make a claim")
+        // 3. become_scout_signup (from "Become a Scout" button)
+        // 4. scout_onboarding (from scout onboarding flow)
+        // 5. Default to /browse
         let finalRedirect = '/browse'
         if (typeof window !== 'undefined') {
-          // First check for postSignUpRedirect (highest priority)
-          const storedRedirect = localStorage.getItem('postSignUpRedirect')
-          if (storedRedirect) {
-            finalRedirect = storedRedirect
-            localStorage.removeItem('postSignUpRedirect')
+          // First check for redirect query parameter (highest priority)
+          if (redirectParam) {
+            finalRedirect = redirectParam
+            console.log('✅ Using redirect parameter from URL:', finalRedirect)
           } else {
-            // Then check for become_scout_signup
-            const becomeScoutSignup = localStorage.getItem('become_scout_signup')
-            if (becomeScoutSignup === 'true') {
-              localStorage.removeItem('become_scout_signup')
-              finalRedirect = '/profile/scout-application'
+            // Check for postSignUpRedirect
+            const storedRedirect = localStorage.getItem('postSignUpRedirect')
+            if (storedRedirect) {
+              finalRedirect = storedRedirect
+              localStorage.removeItem('postSignUpRedirect')
+            } else {
+              // Then check for become_scout_signup (legacy - redirect to new flow)
+              const becomeScoutSignup = localStorage.getItem('become_scout_signup')
+              if (becomeScoutSignup === 'true') {
+                localStorage.removeItem('become_scout_signup')
+                finalRedirect = '/scout'
+              }
+              // Check for scout onboarding flag
+              const scoutOnboarding = localStorage.getItem('scout_onboarding')
+              if (scoutOnboarding === 'true') {
+                localStorage.removeItem('scout_onboarding')
+                finalRedirect = '/scout?step=3'
+              }
             }
           }
         }

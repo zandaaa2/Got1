@@ -33,9 +33,10 @@ const RESERVED_USERNAMES = new Set(["profile", "profiles", "browse", "teams", "t
 interface ProfileEditFormProps {
   profile: any
   isNewProfile?: boolean
+  pendingScoutApplication?: any | null
 }
 
-export default function ProfileEditForm({ profile, isNewProfile = false }: ProfileEditFormProps) {
+export default function ProfileEditForm({ profile, isNewProfile = false, pendingScoutApplication = null }: ProfileEditFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -151,6 +152,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
       birthday: profile.birthday || prev.birthday,
       position: profile.position || prev.position,
       work_history: profile.work_history || prev.work_history,
+      social_link: profile.social_link || prev.social_link,
       additional_info: profile.additional_info || prev.additional_info,
       hudl_link: profile.hudl_link || prev.hudl_link,
       hudl_links: (() => {
@@ -594,6 +596,23 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
           setLoading(false)
           return
         }
+      } else if (profile.role === 'user' && pendingScoutApplication) {
+        // Validate scout application fields for users with pending applications
+        if (!formData.organization || formData.organization.trim() === '') {
+          setError('Organization is required.')
+          setLoading(false)
+          return
+        }
+        if (!formData.position || formData.position.trim() === '') {
+          setError('Position is required.')
+          setLoading(false)
+          return
+        }
+        if (!formData.work_history || formData.work_history.trim() === '') {
+          setError('Work history is required.')
+          setLoading(false)
+          return
+        }
       }
 
       const sanitizedAvatar = isMeaningfulAvatar(formData.avatar_url) ? formData.avatar_url : null
@@ -611,24 +630,47 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
       }
 
       // USER role - no bio, clear all role-specific fields
+      // BUT if they have a pending scout application, save those fields to the application
       if (profile.role === 'user') {
         updateData.bio = null
-        // Clear role-specific fields for USER
-        updateData.organization = null
-        updateData.price_per_eval = null
-        updateData.turnaround_time = null
-        updateData.sports = null
-        updateData.hudl_links = null
-        updateData.hudl_link = null
-        updateData.sport = null
-        updateData.position = null
-        updateData.school = null
-        updateData.graduation_year = null
-        updateData.graduation_month = null
-        updateData.parent_name = null
-        updateData.social_link = null
-        updateData.work_history = null
-        updateData.additional_info = null
+        // Clear role-specific fields for USER (unless they have pending scout application)
+        if (!pendingScoutApplication) {
+          updateData.organization = null
+          updateData.price_per_eval = null
+          updateData.turnaround_time = null
+          updateData.sports = null
+          updateData.hudl_links = null
+          updateData.hudl_link = null
+          updateData.sport = null
+          updateData.position = null
+          updateData.school = null
+          updateData.graduation_year = null
+          updateData.graduation_month = null
+          updateData.parent_name = null
+          updateData.social_link = null
+          updateData.work_history = null
+          updateData.additional_info = null
+        } else {
+          // For users with pending scout applications, save to profile for consistency
+          // (even though it won't be used until approved)
+          updateData.organization = formData.organization || null
+          updateData.position = formData.position || null
+          updateData.work_history = formData.work_history || null
+          updateData.social_link = formData.social_link || null
+          updateData.additional_info = formData.additional_info || null
+          // Clear other fields
+          updateData.price_per_eval = null
+          updateData.turnaround_time = null
+          updateData.sports = null
+          updateData.hudl_links = null
+          updateData.hudl_link = null
+          updateData.sport = null
+          updateData.school = null
+          updateData.graduation_year = null
+          updateData.graduation_month = null
+          updateData.parent_name = null
+          updateData.social_link = null
+        }
         // Clear player stats fields for USER role
         updateData.gpa = null
         updateData.weight = null
@@ -715,6 +757,25 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
         .from('profiles')
         .update(updateData)
         .eq('user_id', session.user.id)
+
+      // If user has a pending scout application, also update it
+      if (pendingScoutApplication && !updateError) {
+        const { error: appUpdateError } = await supabase
+          .from('scout_applications')
+          .update({
+            current_workplace: formData.organization || '',
+            current_position: formData.position || '',
+            work_history: formData.work_history || '',
+            social_link: formData.social_link || null,
+            additional_info: formData.additional_info || '',
+          })
+          .eq('id', pendingScoutApplication.id)
+        
+        if (appUpdateError) {
+          console.error('Error updating scout application:', appUpdateError)
+          // Don't fail the whole save if application update fails
+        }
+      }
 
       if (updateError) throw updateError
 
@@ -1242,26 +1303,29 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
           </div>
         )}
 
-        {/* Scout Info Section */}
-        {profile.role === 'scout' && (
+        {/* Scout Info Section - Show for scouts OR users with pending scout applications */}
+        {(profile.role === 'scout' || pendingScoutApplication) && (
           <div>
             <h2 className="text-xl font-bold text-black mb-4 md:mb-6">Scout Info</h2>
             <div className="space-y-4 md:space-y-6">
-              <div>
-                <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
-                  Social Media Link <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  id="social_link"
-                  name="social_link"
-                  value={formData.social_link}
-                  onChange={handleChange}
-                  required
-                  placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
+              {/* Social link only required for approved scouts, not for pending applications */}
+              {profile.role === 'scout' && (
+                <div>
+                  <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
+                    Social Media Link <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="social_link"
+                    name="social_link"
+                    value={formData.social_link}
+                    onChange={handleChange}
+                    required
+                    placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-black mb-2">
@@ -1277,26 +1341,29 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                 </p>
               </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-black mb-2">
-                    Sport You Evaluate <span className="text-red-500">*</span>
-                  </label>
-                  <MultiSportSelector
-                    selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
-                    onToggle={(sport) => {
-                      const currentSports = Array.isArray(formData.sports) ? formData.sports : []
-                      const newSports = currentSports.includes(sport)
-                        ? currentSports.filter(s => s !== sport)
-                        : [...currentSports, sport]
-                      setFormData((prev) => ({ ...prev, sports: newSports }))
-                    }}
-                    label=""
-                    availableSports={['football', 'basketball']}
-                  />
-                  <p className="mt-1 text-sm text-gray-600">
-                    Select at least one sport (football or men's basketball)
-                  </p>
-                </div>
+                {/* Sport selector only for approved scouts, not for pending applications */}
+                {profile.role === 'scout' && (
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2">
+                      Sport You Evaluate <span className="text-red-500">*</span>
+                    </label>
+                    <MultiSportSelector
+                      selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
+                      onToggle={(sport) => {
+                        const currentSports = Array.isArray(formData.sports) ? formData.sports : []
+                        const newSports = currentSports.includes(sport)
+                          ? currentSports.filter(s => s !== sport)
+                          : [...currentSports, sport]
+                        setFormData((prev) => ({ ...prev, sports: newSports }))
+                      }}
+                      label=""
+                      availableSports={['football', 'basketball']}
+                    />
+                    <p className="mt-1 text-sm text-gray-600">
+                      Select at least one sport (football or men's basketball)
+                    </p>
+                  </div>
+                )}
 
               <div>
                 <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
@@ -1310,6 +1377,22 @@ export default function ProfileEditForm({ profile, isNewProfile = false }: Profi
                   onChange={handleChange}
                   required
                   placeholder="e.g., Player Personnel Assistant, Director of Recruiting"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              {/* Social link field - show for both scouts and users with pending applications */}
+              <div>
+                <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
+                  Social Media Link
+                </label>
+                <input
+                  type="url"
+                  id="social_link"
+                  name="social_link"
+                  value={formData.social_link}
+                  onChange={handleChange}
+                  placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>

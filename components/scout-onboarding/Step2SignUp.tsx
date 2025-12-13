@@ -2,18 +2,15 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
-import Modal from '@/components/shared/Modal'
+import { useRouter } from 'next/navigation'
 import Logo from '@/components/shared/Logo'
 
-interface AuthModalProps {
-  isOpen: boolean
-  onClose: () => void
-  mode: 'signin' | 'signup'
-  onModeChange?: (mode: 'signin' | 'signup') => void
-  hideSignInLink?: boolean
+interface Step2SignUpProps {
+  onComplete: () => void
+  onBack: () => void
 }
 
-export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSignInLink = false }: AuthModalProps) {
+export default function Step2SignUp({ onComplete, onBack }: Step2SignUpProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -21,15 +18,12 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false)
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup')
+  const router = useRouter()
   const supabase = createClient()
 
   /**
    * Handles email-based authentication (sign up or sign in).
-   * For signup: Creates account with password and sends confirmation email.
-   * For signin: Signs in with email and password.
-   *
-   * @param {React.FormEvent} e - The form submission event
-   * @returns {Promise<void>}
    */
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,14 +31,34 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
       setLoading(true)
       setError(null)
 
+      // Store flag that user is signing up for scout onboarding
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('scout_onboarding', 'true')
+      }
+
       if (mode === 'signup') {
         // Sign up with email and password
         console.log('Attempting signup for:', email)
+        
+        // CRITICAL: Use window.location.origin to ensure we use localhost in dev, production in prod
+        // Remove query parameters from emailRedirectTo - Supabase may strip them
+        // Instead, rely on localStorage flag (scout_onboarding) which is already set above
+        const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+        
+        if (!currentOrigin) {
+          throw new Error('Cannot determine current origin')
+        }
+        
+        const redirectUrl = `${currentOrigin}/api/auth/callback`
+        console.log('🔵 Email signup redirectTo URL (no query params):', redirectUrl)
+        console.log('🔵 Current origin being used:', currentOrigin)
+        console.log('🔵 Scout onboarding flag set in localStorage')
+        
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+            emailRedirectTo: redirectUrl,
           },
         })
         
@@ -59,8 +73,6 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
           emailConfirmed: data.user?.email_confirmed_at,
         })
         
-        // Note: Supabase sends confirmation email automatically if email confirmations are enabled
-        // If no email is received, check Supabase dashboard settings
         setSuccess(true)
         setLoading(false)
       } else {
@@ -82,23 +94,8 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
         }
         
         setLoading(false)
-        onClose() // Close modal on successful signin
-        
-        // Check for stored redirect destination (e.g., from protected footer links)
-        const storedRedirect = typeof window !== 'undefined' 
-          ? localStorage.getItem('postSignUpRedirect') 
-          : null
-        
-        // Use stored redirect if available, otherwise default to /browse
-        const redirectDestination = storedRedirect || '/browse'
-        
-        // Clear the stored redirect after reading it
-        if (storedRedirect && typeof window !== 'undefined') {
-          localStorage.removeItem('postSignUpRedirect')
-        }
-        
-        // Redirect through sync page to create sign-in notification
-        window.location.href = `/auth/sync?redirect=${encodeURIComponent(redirectDestination)}`
+        // Redirect to step 3 after successful sign in
+        router.push('/scout?step=3')
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred')
@@ -108,9 +105,6 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
 
   /**
    * Handles password reset request.
-   * Sends a password reset email to the user.
-   *
-   * @returns {Promise<void>}
    */
   const handleForgotPassword = async () => {
     if (!email) {
@@ -137,52 +131,80 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
 
   /**
    * Handles Google OAuth authentication.
-   * Initiates the OAuth flow and redirects to Google for authentication.
-   *
-   * @returns {Promise<void>}
    */
   const handleGoogleAuth = async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Store flag that user is signing up for scout onboarding
+      // This is the primary method - the redirect param is a backup
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('scout_onboarding', 'true')
+        console.log('✅ Set scout_onboarding flag in localStorage')
+        console.log('🔍 Current origin:', window.location.origin)
+        console.log('🔍 Current href:', window.location.href)
+        console.log('🔍 Current protocol:', window.location.protocol)
+        console.log('🔍 Current host:', window.location.host)
+      }
+      
+      // CRITICAL: Use window.location.origin to ensure we use localhost in dev, production in prod
+      // Supabase requires the redirectTo URL to match EXACTLY one of the allowed redirect URLs
+      // The redirect URL should NOT include query parameters - Supabase may strip them
+      // Instead, we'll use localStorage flag and handle redirect in the callback
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+      
+      if (!currentOrigin) {
+        throw new Error('Cannot determine current origin')
+      }
+      
+      // Use the API callback route (without query params) - Supabase will redirect here
+      // The callback will check localStorage for scout_onboarding flag
+      const redirectUrl = `${currentOrigin}/api/auth/callback`
+      console.log('🔵 OAuth redirectTo URL (no query params):', redirectUrl)
+      console.log('🔵 Current origin being used:', currentOrigin)
+      console.log('🔵 Scout onboarding flag set in localStorage')
+      
+      const { error, data } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: redirectUrl,
         },
       })
       
+      console.log('🔵 OAuth response:', { error, data })
+      
       if (error) throw error
+      // Note: Don't set loading to false here - user will be redirected
     } catch (error: any) {
+      console.error('❌ OAuth error:', error)
       setError(error.message || 'An error occurred')
       setLoading(false)
     }
   }
 
-  const mainInstruction = mode === 'signin' ? 'Sign in with an account' : ''
-  const smallerInstruction = mode === 'signup' 
-    ? 'Enter your email to sign up for this app' 
-    : 'Enter your email to sign in for this app'
-  const buttonText = mode === 'signup' ? 'Sign up with email' : 'Sign in with email'
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <div className="max-w-md mx-auto">
+      {/* Back Button */}
+      <div className="mb-6">
+        <button
+          onClick={onBack}
+          className="text-gray-600 hover:text-black transition-colors text-sm font-medium"
+        >
+          ← Back
+        </button>
+      </div>
+
       <div className="space-y-4 md:space-y-6">
         {/* Title */}
-        <Logo variant="regular" size="md" linkToHome={false} className="mb-2" />
+        <Logo variant="regular" size="md" linkToHome={false} />
 
-        {/* Main Instruction - only show for signin */}
-        {mainInstruction && (
-          <h2 className="text-lg font-bold text-black">{mainInstruction}</h2>
-        )}
+        {/* Instruction */}
+        <p className="text-sm text-black">
+          {mode === 'signup' ? 'Enter your email to sign up for this app' : 'Enter your email to sign in for this app'}
+        </p>
 
-        {/* Smaller Instruction - only show if not in success state */}
-        {!(success && mode === 'signup') && (
-          <p className="text-sm text-black">{smallerInstruction}</p>
-        )}
-
-        {success && mode === 'signup' ? (
+        {success ? (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
             Check your email to confirm your account. Click the link in the email to complete sign up.
           </div>
@@ -202,7 +224,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@domain.com"
                 required
-                className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm md:text-base"
+                className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233dff] focus:border-transparent text-sm md:text-base"
               />
               <div className="relative">
                 <input
@@ -212,7 +234,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
                   placeholder={mode === 'signup' ? 'Create a password' : 'Enter your password'}
                   required
                   minLength={mode === 'signup' ? 6 : undefined}
-                  className="w-full px-3 md:px-4 py-2 md:py-3 pr-10 md:pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm md:text-base"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 pr-10 md:pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233dff] focus:border-transparent text-sm md:text-base"
                 />
                 <button
                   type="button"
@@ -255,9 +277,10 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 md:py-3 px-4 bg-black text-white font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
+                className="w-full py-2.5 md:py-3 px-4 text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-sm md:text-base"
+                style={{ backgroundColor: '#233dff' }}
               >
-                {loading ? 'Processing...' : buttonText}
+                {loading ? 'Processing...' : mode === 'signup' ? 'Sign up with email' : 'Sign in with email'}
               </button>
             </form>
 
@@ -298,14 +321,14 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
               <span>{mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}</span>
             </button>
 
-            {/* Sign in link at bottom when in signup mode - hidden if hideSignInLink is true */}
-            {mode === 'signup' && onModeChange && !hideSignInLink && (
+            {/* Sign in link at bottom when in signup mode */}
+            {mode === 'signup' && (
               <div className="pt-2 border-t border-gray-200">
                 <p className="text-center text-sm text-gray-600">
                   Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => onModeChange('signin')}
+                    onClick={() => setMode('signin')}
                     className="text-black font-medium underline hover:no-underline"
                   >
                     Sign in
@@ -314,36 +337,36 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
               </div>
             )}
 
-            {/* Sign up toggle link - only show when NOT in signup mode */}
-            {mode === 'signin' && onModeChange && (
+            {/* Sign up toggle link - only show when in signin mode */}
+            {mode === 'signin' && (
               <p className="text-center text-sm text-gray-600">
                 Don't have an account?{' '}
                 <button
                   type="button"
-                  onClick={() => onModeChange('signup')}
+                  onClick={() => setMode('signup')}
                   className="text-black font-medium underline hover:no-underline"
                 >
                   Sign up instead
                 </button>
               </p>
             )}
+
+            {/* Terms and Privacy Policy */}
+            <p className="text-xs text-black text-center">
+              By clicking continue, you agree to our{' '}
+              <a href="/terms-of-service" className="font-bold underline hover:no-underline">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="/privacy-policy" className="font-bold underline hover:no-underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
           </>
         )}
-
-        {/* Terms and Privacy Policy */}
-        <p className="text-xs text-black text-center">
-          By clicking continue, you agree to our{' '}
-          <a href="/terms-of-service" className="font-bold underline hover:no-underline">
-            Terms of Service
-          </a>{' '}
-          and{' '}
-          <a href="/privacy-policy" className="font-bold underline hover:no-underline">
-            Privacy Policy
-          </a>
-          .
-        </p>
       </div>
-    </Modal>
+    </div>
   )
 }
 

@@ -20,15 +20,26 @@ function AuthSyncContent() {
       const syncAuth = async () => {
         console.log('🔵 syncAuth function called')
         
-        // Priority: query param (from callback) > localStorage (from button clicks)
+        // Priority: query param (from callback) > localStorage flags > default
         // Query param is more reliable as it comes directly from the auth callback
         const queryRedirect = searchParams.get('redirect')
         const postSignUpRedirect = typeof window !== 'undefined' 
           ? localStorage.getItem('postSignUpRedirect') 
           : null
+        const scoutOnboarding = typeof window !== 'undefined'
+          ? localStorage.getItem('scout_onboarding')
+          : null
         
-        // Use query param first (from callback), then localStorage, then default to /browse
-        const redirect = queryRedirect || postSignUpRedirect || '/browse'
+        // Use query param first (from callback), then localStorage flags, then default to /browse
+        let redirect = queryRedirect || postSignUpRedirect || '/browse'
+        
+        // Check for scout onboarding flag if no other redirect is set
+        if (!queryRedirect && !postSignUpRedirect && scoutOnboarding === 'true') {
+          redirect = '/scout?step=3'
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('scout_onboarding')
+          }
+        }
         
         // Clear the localStorage redirect after using it (if it was used)
         if (postSignUpRedirect && typeof window !== 'undefined' && redirect === postSignUpRedirect) {

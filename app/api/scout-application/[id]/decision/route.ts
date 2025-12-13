@@ -99,6 +99,7 @@ export async function POST(
           organization: application.current_workplace,
           position: application.current_position || null, // Save position from application
           work_history: application.work_history || null, // Save work history from application
+          social_link: application.social_link || null, // Save social link from application
           additional_info: application.additional_info || null, // Save additional info from application
           updated_at: new Date().toISOString(),
         })

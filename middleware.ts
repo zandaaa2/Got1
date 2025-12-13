@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
     '/terms-of-service',
     '/privacy-policy',
     '/teams',
+    '/scout', // Scout onboarding flow - steps 1-2 don't require auth
   ]
 
   // Check if pathname matches a username route (e.g., /john-doe)

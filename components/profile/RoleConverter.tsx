@@ -46,9 +46,9 @@ export default function RoleConverter({ currentRole, hasPassword: hasPasswordPro
   const handleRoleSelect = (role: 'user' | 'player' | 'scout') => {
     if (role === currentRole) return
     
-    // For scout, redirect to application page instead of showing modal
+    // For scout, redirect to new onboarding flow
     if (role === 'scout') {
-      router.push('/profile/scout-application')
+      router.push('/scout')
       return
     }
     

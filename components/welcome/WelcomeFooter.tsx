@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import Link from 'next/link'
+import Logo from '@/components/shared/Logo'
 
 export default function WelcomeFooter() {
   const [hasSession, setHasSession] = useState(false)
@@ -61,7 +62,9 @@ export default function WelcomeFooter() {
       <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
           <div>
-            <h3 className="font-bold text-white mb-4">Got1</h3>
+            <div className="mb-4">
+              <Logo variant="white" size="md" linkToHome={true} />
+            </div>
             <p className="text-sm text-gray-400">
               Connecting high school football players with verified college scouts.
             </p>
@@ -90,9 +93,8 @@ export default function WelcomeFooter() {
               </li>
               <li>
                 <Link 
-                  href="/profile/scout-application" 
+                  href="/scout" 
                   className="text-gray-400 hover:text-white transition-colors"
-                  onClick={(e) => handleProtectedLinkClick(e, '/profile/scout-application')}
                 >
                   Become a Scout
                 </Link>

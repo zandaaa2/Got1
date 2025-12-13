@@ -36,11 +36,39 @@ export default async function ProfileEditPage() {
   // If updated_at is within 5 seconds of created_at, consider it unsaved
   const isNewProfile = timeDiff < 5000
 
+  // Check if user has a pending scout application (for users with role='user')
+  let pendingScoutApplication = null
+  if (profile.role === 'user') {
+    const { data: scoutApplication } = await supabase
+      .from('scout_applications')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .eq('status', 'pending')
+      .maybeSingle()
+    
+    if (scoutApplication) {
+      pendingScoutApplication = scoutApplication
+      // Merge scout application data into profile for the form
+      profile = {
+        ...profile,
+        organization: profile.organization || scoutApplication.current_workplace || '',
+        position: profile.position || scoutApplication.current_position || '',
+        work_history: profile.work_history || scoutApplication.work_history || '',
+        social_link: profile.social_link || scoutApplication.social_link || '',
+        additional_info: profile.additional_info || scoutApplication.additional_info || '',
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar />
       <DynamicLayout header={null}>
-        <ProfileEditForm profile={profile} isNewProfile={isNewProfile} />
+        <ProfileEditForm 
+          profile={profile} 
+          isNewProfile={isNewProfile}
+          pendingScoutApplication={pendingScoutApplication}
+        />
       </DynamicLayout>
     </div>
   )

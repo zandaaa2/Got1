@@ -15,10 +15,12 @@ import { collegeEntries } from '@/lib/college-data'
 import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 import ParentDashboard from '@/components/profile/ParentDashboard'
 import OnboardingSteps from '@/components/profile/OnboardingSteps'
+import PendingScoutApplication from '@/components/profile/PendingScoutApplication'
 
 interface ProfileContentProps {
   profile: any
   hasPendingApplication: boolean
+  pendingScoutApplication?: any | null
   needsReferrerSelection?: boolean
 }
 
@@ -1749,7 +1751,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
   )
 }
 
-export default function ProfileContent({ profile, hasPendingApplication, needsReferrerSelection = false }: ProfileContentProps) {
+export default function ProfileContent({ profile, hasPendingApplication, pendingScoutApplication, needsReferrerSelection = false }: ProfileContentProps) {
   useEffect(() => {
     console.log('ProfileContent mounted', { profileId: profile?.id, role: profile?.role })
   }, [profile])
@@ -2595,8 +2597,13 @@ export default function ProfileContent({ profile, hasPendingApplication, needsRe
         </div>
       )}
 
-      {/* 4-Step Onboarding System - Show when user has role='user' */}
-      {profile.role === 'user' && (
+      {/* Pending Scout Application - Show when user has role='user' AND has pending application */}
+      {profile.role === 'user' && hasPendingApplication && pendingScoutApplication && (
+        <PendingScoutApplication application={pendingScoutApplication} />
+      )}
+
+      {/* 4-Step Onboarding System - Show when user has role='user' AND no pending scout application */}
+      {profile.role === 'user' && !hasPendingApplication && (
         <OnboardingSteps profile={profile} />
       )}
 

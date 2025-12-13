@@ -69,6 +69,7 @@ export default async function ProfilePage() {
         organization: approvedApplication.current_workplace,
         position: approvedApplication.current_position || null,
         work_history: approvedApplication.work_history || null,
+        social_link: approvedApplication.social_link || null,
         additional_info: approvedApplication.additional_info || null,
         updated_at: new Date().toISOString(),
       })
@@ -118,6 +119,7 @@ export default async function ProfilePage() {
         <ProfileContent 
           profile={profile} 
           hasPendingApplication={!!scoutApplication}
+          pendingScoutApplication={scoutApplication || null}
           needsReferrerSelection={needsReferrerSelection}
         />
       </DynamicLayout>
