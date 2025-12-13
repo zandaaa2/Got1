@@ -23,7 +23,8 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/got1app.png', sizes: 'any' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/got1app.png', type: 'image/png', sizes: 'any' },
       { url: '/got1app.png', type: 'image/png', sizes: '32x32' },
       { url: '/got1app.png', type: 'image/png', sizes: '16x16' },
     ],
