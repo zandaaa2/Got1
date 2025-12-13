@@ -68,14 +68,14 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
       description,
       url: absoluteUrl,
       images: [
-        { url: '/social/og-default.png', width: 1200, height: 630, alt: `${team.name} on Got1` },
+        { url: '/social/og-default.png?v=2', width: 1200, height: 630, alt: `${team.name} on Got1` },
       ],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${team.name} | Got1 Teams`,
       description,
-      images: ['/social/og-default.png'],
+      images: ['/social/og-default.png?v=2'],
     },
   }
 }

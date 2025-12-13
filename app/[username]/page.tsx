@@ -85,14 +85,14 @@ export async function generateMetadata({ params }: UsernamePageProps): Promise<M
       url: absoluteUrl,
       type: profile.role === 'scout' ? 'profile' : 'article',
       images: [
-        { url: '/social/og-default.png', width: 1200, height: 630, alt: `${name} on Got1` },
+        { url: '/social/og-default.png?v=2', width: 1200, height: 630, alt: `${name} on Got1` },
       ],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${name} | Got1`,
       description,
-      images: ['/social/og-default.png'],
+      images: ['/social/og-default.png?v=2'],
     },
   }
 }

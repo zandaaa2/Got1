@@ -14,7 +14,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'),
   title: {
-    default: 'Got1 – Verified Football Evaluations',
+    default: 'Got1',
     template: '%s | Got1',
   },
   description: 'Verified college scouts providing fast feedback for high school football players.',
@@ -38,20 +38,20 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
   themeColor: '#0B63F6',
   openGraph: {
-    title: 'Got1 – Verified Football Evaluations',
+    title: 'Got1',
     description: 'Verified college scouts providing fast feedback for high school football players.',
     url: 'https://got1.app',
     siteName: 'Got1',
     images: [
-      { url: '/social/og-default.png', width: 1200, height: 630, alt: 'Got1 branding' },
+      { url: '/social/og-default.png?v=2', width: 1200, height: 630, alt: 'Got1 branding' },
     ],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Got1 – Verified Football Evaluations',
+    title: 'Got1',
     description: 'Verified college scouts providing fast feedback for high school football players.',
-    images: ['/social/og-default.png'],
+    images: ['/social/og-default.png?v=2'],
   },
 }
 

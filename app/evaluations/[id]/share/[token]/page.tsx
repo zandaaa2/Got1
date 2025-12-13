@@ -62,7 +62,7 @@ export async function generateMetadata({
       type: 'article',
       images: [
         {
-          url: player?.avatar_url || `${baseUrl}/social/og-default.png`,
+          url: player?.avatar_url || `${baseUrl}/social/og-default.png?v=2`,
           width: 1200,
           height: 630,
           alt: `${playerName}'s evaluation from ${scoutName}`,
@@ -73,7 +73,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${playerName}'s Evaluation | Got1`,
       description: `View ${playerName}'s evaluation from ${scoutName} at ${organization}.`,
-      images: [player?.avatar_url || `${baseUrl}/social/og-default.png`],
+      images: [player?.avatar_url || `${baseUrl}/social/og-default.png?v=2`],
     },
   }
 }
