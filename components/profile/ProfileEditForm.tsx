@@ -152,7 +152,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
       birthday: profile.birthday || prev.birthday,
       position: profile.position || prev.position,
       work_history: profile.work_history || prev.work_history,
-      social_link: profile.social_link || prev.social_link,
       additional_info: profile.additional_info || prev.additional_info,
       hudl_link: profile.hudl_link || prev.hudl_link,
       hudl_links: (() => {
