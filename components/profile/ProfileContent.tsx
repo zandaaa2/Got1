@@ -828,14 +828,13 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         }
 
         // Check if they need to select a referrer
-        // We'll determine this after checking Stripe status:
-        // - Existing scouts (with Stripe started) don't need referrer selection
-        // - New scouts (without Stripe) MUST select a referrer
+        // Default to requiring referrer selection for new scouts (no referrer found)
+        // Will be updated after Stripe check if they have Stripe started
         if (!hasReferrer) {
-          // Initially set to false - will be updated after Stripe check
-          // If they don't have Stripe, we'll set it to true
-          setNeedsReferrerSelection(false)
-          console.log('📋 Will check Stripe status to determine referrer selection requirement')
+          // Default to true - new scouts need to select a referrer
+          // Will be set to false if they have Stripe started (existing scout)
+          setNeedsReferrerSelection(true)
+          console.log('📋 No referrer found - defaulting to requiring referrer selection (will check Stripe status)')
         } else {
           // If referral exists, don't show referrer selection
           console.log('✅ Referral exists - hiding referrer selection screen')
@@ -853,6 +852,8 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
             console.error('❌ Stripe API error:', response.status, response.statusText)
             setStripeStarted(false)
             setStripeComplete(false)
+            // If Stripe check fails, assume they don't have Stripe (new scout)
+            // needsReferrerSelection should already be true if no referrer was found
             return
           }
           
@@ -873,14 +874,14 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
           // Update referrer selection requirement based on Stripe status
           // Existing scouts (with Stripe started) don't need referrer selection
           // New scouts (without Stripe) MUST select a referrer
-          if (!referrerSelected && !hasStripeAccount) {
-            // New scout without Stripe - must select referrer
-            setNeedsReferrerSelection(true)
-            console.log('📋 New scout without Stripe - requiring referrer selection')
-          } else if (hasStripeAccount) {
+          if (hasStripeAccount) {
             // Existing scout with Stripe - don't require referrer selection
             setNeedsReferrerSelection(false)
             console.log('📋 Existing scout with Stripe - referrer selection not required')
+          } else if (!referrerSelected) {
+            // New scout without Stripe - must select referrer
+            // (needsReferrerSelection is already true from above if no referrer found)
+            console.log('📋 New scout without Stripe - requiring referrer selection')
           }
           // If referrerSelected is true, needsReferrerSelection is already false
           
