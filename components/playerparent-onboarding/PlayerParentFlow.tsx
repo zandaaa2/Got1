@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Step1SignUpEmbedded from './Step1SignUpEmbedded'
 import Step2BasicInfo from './Step2BasicInfo'
 import Step3SelectRole from './Step3SelectRole'
-// import Step4ParentChoice from './Step4ParentChoice' // Parent feature - excluded from this deployment
+import Step4ParentChoice from './Step4ParentChoice'
 import Step4HudlLink from './Step4HudlLink'
 import Step5GeneralInfo from './Step5GeneralInfo'
 import Step6SpecificInfo from './Step6SpecificInfo'
@@ -182,11 +182,18 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           targetStep = 2
         } else if (!profileData?.role || profileData.role === 'user') {
           targetStep = 3
+        } else if (determinedAccountType === 'parent') {
+          // For parents, always start at step 4 (tag/create player)
+          // The component will handle checking if playerProfile exists
+          targetStep = 4
         } else if (!profileData?.hudl_link) {
-          // Use determinedAccountType, not accountType state (which might be stale)
-          targetStep = determinedAccountType === 'parent' ? 5 : 4
+          // For players, go to step 4 (HUDL link)
+          targetStep = 4
         } else if (!profileData?.position || !profileData?.school || !profileData?.graduation_year) {
-          targetStep = determinedAccountType === 'parent' ? 6 : 5
+          targetStep = determinedAccountType === 'parent' ? 5 : 5
+        } else if (!profileData?.hudl_link && determinedAccountType === 'parent') {
+          // For parents, if they have position/school but no HUDL link, go to step 6
+          targetStep = 6
         } else {
           targetStep = determinedAccountType === 'parent' ? 7 : 6
         }
@@ -459,27 +466,32 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           />
         )}
 
-        {/* Parent step 4 - excluded from this deployment */}
-        {false && currentStep === 4 && session && profile && accountType === 'parent' && (
-          // <Step4ParentChoice
-          //   profile={profile}
-          //   onTagExisting={(playerProfile) => {
-          //     setPlayerProfile(playerProfile)
-          //     handleStepComplete(5)
-          //   }}
-          //   onCreateNew={(playerProfile) => {
-          //     console.log('🎯 Step 4 - Setting playerProfile in PlayerParentFlow:', {
-          //       id: playerProfile.id,
-          //       user_id: playerProfile.user_id,
-          //       role: playerProfile.role,
-          //       username: playerProfile.username
-          //     })
-          //     setPlayerProfile(playerProfile)
-          //     handleStepComplete(5)
-          //   }}
-          //   onBack={handleStepBack}
-          // />
-          null
+        {/* Step 4: Parent choice (tag existing or create new player) OR Player HUDL link */}
+        {currentStep === 4 && session && profile && accountType === 'parent' && (
+          <Step4ParentChoice
+            profile={profile}
+            onTagExisting={(playerProfile) => {
+              console.log('🎯 Step 4 - Tagging existing player:', {
+                id: playerProfile.id,
+                user_id: playerProfile.user_id,
+                role: playerProfile.role,
+                username: playerProfile.username
+              })
+              setPlayerProfile(playerProfile)
+              handleStepComplete(5)
+            }}
+            onCreateNew={(playerProfile) => {
+              console.log('🎯 Step 4 - Creating new player:', {
+                id: playerProfile.id,
+                user_id: playerProfile.user_id,
+                role: playerProfile.role,
+                username: playerProfile.username
+              })
+              setPlayerProfile(playerProfile)
+              handleStepComplete(5)
+            }}
+            onBack={handleStepBack}
+          />
         )}
 
         {currentStep === 4 && session && profile && (accountType === 'player' || !accountType) && (
@@ -490,6 +502,7 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           />
         )}
 
+        {/* Step 5: Create/update player profile (parents) OR General info (players) */}
         {currentStep === 5 && session && profile && accountType === 'parent' && (
           <Step5GeneralInfo
             profile={profile}
@@ -509,27 +522,12 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           />
         )}
 
+        {/* Step 6: Add HUDL link (parents) OR Complete player info (players) */}
         {currentStep === 6 && session && profile && accountType === 'parent' && (
-          <>
-            {!playerProfile && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                Error: Player profile not found. Please go back to step 5 and create a player.
-              </div>
-            )}
-            <Step4HudlLink
-              profile={playerProfile}
-              playerProfile={playerProfile}
-              onComplete={() => handleStepComplete(7)}
-              onBack={handleStepBack}
-            />
-          </>
-        )}
-
-        {currentStep === 7 && session && profile && accountType === 'parent' && (
-          <Step6SpecificInfo
+          <Step4HudlLink
             profile={playerProfile}
             playerProfile={playerProfile}
-            accountType={accountType}
+            onComplete={() => handleStepComplete(7)}
             onBack={handleStepBack}
           />
         )}
@@ -538,6 +536,16 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           <Step6SpecificInfo
             profile={profile}
             accountType={accountType || 'player'}
+            onBack={handleStepBack}
+          />
+        )}
+
+        {/* Step 7: Complete player info (parents only) */}
+        {currentStep === 7 && session && profile && accountType === 'parent' && (
+          <Step6SpecificInfo
+            profile={playerProfile}
+            playerProfile={playerProfile}
+            accountType={accountType}
             onBack={handleStepBack}
           />
         )}
