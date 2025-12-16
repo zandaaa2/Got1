@@ -235,16 +235,25 @@ export default function Step2BasicInfo({ session, profile, onComplete, onBack }:
       let result
       if (existingProfile) {
         // Update existing profile
+        // IMPORTANT: Don't overwrite role if it's already set to player/parent/scout
+        // Only set role to 'user' if it's currently null/undefined or already 'user'
+        const updateData: any = {
+          full_name: profileData.full_name,
+          username: profileData.username,
+          avatar_url: profileData.avatar_url,
+          birthday: profileData.birthday,
+          updated_at: profileData.updated_at,
+        }
+        
+        // Only set role to 'user' if profile doesn't have a role set yet
+        // This prevents overwriting 'player', 'parent', or 'scout' roles
+        if (!profile?.role || profile.role === 'user') {
+          updateData.role = 'user'
+        }
+        
         const { data: updatedData, error: updateError } = await supabase
           .from('profiles')
-          .update({
-            full_name: profileData.full_name,
-            username: profileData.username,
-            avatar_url: profileData.avatar_url,
-            birthday: profileData.birthday,
-            role: 'user',
-            updated_at: profileData.updated_at,
-          })
+          .update(updateData)
           .eq('user_id', session.user.id)
           .select('id, role')
           .single()
@@ -264,16 +273,23 @@ export default function Step2BasicInfo({ session, profile, onComplete, onBack }:
         if (insertError) {
           // If it's a unique violation, try updating instead
           if (insertError.code === '23505') {
+            // Don't overwrite role if it's already set
+            const updateData: any = {
+              full_name: profileData.full_name,
+              username: profileData.username,
+              avatar_url: profileData.avatar_url,
+              birthday: profileData.birthday,
+              updated_at: profileData.updated_at,
+            }
+            
+            // Only set role to 'user' if profile doesn't have a role set yet
+            if (!profile?.role || profile.role === 'user') {
+              updateData.role = 'user'
+            }
+            
             const { data: updatedData, error: updateError } = await supabase
               .from('profiles')
-              .update({
-                full_name: profileData.full_name,
-                username: profileData.username,
-                avatar_url: profileData.avatar_url,
-                birthday: profileData.birthday,
-                role: 'user',
-                updated_at: profileData.updated_at,
-              })
+              .update(updateData)
               .eq('user_id', session.user.id)
               .select('id, role')
               .single()
