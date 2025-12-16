@@ -12,9 +12,7 @@ import { openCalendly30Min } from '@/lib/calendly'
 import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
 import CollegeMultiSelect from '@/components/profile/CollegeMultiSelect'
 import { collegeEntries } from '@/lib/college-data'
-import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 import ParentDashboard from '@/components/profile/ParentDashboard'
-import OnboardingSteps from '@/components/profile/OnboardingSteps'
 import PendingScoutApplication from '@/components/profile/PendingScoutApplication'
 
 interface ProfileContentProps {
@@ -859,11 +857,14 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         const data = await response.json()
         
         setStripeStarted(data.hasAccount || false)
+        // Stripe is complete if onboarding is complete (which means account can receive payments)
+        // We don't require both chargesEnabled AND payoutsEnabled because:
+        // - Payouts can take 1-2 business days to enable after onboarding
+        // - Express accounts can have details_submitted = true but charges not yet enabled
+        // - If onboardingComplete = true, the account is functional for receiving payments
         setStripeComplete(
           data.hasAccount && 
-          data.onboardingComplete && 
-          data.chargesEnabled && 
-          data.payoutsEnabled
+          data.onboardingComplete
         )
       } catch (error) {
         console.error('Error checking setup progress:', error)
@@ -2256,6 +2257,13 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
           )}
         </div>
         <div className="flex-1 text-left min-w-0">
+          <div className="text-xs md:text-sm text-gray-500 mb-1 md:mb-1.5 font-medium uppercase tracking-wide">
+            {profile.role === 'user' ? 'User' 
+             : profile.role === 'player' ? 'Player' 
+             : profile.role === 'parent' ? 'Parent'
+             : profile.role === 'scout' ? 'Scout'
+             : 'User'}
+          </div>
           <h2 className="text-base md:text-xl font-bold text-black mb-0.5 md:mb-1">
             {profile.full_name || 'Unknown'}
           </h2>
@@ -2293,170 +2301,6 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         </Link>
       </div>
 
-      {/* Profile Information Display Sections - Show for players and parents */}
-      {(profile.role === 'player' || profile.role === 'parent') && (
-        <>
-          {/* Basic Information */}
-          <div className="surface-card mb-8 p-6">
-            <h3 className="text-xl font-bold text-black mb-4">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
-                <p className="text-black">{profile.full_name || 'Not set'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Username</label>
-                <p className="text-black">@{profile.username || 'Not set'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
-                <p className="text-black">
-                  {profile.birthday 
-                    ? new Date(profile.birthday).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                    : 'Not set'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Player Information */}
-          <div className="surface-card mb-8 p-6">
-            <h3 className="text-xl font-bold text-black mb-4">Player Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {profile.social_link && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Social Media Link</label>
-                  <a 
-                    href={profile.social_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline break-all"
-                  >
-                    {profile.social_link}
-                  </a>
-                </div>
-              )}
-              
-              {getDisplayHudlLinks().length > 0 && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-600 mb-2">HUDL Links</label>
-                  <div className="space-y-2">
-                    {getDisplayHudlLinks().map((hudlLink: any, index: number) => (
-                      <a
-                        key={index}
-                        href={hudlLink.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-blue-600 hover:underline break-all"
-                      >
-                        {hudlLink.link} {hudlLink.sport ? `(${hudlLink.sport})` : ''}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {getDisplayPositions().length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Position</label>
-                  <p className="text-black">{getDisplayPositions().join(', ')}</p>
-                </div>
-              )}
-
-              {profile.school && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">School</label>
-                  <p className="text-black">{profile.school}</p>
-                </div>
-              )}
-
-              {(profile.graduation_month || profile.graduation_year) && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Graduation Date</label>
-                  <p className="text-black">
-                    {profile.graduation_month && profile.graduation_year
-                      ? `${new Date(2000, parseInt(profile.graduation_month) - 1).toLocaleString('default', { month: 'long' })} ${profile.graduation_year}`
-                      : profile.graduation_year
-                      ? profile.graduation_year
-                      : 'Not set'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Athletic Information */}
-          {(profile.gpa || profile.weight || profile.height || profile.forty_yd_dash || 
-            profile.bench_max || profile.squat_max || profile.clean_max || profile.state || 
-            profile.classification || profile.college_offers) && (
-            <div className="surface-card mb-8 p-6">
-              <h3 className="text-xl font-bold text-black mb-4">Athletic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {profile.gpa && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">GPA</label>
-                    <p className="text-black">{profile.gpa}</p>
-                  </div>
-                )}
-                {profile.weight && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Weight</label>
-                    <p className="text-black">{profile.weight} lbs</p>
-                  </div>
-                )}
-                {profile.height && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Height</label>
-                    <p className="text-black">{profile.height}</p>
-                  </div>
-                )}
-                {profile.forty_yd_dash && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">40-Yard Dash</label>
-                    <p className="text-black">{profile.forty_yd_dash} seconds</p>
-                  </div>
-                )}
-                {profile.bench_max && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Bench Max</label>
-                    <p className="text-black">{profile.bench_max} lbs</p>
-                  </div>
-                )}
-                {profile.squat_max && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Squat Max</label>
-                    <p className="text-black">{profile.squat_max} lbs</p>
-                  </div>
-                )}
-                {profile.clean_max && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Clean Max</label>
-                    <p className="text-black">{profile.clean_max} lbs</p>
-                  </div>
-                )}
-                {profile.state && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">State</label>
-                    <p className="text-black">{profile.state}</p>
-                  </div>
-                )}
-                {profile.classification && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Classification</label>
-                    <p className="text-black">{profile.classification}</p>
-                  </div>
-                )}
-                {profile.college_offers && (
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">College Offers</label>
-                    <p className="text-black whitespace-pre-wrap">{profile.college_offers}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </>
-      )}
 
       {/* Scout Setup Progress - Only show for scouts */}
       {profile.role === 'scout' && <ScoutSetupProgress key={`setup-${refreshKey}`} profile={profile} />}
@@ -2467,16 +2311,6 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
       {/* Parent Dashboard - Only show for parents */}
       {profile.role === 'parent' && <ParentDashboard profile={profile} />}
 
-      {/* College Offers Section - Only show for players */}
-      {profile.role === 'player' && (
-        <div className="mb-8">
-          <PlayerOffersSection
-            profileId={profile.id}
-            userId={profile.user_id}
-            isOwnProfile={true}
-          />
-        </div>
-      )}
 
       {/* Floating "How to make money" widget - only shows once for approved Stripe accounts */}
       {profile.role === 'scout' && 
@@ -2602,11 +2436,6 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         <PendingScoutApplication application={pendingScoutApplication} />
       )}
 
-      {/* 4-Step Onboarding System - Show when user has role='user' AND no pending scout application */}
-      {profile.role === 'user' && !hasPendingApplication && (
-        <OnboardingSteps profile={profile} />
-      )}
-
       {/* General Info Section */}
       <div className="mt-8">
         <h2 className="text-lg font-bold text-black mb-4">General Info</h2>
@@ -2637,18 +2466,50 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
             </div>
           </div>
 
+          {/* Suggest a Feature */}
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
             <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Stripe</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">Update my stripe billing, card info, and more.</p>
+              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Suggest a Feature</h3>
+              <p className="text-xs md:text-sm text-gray-600 break-words">Share your ideas to help us improve Got1</p>
             </div>
-            <button 
-              onClick={handleViewStripeAccount}
+            <Link
+              href="/suggest-feature"
               className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
             >
               View
-            </button>
+            </Link>
           </div>
+
+          {/* Make a Claim - Only show to players and parents */}
+          {(profile.role === 'player' || profile.role === 'parent') && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Make a Claim</h3>
+                <p className="text-xs md:text-sm text-gray-600 break-words">Submit a claim for a recent evaluation if you're not satisfied</p>
+              </div>
+              <Link
+                href="/make-a-claim"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+              >
+                View
+              </Link>
+            </div>
+          )}
+
+          {profile.role === 'scout' && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Stripe</h3>
+                <p className="text-xs md:text-sm text-gray-600 break-words">Update my stripe billing, card info, and more.</p>
+              </div>
+              <button 
+                onClick={handleViewStripeAccount}
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
+              >
+                View
+              </button>
+            </div>
+          )}
 
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
             <div className="flex-1 min-w-0 pr-2">
@@ -2680,25 +2541,6 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
             </a>
           </div>
 
-          {/* Account Type */}
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Account Type</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">
-                {profile.role === 'user' ? 'User' 
-                 : profile.role === 'player' ? 'Player' 
-                 : profile.role === 'parent' ? 'Parent'
-                 : profile.role === 'scout' ? 'Scout'
-                 : 'User'}
-              </p>
-            </div>
-            <Link
-              href="/profile/account-type"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              View
-            </Link>
-          </div>
 
           <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
             <div className="flex-1 min-w-0 pr-2">
@@ -2713,35 +2555,6 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
             </Link>
           </div>
 
-          {/* Make a Claim - Only show to players and parents */}
-          {(profile.role === 'player' || profile.role === 'parent') && (
-            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Make a Claim</h3>
-                <p className="text-xs md:text-sm text-gray-600 break-words">Submit a claim for a recent evaluation if you're not satisfied</p>
-              </div>
-              <Link
-                href="/make-a-claim"
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-              >
-                View
-              </Link>
-            </div>
-          )}
-
-          {/* Suggest a Feature */}
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Suggest a Feature</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">Share your ideas to help us improve Got1</p>
-            </div>
-            <Link
-              href="/suggest-feature"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              View
-            </Link>
-          </div>
 
           {/* Referral Program - Only show to Chasity and Zander */}
           {userEmail && (userEmail === 'douyonchasity@gmail.com' || userEmail === 'zander@got1.app') && (
