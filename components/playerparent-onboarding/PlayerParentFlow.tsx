@@ -101,8 +101,9 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           return
         }
         
+        let profileData: any = null
         try {
-          const { data: profileData, error } = await supabase
+          const { data: fetchedProfileData, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('user_id', currentSession.user.id)
@@ -124,8 +125,9 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
             }
           }
           
+          profileData = fetchedProfileData || null
           // Set profile (can be null for new users)
-          setProfile(profileData || null)
+          setProfile(profileData)
         } catch (fetchError: any) {
           console.error('Error fetching profile (catch):', fetchError)
           // If fetch fails completely, still allow user to continue (they can create profile)
