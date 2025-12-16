@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase-client'
 interface Step3SelectRoleProps {
   profile: any
   onComplete: () => void
-  onBack: () => void
+  onBack?: () => void
 }
 
 export default function Step3SelectRole({ profile, onComplete, onBack }: Step3SelectRoleProps) {
@@ -168,7 +168,7 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
         <button
           onClick={handleSubmit}
           disabled={!accountType || loading}
-          className={`${onBack ? 'flex-1' : 'w-full'} py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`${onBack !== undefined ? 'flex-1' : 'w-full'} py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {loading ? 'Saving...' : 'Continue'}
         </button>
