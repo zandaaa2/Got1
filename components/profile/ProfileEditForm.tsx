@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/shared/Modal'
@@ -39,6 +39,9 @@ interface ProfileEditFormProps {
 export default function ProfileEditForm({ profile, isNewProfile = false, pendingScoutApplication = null }: ProfileEditFormProps) {
   const router = useRouter()
   const supabase = createClient()
+  
+  // Track if we've already attempted to fix the role to prevent infinite loops
+  const roleFixAttempted = useRef(false)
   
   // Determine if we should show player fields
   // Show player fields if role is 'player' OR if profile has player data (hudl_link, position, school)
@@ -83,37 +86,40 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
     return []
   })
   
-  // Debug: Log profile role on mount
+  // Auto-fix role if profile has player data but role is 'user'
+  // Only run once per profile to prevent infinite loops
   useEffect(() => {
-    console.log('🔍 ProfileEditForm - Profile role:', profile?.role)
-    console.log('🔍 ProfileEditForm - Has player data?', {
-      hasHudlLink: !!profile?.hudl_link,
-      hasPosition: !!profile?.position,
-      hasSchool: !!profile?.school,
-      hasGraduationYear: !!profile?.graduation_year
-    })
-    console.log('🔍 ProfileEditForm - Will show player fields?', shouldShowPlayerFields)
-    
-    // Auto-fix role if profile has player data but role is 'user'
-    if (profile?.role === 'user' && shouldShowPlayerFields) {
+    // Only attempt fix if we haven't tried before and role is 'user' with player data
+    if (profile?.role === 'user' && shouldShowPlayerFields && !roleFixAttempted.current && profile?.user_id) {
+      roleFixAttempted.current = true
       console.log('⚠️ ProfileEditForm - Auto-fixing role from "user" to "player"')
+      
       const fixRole = async () => {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: 'player' })
-          .eq('user_id', profile.user_id)
-        
-        if (updateError) {
-          console.error('❌ ProfileEditForm - Error auto-fixing role:', updateError)
-        } else {
-          console.log('✅ ProfileEditForm - Role auto-fixed to "player"')
-          // Refresh the page to get updated profile
-          window.location.reload()
+        try {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ role: 'player' })
+            .eq('user_id', profile.user_id)
+          
+          if (updateError) {
+            console.error('❌ ProfileEditForm - Error auto-fixing role:', updateError)
+            roleFixAttempted.current = false // Allow retry on error
+          } else {
+            console.log('✅ ProfileEditForm - Role auto-fixed to "player"')
+            // Use router.refresh() instead of window.location.reload() to avoid full page reload
+            router.refresh()
+          }
+        } catch (error) {
+          console.error('❌ ProfileEditForm - Error in fixRole:', error)
+          roleFixAttempted.current = false // Allow retry on error
         }
       }
+      
       fixRole()
     }
-  }, [profile?.role, profile?.hudl_link, profile?.position, profile?.school, profile?.graduation_year, shouldShowPlayerFields, profile?.user_id, supabase])
+    // Only depend on profile.user_id to prevent re-running when other profile fields change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.user_id, profile?.role])
   
   // Determine if we're editing a child profile (parent editing their child)
   // This happens when profile.user_id !== session.user.id
