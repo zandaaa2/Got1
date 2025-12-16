@@ -758,6 +758,10 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
       // Small delay to ensure any previous writes are committed
       await new Promise(resolve => setTimeout(resolve, 100))
       try {
+        // Check if user has skipped referrer selection (persisted in localStorage)
+        const skipKey = `scout-referrer-skipped-${profile.user_id}`
+        const hasSkippedReferrer = typeof window !== 'undefined' && localStorage.getItem(skipKey) === 'true'
+        
         // Step 1: Check if referrer has been selected
         // Use API endpoint as fallback since RLS might be blocking direct queries
         const { data: { session: currentSession } } = await supabase.auth.getSession()
@@ -828,17 +832,20 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         }
 
         // Check if they need to select a referrer
-        // Default to requiring referrer selection for new scouts (no referrer found)
-        // Will be updated after Stripe check if they have Stripe started
-        if (!hasReferrer) {
+        // If they've skipped before, don't require it again
+        if (hasReferrer) {
+          // If referral exists, don't show referrer selection
+          console.log('✅ Referral exists - hiding referrer selection screen')
+          setNeedsReferrerSelection(false)
+        } else if (hasSkippedReferrer) {
+          // User has skipped referrer selection before - don't require it
+          console.log('✅ User has skipped referrer selection - not requiring it')
+          setNeedsReferrerSelection(false)
+        } else {
           // Default to true - new scouts need to select a referrer
           // Will be set to false if they have Stripe started (existing scout)
           setNeedsReferrerSelection(true)
           console.log('📋 No referrer found - defaulting to requiring referrer selection (will check Stripe status)')
-        } else {
-          // If referral exists, don't show referrer selection
-          console.log('✅ Referral exists - hiding referrer selection screen')
-          setNeedsReferrerSelection(false)
         }
 
         // Step 2 & 3: Check Stripe account status
@@ -869,16 +876,21 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
           })
           
           const hasStripeAccount = data.hasAccount || false
-          setStripeStarted(hasStripeAccount)
+          // Step 2 is only complete if they've actually started onboarding (detailsSubmitted)
+          // Just having an account (auto-created) doesn't count as "started"
+          // This ensures progress bar starts at 0 for new scouts
+          const hasStartedOnboarding = hasStripeAccount && (data.detailsSubmitted || data.onboardingComplete)
+          setStripeStarted(hasStartedOnboarding)
           
           // Update referrer selection requirement based on Stripe status
           // IMPORTANT: Even if they have a Stripe account (auto-created on approval),
-          // they still need to select a referrer if they haven't already
-          // Only skip referrer selection if they have BOTH:
+          // they still need to select a referrer if they haven't already (unless they've skipped)
+          // Only skip referrer selection if they have:
           // 1. A referrer selected, OR
-          // 2. Stripe account AND onboarding complete (existing scout who's been through the flow)
-          if (!referrerSelected) {
-            // No referrer selected - check if they're an existing scout with completed Stripe
+          // 2. Skipped referrer selection (persisted), OR
+          // 3. Stripe account AND onboarding complete (existing scout who's been through the flow)
+          if (!referrerSelected && !hasSkippedReferrer) {
+            // No referrer selected and hasn't skipped - check if they're an existing scout with completed Stripe
             const isExistingScout = hasStripeAccount && data.onboardingComplete
             if (isExistingScout) {
               // Existing scout with completed Stripe - don't require referrer selection
@@ -889,6 +901,10 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
               setNeedsReferrerSelection(true)
               console.log('📋 New scout - requiring referrer selection (Stripe account exists but onboarding not complete)')
             }
+          } else if (hasSkippedReferrer) {
+            // User has skipped - don't require selection
+            setNeedsReferrerSelection(false)
+            console.log('📋 User has skipped referrer selection - not requiring it')
           } else {
             // Referrer already selected - don't require selection
             setNeedsReferrerSelection(false)
@@ -1003,11 +1019,19 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
     profileUserId: profile.user_id,
   })
 
-  // Referrer step is complete if:
+  // The 3 steps are:
+  // Step 1: Select Referrer (complete if selected or skipped)
+  // Step 2: Start Stripe Setup (complete if onboarding has started - detailsSubmitted)
+  // Step 3: Complete Stripe Setup (complete if onboarding is complete)
+  
+  // Step 1 is complete if:
   // 1. They already selected a referrer, OR
   // 2. They don't need to select a referrer (existing scout or skipped)
-  // New scouts will start at step 1 if they need to select a referrer
   const referrerStepComplete = referrerSelected || !needsReferrerSelection
+  
+  // Step 2 is complete if they've started Stripe onboarding (detailsSubmitted)
+  // Just having an account (auto-created) doesn't count - they need to actually start onboarding
+  // Step 3 is complete if onboarding is fully complete
   
   const completedSteps = [referrerStepComplete, stripeStarted, stripeComplete].filter(Boolean).length
   const progressPercent = (completedSteps / 3) * 100
@@ -1024,13 +1048,16 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
   })
 
   // Determine current step
+  // Step 1: Select Referrer (if needed and not selected)
+  // Step 2: Start Stripe Setup (if step 1 done but Stripe not started)
+  // Step 3: Complete Stripe Setup (if step 2 done but not complete)
   let currentStep = null
   if (!referrerSelected && needsReferrerSelection) {
-    currentStep = 'referrer'
+    currentStep = 'referrer' // Step 1
   } else if (!stripeStarted) {
-    currentStep = 'start-stripe'
+    currentStep = 'start-stripe' // Step 2: Start Stripe Setup
   } else if (!stripeComplete) {
-    currentStep = 'complete-stripe'
+    currentStep = 'complete-stripe' // Step 3: Complete Stripe Setup
   }
 
   // If all steps are complete, don't show the section
@@ -1059,7 +1086,9 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
           profile={profile}
           onComplete={() => {
             // Mark referrer step as complete (either selected or skipped)
-            // Setting needsReferrerSelection to false marks the step as complete
+            // Persist skip state in localStorage to prevent glitch on reload
+            const skipKey = `scout-referrer-skipped-${profile.user_id}`
+            localStorage.setItem(skipKey, 'true')
             setNeedsReferrerSelection(false)
             // Force full page reload to ensure state updates correctly
             window.location.reload()
