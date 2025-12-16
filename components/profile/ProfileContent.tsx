@@ -828,29 +828,14 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         }
 
         // Check if they need to select a referrer
-        // New scouts (without Stripe started) MUST select a referrer
-        // Existing scouts (with Stripe started) don't need to select one
+        // We'll determine this after checking Stripe status:
+        // - Existing scouts (with Stripe started) don't need referrer selection
+        // - New scouts (without Stripe) MUST select a referrer
         if (!hasReferrer) {
-          // First check if they have Stripe started (existing scout)
-          // We'll check this after we get Stripe status, but for now set a flag
-          // New scouts without Stripe must select a referrer
-          const { data: approvedApp } = await supabase
-            .from('scout_applications')
-            .select('reviewed_at')
-            .eq('user_id', sessionUserId || profileUserId)
-            .eq('status', 'approved')
-            .maybeSingle()
-          
-          // We'll determine if they need referrer selection after checking Stripe status
-          // For now, assume they need it if recently approved (will be overridden if Stripe is started)
-          if (approvedApp?.reviewed_at) {
-            const recentlyApproved = new Date(approvedApp.reviewed_at) > new Date(Date.now() - 24 * 3600000)
-            // Will be updated after Stripe check
-            setNeedsReferrerSelection(recentlyApproved)
-            console.log('📋 Initial referrer selection need:', recentlyApproved, 'approved at:', approvedApp.reviewed_at)
-          } else {
-            setNeedsReferrerSelection(false)
-          }
+          // Initially set to false - will be updated after Stripe check
+          // If they don't have Stripe, we'll set it to true
+          setNeedsReferrerSelection(false)
+          console.log('📋 Will check Stripe status to determine referrer selection requirement')
         } else {
           // If referral exists, don't show referrer selection
           console.log('✅ Referral exists - hiding referrer selection screen')
