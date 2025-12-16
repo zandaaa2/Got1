@@ -18,6 +18,7 @@ export default function ScoutApplicationForm({ profile }: ScoutApplicationFormPr
     current_workplace: '',
     current_position: '',
     work_history: '',
+    social_link: '',
     additional_info: '',
   })
 
@@ -40,6 +41,7 @@ export default function ScoutApplicationForm({ profile }: ScoutApplicationFormPr
           current_workplace: formData.current_workplace,
           current_position: formData.current_position,
           work_history: formData.work_history,
+          social_link: formData.social_link || null,
           additional_info: formData.additional_info,
         }),
       }).then((res) => res.json())
@@ -133,6 +135,24 @@ export default function ScoutApplicationForm({ profile }: ScoutApplicationFormPr
             required
             rows={6}
             placeholder="Please provide a brief overview of your work history in player personnel, recruiting, or related roles..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="social_link"
+            className="block text-sm font-medium text-black mb-2"
+          >
+            Social Media Link
+          </label>
+          <input
+            type="text"
+            id="social_link"
+            name="social_link"
+            value={formData.social_link}
+            onChange={handleChange}
+            placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
           />
         </div>

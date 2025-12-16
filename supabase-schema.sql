@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS scout_applications (
   current_workplace TEXT NOT NULL,
   current_position TEXT NOT NULL,
   work_history TEXT NOT NULL,
+  social_link TEXT,
   additional_info TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
