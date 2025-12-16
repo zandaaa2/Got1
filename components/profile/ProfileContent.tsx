@@ -851,33 +851,49 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         }
 
         // Step 2 & 3: Check Stripe account status
-        const response = await fetch('/api/stripe/connect/account-link', {
-          method: 'GET',
-          cache: 'no-store', // Prevent caching to get fresh data
-        })
-        const data = await response.json()
-        
-        console.log('🔍 Stripe API Response:', {
-          hasAccount: data.hasAccount,
-          onboardingComplete: data.onboardingComplete,
-          chargesEnabled: data.chargesEnabled,
-          payoutsEnabled: data.payoutsEnabled,
-          detailsSubmitted: data.detailsSubmitted,
-        })
-        
-        setStripeStarted(data.hasAccount || false)
-        // Stripe is complete if onboarding is complete (which means account can receive payments)
-        // We don't require both chargesEnabled AND payoutsEnabled because:
-        // - Payouts can take 1-2 business days to enable after onboarding
-        // - Express accounts can have details_submitted = true but charges not yet enabled
-        // - If onboardingComplete = true, the account is functional for receiving payments
-        const isComplete = data.hasAccount && data.onboardingComplete
-        console.log('🔍 Stripe Complete Calculation:', {
-          hasAccount: data.hasAccount,
-          onboardingComplete: data.onboardingComplete,
-          isComplete,
-        })
-        setStripeComplete(isComplete)
+        try {
+          const response = await fetch('/api/stripe/connect/account-link', {
+            method: 'GET',
+            cache: 'no-store', // Prevent caching to get fresh data
+          })
+          
+          if (!response.ok) {
+            console.error('❌ Stripe API error:', response.status, response.statusText)
+            setStripeStarted(false)
+            setStripeComplete(false)
+            return
+          }
+          
+          const data = await response.json()
+          
+          console.log('🔍 Stripe API Response:', {
+            hasAccount: data.hasAccount,
+            onboardingComplete: data.onboardingComplete,
+            chargesEnabled: data.chargesEnabled,
+            payoutsEnabled: data.payoutsEnabled,
+            detailsSubmitted: data.detailsSubmitted,
+            fullResponse: data,
+          })
+          
+          setStripeStarted(data.hasAccount || false)
+          // Stripe is complete if onboarding is complete (which means account can receive payments)
+          // We don't require both chargesEnabled AND payoutsEnabled because:
+          // - Payouts can take 1-2 business days to enable after onboarding
+          // - Express accounts can have details_submitted = true but charges not yet enabled
+          // - If onboardingComplete = true, the account is functional for receiving payments
+          const isComplete = data.hasAccount && data.onboardingComplete
+          console.log('🔍 Stripe Complete Calculation:', {
+            hasAccount: data.hasAccount,
+            onboardingComplete: data.onboardingComplete,
+            isComplete,
+            willSetComplete: isComplete,
+          })
+          setStripeComplete(isComplete)
+        } catch (fetchError) {
+          console.error('❌ Error fetching Stripe status:', fetchError)
+          setStripeStarted(false)
+          setStripeComplete(false)
+        }
       } catch (error) {
         console.error('Error checking setup progress:', error)
       } finally {
