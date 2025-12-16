@@ -66,10 +66,21 @@ export default function CombinedScoutApplicationForm({
   })
 
   useEffect(() => {
+    // Only auto-generate username from full_name if username is empty
+    // Don't include username in deps to avoid conflicts with user typing
     if (!userFormData.username && userFormData.full_name) {
-      setUserFormData((prev) => ({ ...prev, username: normalizeUsername(userFormData.full_name) }))
+      const generated = normalizeUsername(userFormData.full_name)
+      if (generated) {
+        setUserFormData((prev) => {
+          // Only set if username is still empty (user hasn't typed anything)
+          if (!prev.username) {
+            return { ...prev, username: generated }
+          }
+          return prev
+        })
+      }
     }
-  }, [userFormData.full_name, userFormData.username])
+  }, [userFormData.full_name]) // Removed username from deps
 
   // Real-time username availability checking
   useEffect(() => {
@@ -380,9 +391,9 @@ export default function CombinedScoutApplicationForm({
   const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     if (name === 'username') {
-      // Normalize username as they type
+      // Normalize username immediately as they type
       const normalized = normalizeUsername(value)
-      setUserFormData((prev) => ({ ...prev, [name]: normalized }))
+      setUserFormData((prev) => ({ ...prev, username: normalized }))
     } else {
       setUserFormData((prev) => ({ ...prev, [name]: value }))
     }
