@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Step1SignUpEmbedded from './Step1SignUpEmbedded'
 import Step2BasicInfo from './Step2BasicInfo'
 import Step3SelectRole from './Step3SelectRole'
-import Step4ParentChoice from './Step4ParentChoice'
+// import Step4ParentChoice from './Step4ParentChoice' // Parent feature - excluded from this deployment
 import Step4HudlLink from './Step4HudlLink'
 import Step5GeneralInfo from './Step5GeneralInfo'
 import Step6SpecificInfo from './Step6SpecificInfo'
@@ -436,25 +436,27 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           />
         )}
 
-        {currentStep === 4 && session && profile && accountType === 'parent' && (
-          <Step4ParentChoice
-            profile={profile}
-            onTagExisting={(playerProfile) => {
-              setPlayerProfile(playerProfile)
-              handleStepComplete(5)
-            }}
-            onCreateNew={(playerProfile) => {
-              console.log('🎯 Step 4 - Setting playerProfile in PlayerParentFlow:', {
-                id: playerProfile.id,
-                user_id: playerProfile.user_id,
-                role: playerProfile.role,
-                username: playerProfile.username
-              })
-              setPlayerProfile(playerProfile)
-              handleStepComplete(5)
-            }}
-            onBack={handleStepBack}
-          />
+        {/* Parent step 4 - excluded from this deployment */}
+        {false && currentStep === 4 && session && profile && accountType === 'parent' && (
+          // <Step4ParentChoice
+          //   profile={profile}
+          //   onTagExisting={(playerProfile) => {
+          //     setPlayerProfile(playerProfile)
+          //     handleStepComplete(5)
+          //   }}
+          //   onCreateNew={(playerProfile) => {
+          //     console.log('🎯 Step 4 - Setting playerProfile in PlayerParentFlow:', {
+          //       id: playerProfile.id,
+          //       user_id: playerProfile.user_id,
+          //       role: playerProfile.role,
+          //       username: playerProfile.username
+          //     })
+          //     setPlayerProfile(playerProfile)
+          //     handleStepComplete(5)
+          //   }}
+          //   onBack={handleStepBack}
+          // />
+          null
         )}
 
         {currentStep === 4 && session && profile && (accountType === 'player' || !accountType) && (

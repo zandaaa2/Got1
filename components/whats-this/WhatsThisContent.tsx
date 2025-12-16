@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthModal } from '@/contexts/AuthModalContext'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getGradientForId } from '@/lib/gradients'
 
@@ -20,6 +19,7 @@ interface WhatsThisContentProps {
 export default function WhatsThisContent({ organizations, hasSession, profileAvatars }: WhatsThisContentProps) {
   const { openSignUp } = useAuthModal()
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
   
   const handleGetStarted = () => {
     // Set flag that user wants to sign up for player/parent flow
@@ -32,8 +32,6 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
     // Navigate to player/parent onboarding step 1
     router.push('/playerparent?step=1')
   }
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
 
   useEffect(() => {
     // Log component mount for debugging
