@@ -133,6 +133,11 @@ export async function POST(request: NextRequest) {
 
       // Prepare update data if we have new information to save
       const updateData: any = {}
+      
+      // CRITICAL: Always ensure role is 'player' for profiles created by parents
+      // This ensures they show up in the browse/search
+      updateData.role = 'player'
+      
       if (full_name !== undefined && full_name !== null && full_name.trim() !== '') {
         updateData.full_name = full_name.trim()
       }
