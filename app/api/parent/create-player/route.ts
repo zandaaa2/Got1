@@ -175,7 +175,8 @@ export async function POST(request: NextRequest) {
         updateData.username = finalUsername
       }
 
-      // Update profile if we have new data
+      // Update profile - always update role to 'player' even if no other data changes
+      // This ensures parent-created players always have the correct role
       let updatedProfile = existingProfile
       if (Object.keys(updateData).length > 0) {
         console.log('🔄 Updating existing profile with new data:', updateData)
@@ -192,6 +193,22 @@ export async function POST(request: NextRequest) {
         } else if (updated) {
           updatedProfile = updated
           console.log('✅ Successfully updated existing profile')
+        }
+      } else if (existingProfile.role !== 'player') {
+        // Even if no other data to update, ensure role is 'player'
+        console.log('🔄 Updating role to "player" for existing profile')
+        const { data: updated, error: updateError } = await adminSupabase
+          .from('profiles')
+          .update({ role: 'player' })
+          .eq('user_id', playerUserId)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('Error updating role:', updateError)
+        } else if (updated) {
+          updatedProfile = updated
+          console.log('✅ Successfully updated role to "player"')
         }
       }
 
