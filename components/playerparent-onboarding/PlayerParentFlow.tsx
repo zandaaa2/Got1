@@ -243,8 +243,10 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
             // Don't auto-navigate forward if user is on a form step (steps 2-7) and target is ahead
             const isOnFormStep = urlStepNum !== null && urlStepNum >= 2 && urlStepNum <= 7
             const targetIsAhead = urlStepNum !== null && targetStep > urlStepNum
-            // Allow navigation if: not on form step, OR target is ahead (user needs to catch up), OR on step 1
-            const shouldAutoNavigate = !isOnFormStep || targetIsAhead || urlStepNum === 1
+            // Special case: For parents on step 3, always allow navigation to step 4 (tag/create player)
+            const isParentOnStep3 = determinedAccountType === 'parent' && urlStepNum === 3 && targetStep === 4
+            // Allow navigation if: not on form step, OR target is ahead (user needs to catch up), OR on step 1, OR parent on step 3 going to step 4
+            const shouldAutoNavigate = !isOnFormStep || targetIsAhead || urlStepNum === 1 || isParentOnStep3
             
             if (shouldAutoNavigate) {
               // Only update state and redirect if auto-navigation is allowed
