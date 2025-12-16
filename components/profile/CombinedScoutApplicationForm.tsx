@@ -43,6 +43,13 @@ export default function CombinedScoutApplicationForm({
   const [avatarPreview, setAvatarPreview] = useState<string | null>(isMeaningfulAvatar(userAvatar) ? userAvatar : null)
   const [uploading, setUploading] = useState(false)
 
+  // Username availability checking state
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checking: boolean
+    available: boolean | null
+    message: string | null
+  }>({ checking: false, available: null, message: null })
+
   // User profile fields
   const [userFormData, setUserFormData] = useState({
     full_name: userName || '',
@@ -63,6 +70,96 @@ export default function CombinedScoutApplicationForm({
       setUserFormData((prev) => ({ ...prev, username: normalizeUsername(userFormData.full_name) }))
     }
   }, [userFormData.full_name, userFormData.username])
+
+  // Real-time username availability checking
+  useEffect(() => {
+    const normalizedUsername = normalizeUsername(userFormData.username.trim())
+    
+    // Reset status if username is empty
+    if (!normalizedUsername) {
+      setUsernameStatus({ checking: false, available: null, message: null })
+      return
+    }
+
+    // Don't check if it's too short
+    if (normalizedUsername.length < 3) {
+      setUsernameStatus({ 
+        checking: false, 
+        available: false, 
+        message: 'Username must be at least 3 characters' 
+      })
+      return
+    }
+
+    // Check if it's reserved
+    if (RESERVED_USERNAMES.has(normalizedUsername)) {
+      setUsernameStatus({ 
+        checking: false, 
+        available: false, 
+        message: 'This username is reserved' 
+      })
+      return
+    }
+
+    // Debounce the database check
+    const timeoutId = setTimeout(async () => {
+      setUsernameStatus({ checking: true, available: null, message: 'Checking availability...' })
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          setUsernameStatus({ 
+            checking: false, 
+            available: null, 
+            message: 'Please sign in to check username' 
+          })
+          return
+        }
+
+        const { data: existingUsername, error: checkError } = await supabase
+          .from('profiles')
+          .select('id, user_id')
+          .eq('username', normalizedUsername)
+          .maybeSingle()
+        
+        if (checkError) {
+          console.error('Error checking username:', checkError)
+          setUsernameStatus({ 
+            checking: false, 
+            available: null, 
+            message: 'Error checking username' 
+          })
+          return
+        }
+
+        // If username exists and belongs to a different user, it's taken
+        // If it belongs to the current user, it's available (they can keep their own username)
+        if (existingUsername && existingUsername.user_id !== session.user.id) {
+          setUsernameStatus({ 
+            checking: false, 
+            available: false, 
+            message: 'This username is already taken' 
+          })
+        } else {
+          // Username is available
+          setUsernameStatus({ 
+            checking: false, 
+            available: true, 
+            message: 'Username is available' 
+          })
+        }
+      } catch (err) {
+        console.error('Error checking username:', err)
+        setUsernameStatus({ 
+          checking: false, 
+          available: null, 
+          message: 'Error checking username' 
+        })
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [userFormData.username, supabase])
 
   const calculateAge = (birthday: string): number | null => {
     if (!birthday) return null
@@ -282,7 +379,13 @@ export default function CombinedScoutApplicationForm({
 
   const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setUserFormData((prev) => ({ ...prev, [name]: value }))
+    if (name === 'username') {
+      // Normalize username as they type
+      const normalized = normalizeUsername(value)
+      setUserFormData((prev) => ({ ...prev, [name]: normalized }))
+    } else {
+      setUserFormData((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleScoutFormChange = (
@@ -379,19 +482,61 @@ export default function CombinedScoutApplicationForm({
               >
                 Username *
               </label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={userFormData.username}
-                onChange={handleUserFormChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="your-username"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This will be your unique profile URL
-              </p>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={userFormData.username}
+                  onChange={handleUserFormChange}
+                  required
+                  className={`w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${
+                    usernameStatus.available === true
+                      ? 'border-green-500 focus:ring-green-500'
+                      : usernameStatus.available === false
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-600'
+                  }`}
+                  placeholder="your-username"
+                  minLength={3}
+                  maxLength={30}
+                />
+                {usernameStatus.checking && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  </div>
+                )}
+                {!usernameStatus.checking && usernameStatus.available === true && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                {!usernameStatus.checking && usernameStatus.available === false && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              {usernameStatus.message && (
+                <p className={`text-xs mt-1 ${
+                  usernameStatus.available === true
+                    ? 'text-green-600'
+                    : usernameStatus.available === false
+                    ? 'text-red-600'
+                    : 'text-gray-500'
+                }`}>
+                  {usernameStatus.message}
+                </p>
+              )}
+              {!usernameStatus.message && (
+                <p className="text-xs text-gray-500 mt-1">
+                  This will be your unique profile URL
+                </p>
+              )}
             </div>
 
             {/* Birthday */}
