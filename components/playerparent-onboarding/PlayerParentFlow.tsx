@@ -491,9 +491,10 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         )}
 
         {currentStep === 5 && session && profile && accountType === 'parent' && (
-          <Step4HudlLink
-            profile={playerProfile}
+          <Step5GeneralInfo
+            profile={profile}
             playerProfile={playerProfile}
+            accountType={accountType}
             onComplete={() => handleStepComplete(6)}
             onBack={handleStepBack}
           />
@@ -512,13 +513,12 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           <>
             {!playerProfile && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                Error: Player profile not found. Please go back to step 4 and create/link a player.
+                Error: Player profile not found. Please go back to step 5 and create a player.
               </div>
             )}
-            <Step5GeneralInfo
+            <Step4HudlLink
               profile={playerProfile}
               playerProfile={playerProfile}
-              accountType={accountType}
               onComplete={() => handleStepComplete(7)}
               onBack={handleStepBack}
             />

@@ -18,6 +18,28 @@ export default function Step4HudlLink({ profile, playerProfile, onComplete, onBa
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
+  // Check if targetProfile is null (for parents who haven't created player yet)
+  if (!targetProfile || !targetProfile.user_id) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <p className="font-medium">Error: Player profile not found</p>
+          <p className="text-sm mt-1">
+            Please go back and create a player profile first before adding a HUDL link.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onBack}
+            className="flex-1 py-3 border border-gray-300 text-black rounded-lg font-medium hover:bg-gray-50"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const handleSubmit = async () => {
     if (!hudlLink.trim()) {
       setError('HUDL link is required')
