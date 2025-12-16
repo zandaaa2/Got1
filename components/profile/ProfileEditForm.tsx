@@ -37,6 +37,15 @@ interface ProfileEditFormProps {
 }
 
 export default function ProfileEditForm({ profile, isNewProfile = false, pendingScoutApplication = null }: ProfileEditFormProps) {
+  const router = useRouter()
+  const supabase = createClient()
+  
+  // Determine if we should show player fields
+  // Show player fields if role is 'player' OR if profile has player data (hudl_link, position, school)
+  // This handles cases where role might be 'user' but the profile has player data
+  const shouldShowPlayerFields = profile?.role === 'player' || 
+    !!(profile?.hudl_link || profile?.position || profile?.school || profile?.graduation_year)
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -49,7 +58,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   // Player position state (array for PositionMultiSelect component)
   const [playerPositions, setPlayerPositions] = useState<string[]>(() => {
-    if (profile.role === 'player') {
+    if (profile.role === 'player' || shouldShowPlayerFields) {
       // Try to load from positions JSONB array first (new format)
       try {
         if (profile.positions && typeof profile.positions === 'string') {
@@ -73,8 +82,61 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
     }
     return []
   })
-  const router = useRouter()
-  const supabase = createClient()
+  
+  // Debug: Log profile role on mount
+  useEffect(() => {
+    console.log('🔍 ProfileEditForm - Profile role:', profile?.role)
+    console.log('🔍 ProfileEditForm - Has player data?', {
+      hasHudlLink: !!profile?.hudl_link,
+      hasPosition: !!profile?.position,
+      hasSchool: !!profile?.school,
+      hasGraduationYear: !!profile?.graduation_year
+    })
+    console.log('🔍 ProfileEditForm - Will show player fields?', shouldShowPlayerFields)
+    
+    // Auto-fix role if profile has player data but role is 'user'
+    if (profile?.role === 'user' && shouldShowPlayerFields) {
+      console.log('⚠️ ProfileEditForm - Auto-fixing role from "user" to "player"')
+      const fixRole = async () => {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ role: 'player' })
+          .eq('user_id', profile.user_id)
+        
+        if (updateError) {
+          console.error('❌ ProfileEditForm - Error auto-fixing role:', updateError)
+        } else {
+          console.log('✅ ProfileEditForm - Role auto-fixed to "player"')
+          // Refresh the page to get updated profile
+          window.location.reload()
+        }
+      }
+      fixRole()
+    }
+  }, [profile?.role, profile?.hudl_link, profile?.position, profile?.school, profile?.graduation_year, shouldShowPlayerFields, profile?.user_id, supabase])
+  
+  // Determine if we're editing a child profile (parent editing their child)
+  // This happens when profile.user_id !== session.user.id
+  const [isEditingChild, setIsEditingChild] = useState(false)
+  const [targetUserId, setTargetUserId] = useState<string | null>(null)
+  
+  useEffect(() => {
+    const checkEditingChild = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session && profile?.user_id && profile.user_id !== session.user.id) {
+        setIsEditingChild(true)
+        setTargetUserId(profile.user_id)
+        console.log('🔍 ProfileEditForm - Editing child profile:', { 
+          profileUserId: profile.user_id, 
+          sessionUserId: session.user.id 
+        })
+      } else {
+        setIsEditingChild(false)
+        setTargetUserId(null)
+      }
+    }
+    checkEditingChild()
+  }, [profile?.user_id, supabase])
   
   // Check if birthday is already set (locked)
   const isBirthdayLocked = !!profile.birthday
@@ -115,14 +177,14 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
     hudl_links: getInitialHudlLinks(),
     school: profile.school || '',
     graduation_year: profile.graduation_year?.toString() || '',
-    graduation_month: profile.graduation_month?.toString() || '',
+    graduation_month: profile.graduation_month ? String(profile.graduation_month) : '',
     parent_name: profile.parent_name || '',
     sport: profile.sport || '',
     // Player stats fields
     gpa: profile.gpa?.toString() || '',
     weight: profile.weight?.toString() || '',
     height: profile.height || '',
-    forty_yard_dash: profile.forty_yard_dash?.toString() || '',
+    forty_yard_dash: (profile.forty_yard_dash || profile.forty_yd_dash)?.toString() || '',
     bench_max: profile.bench_max?.toString() || '',
     squat_max: profile.squat_max?.toString() || '',
     clean_max: profile.clean_max?.toString() || '',
@@ -168,7 +230,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
       })(),
       school: profile.school || prev.school,
       graduation_year: profile.graduation_year?.toString() || prev.graduation_year,
-      graduation_month: profile.graduation_month?.toString() || prev.graduation_month,
+      graduation_month: profile.graduation_month ? String(profile.graduation_month) : prev.graduation_month,
       parent_name: profile.parent_name || prev.parent_name,
       sport: profile.sport || prev.sport,
       gpa: profile.gpa?.toString() || prev.gpa,
@@ -359,10 +421,11 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
 
       // Immediately save the avatar to the database so it updates across the platform
       try {
+        const userIdToUpdate = targetUserId || session.user.id
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-          .eq('user_id', session.user.id)
+          .eq('user_id', userIdToUpdate)
 
         if (updateError) {
           console.error('Failed to update avatar in database:', updateError)
@@ -483,8 +546,8 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
           setLoading(false)
           return
         }
-      } else if (isNewProfile) {
-        // Require birthday for new profiles
+      } else if (isNewProfile && !isEditingChild) {
+        // Require birthday for new profiles (but not when parent is editing child)
         setError('Birthday is required. You must be at least 16 years old to use this platform.')
         setLoading(false)
         return
@@ -510,11 +573,12 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
         return
       }
 
+      const userIdToCheck = targetUserId || session.user.id
       const { data: existingUsername } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', normalizedUsername)
-        .neq('user_id', session.user.id)
+        .neq('user_id', userIdToCheck)
         .maybeSingle()
 
       if (existingUsername) {
@@ -752,10 +816,11 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
         updateData.additional_info = null
       }
 
+      const userIdToUpdate = targetUserId || session.user.id
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updateData)
-        .eq('user_id', session.user.id)
+        .eq('user_id', userIdToUpdate)
 
       // If user has a pending scout application, also update it
       if (pendingScoutApplication && !updateError) {
@@ -833,7 +898,13 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
         console.log('ℹ️  Profile already exists and has been saved before, skipping welcome email')
       }
 
-      router.push(`/${normalizedUsername}`)
+      // If editing a child, redirect back to parent's profile page
+      // Otherwise, redirect to the profile's own page
+      if (isEditingChild) {
+        router.push('/profile')
+      } else {
+        router.push(`/${normalizedUsername}`)
+      }
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to update profile')
@@ -843,9 +914,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
 
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-xl md:text-2xl font-bold text-black mb-4 md:mb-6">Edit Profile</h1>
-
+    <div className="max-w-2xl">
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
           {error}
@@ -948,45 +1017,47 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
               </p>
             </div>
 
-            {/* Birthday */}
-            <div>
-              <label htmlFor="birthday" className="block text-sm font-medium text-black mb-2">
-                Birthday * {isNewProfile && <span className="text-red-600">(Required - Must be 16+)</span>}
-                {isBirthdayLocked && <span className="text-gray-500 text-xs ml-2">(Cannot be changed)</span>}
-              </label>
-              <input
-                type="date"
-                id="birthday"
-                name="birthday"
-                value={formData.birthday}
-                onChange={handleChange}
-                required={isNewProfile}
-                disabled={isBirthdayLocked}
-                max={new Date(new Date().setFullYear(new Date().getFullYear() - 16)).toISOString().split('T')[0]}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black ${
-                  isBirthdayLocked ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
-              />
-              {!isBirthdayLocked && (
-                <p className="mt-1 text-sm text-gray-600">
-                  You must be at least 16 years old to use this platform.
-                </p>
-              )}
-              {formData.birthday && !isBirthdayLocked && (() => {
-                const age = calculateAge(formData.birthday)
-                return age !== null && (
-                  <p className={`mt-1 text-sm ${age < 16 ? 'text-red-600' : 'text-green-600'}`}>
-                    Age: {age} {age < 16 ? '(Must be 16 or older)' : 'years old'}
+            {/* Birthday - Hidden when editing a child player */}
+            {!isEditingChild && (
+              <div>
+                <label htmlFor="birthday" className="block text-sm font-medium text-black mb-2">
+                  Birthday * {isNewProfile && <span className="text-red-600">(Required - Must be 16+)</span>}
+                  {isBirthdayLocked && <span className="text-gray-500 text-xs ml-2">(Cannot be changed)</span>}
+                </label>
+                <input
+                  type="date"
+                  id="birthday"
+                  name="birthday"
+                  value={formData.birthday}
+                  onChange={handleChange}
+                  required={isNewProfile}
+                  disabled={isBirthdayLocked}
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() - 16)).toISOString().split('T')[0]}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black ${
+                    isBirthdayLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
+                />
+                {!isBirthdayLocked && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    You must be at least 16 years old to use this platform.
                   </p>
-                )
-              })()}
-            </div>
+                )}
+                {formData.birthday && !isBirthdayLocked && (() => {
+                  const age = calculateAge(formData.birthday)
+                  return age !== null && (
+                    <p className={`mt-1 text-sm ${age < 16 ? 'text-red-600' : 'text-green-600'}`}>
+                      Age: {age} {age < 16 ? '(Must be 16 or older)' : 'years old'}
+                    </p>
+                  )
+                })()}
+              </div>
+            )}
 
           </div>
         </div>
 
         {/* Player Info Section */}
-        {profile.role === 'player' && (
+        {shouldShowPlayerFields && (
           <div>
             <h2 className="text-xl font-bold text-black mb-4 md:mb-6">Player Info</h2>
             <div className="space-y-4 md:space-y-6">
@@ -1085,20 +1156,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="parent_name" className="block text-sm font-medium text-black mb-2">
-                  Parent Name (if account is run by parent)
-                </label>
-                <input
-                  type="text"
-                  id="parent_name"
-                  name="parent_name"
-                  value={formData.parent_name}
-                  onChange={handleChange}
-                  placeholder="Parent or guardian name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
 
               {/* Player Stats Section */}
               <div className="mt-8 pt-8 border-t border-gray-200">
@@ -1292,7 +1349,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
         )}
 
         {/* College Offers Section - Only for players */}
-        {profile.role === 'player' && (
+        {shouldShowPlayerFields && (
           <div className="mt-8 pt-8 border-t border-gray-200">
             <PlayerOffersSection
               profileId={profile.id}
