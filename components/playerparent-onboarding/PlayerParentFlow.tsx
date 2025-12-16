@@ -215,21 +215,11 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         } else if (!profileData?.role || profileData.role === 'user') {
           targetStep = 3
         } else if (determinedAccountType === 'parent') {
-          // For parents, check what step they should be on
-          // Step 4: Tag/create player (always start here)
-          // Step 5: Create/update player profile
-          // Step 6: Add HUDL link
-          // Step 7: Complete player info
-          if (!profileData?.position || !profileData?.school || !profileData?.graduation_year) {
-            // Missing position/school/graduation - go to step 5 (create player profile)
-            targetStep = 5
-          } else if (!profileData?.hudl_link) {
-            // Has position/school but no HUDL link - go to step 6
-            targetStep = 6
-          } else {
-            // Has everything - go to step 7 (complete info)
-            targetStep = 7
-          }
+          // For parents, always start at step 4 (tag/create player)
+          // After that, check playerProfile data to determine next steps
+          // We'll load playerProfile above, but for step determination, default to step 4
+          // The component will handle showing the right step based on whether playerProfile exists
+          targetStep = 4
         } else {
           // For players
           if (!profileData?.hudl_link) {
