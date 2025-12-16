@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -21,30 +21,49 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
   const [playerSearchResults, setPlayerSearchResults] = useState<any[]>([])
   const [searchingPlayer, setSearchingPlayer] = useState(false)
   const [linkingPlayer, setLinkingPlayer] = useState(false)
-  const [unlinkingPlayerId, setUnlinkingPlayerId] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    loadLinkedChildren()
-  }, [profile.user_id])
+  console.log('🎯 ParentDashboard mounted with profile:', { 
+    profileId: profile?.id, 
+    userId: profile?.user_id, 
+    role: profile?.role,
+    fullProfile: profile
+  })
 
-  const loadLinkedChildren = async () => {
+  const loadLinkedChildren = useCallback(async () => {
+    console.log('🚀 ParentDashboard: loadLinkedChildren called')
     try {
       setLoading(true)
-      // Get all parent_children relationships for this parent
-      const { data: parentLinks, error: linksError } = await supabase
-        .from('parent_children')
-        .select('player_id')
-        .eq('parent_id', profile.user_id)
-
-      if (linksError) {
-        console.error('Error loading parent links:', linksError)
+      
+      // Get session to use the actual user ID (more reliable than profile.user_id)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.error('❌ No session found when loading linked children')
         setLoading(false)
         return
       }
 
+      const parentUserId = session.user.id
+      console.log('🔍 Loading linked children for parent:', parentUserId)
+      console.log('🔍 Profile user_id:', profile.user_id)
+
+      // Get all parent_children relationships for this parent
+      const { data: parentLinks, error: linksError } = await supabase
+        .from('parent_children')
+        .select('player_id')
+        .eq('parent_id', parentUserId)
+
+      if (linksError) {
+        console.error('❌ Error loading parent links:', linksError)
+        setLoading(false)
+        return
+      }
+
+      console.log('📋 Found parent_children links:', parentLinks?.length || 0, parentLinks)
+
       if (!parentLinks || parentLinks.length === 0) {
+        console.log('ℹ️ No parent_children links found')
         setLinkedChildren([])
         setLoading(false)
         return
@@ -52,6 +71,21 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
 
       // Get all player profiles
       const playerIds = parentLinks.map(link => link.player_id)
+      console.log('🔍 Loading player profiles for IDs:', playerIds)
+      console.log('🔍 Player IDs detail:', JSON.stringify(playerIds))
+      
+      // First, try to get profiles without role filter to see if they exist
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('id, user_id, role, username, full_name, created_at')
+        .in('user_id', playerIds)
+
+      console.log('🔍 All profiles (no role filter):', allProfiles?.length || 0, allProfiles)
+      if (allProfilesError) {
+        console.error('❌ Error loading all profiles:', allProfilesError)
+      }
+
+      // Now get profiles with role filter
       const { data: players, error: playersError } = await supabase
         .from('profiles')
         .select('*')
@@ -59,18 +93,110 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
         .eq('role', 'player')
 
       if (playersError) {
-        console.error('Error loading players:', playersError)
-        setLinkedChildren([])
+        console.error('❌ Error loading players:', playersError)
+        console.error('❌ Error details:', JSON.stringify(playersError, null, 2))
+        
+        // If we found profiles without the role filter, use those as fallback
+        if (allProfiles && allProfiles.length > 0) {
+          console.warn('⚠️ Using profiles without role filter as fallback')
+          // Fetch full profile data for the profiles we found
+          const { data: fallbackPlayers, error: fallbackError } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('user_id', allProfiles.map(p => p.user_id))
+          
+          if (!fallbackError && fallbackPlayers) {
+            console.log('✅ Using fallback players:', fallbackPlayers.length, fallbackPlayers)
+            setLinkedChildren(fallbackPlayers)
+          } else {
+            setLinkedChildren([])
+          }
+        } else {
+          setLinkedChildren([])
+        }
       } else {
-        setLinkedChildren(players || [])
+        console.log('✅ Loaded players:', players?.length || 0, players)
+        console.log('✅ Player details:', JSON.stringify(players, null, 2))
+        
+        // If we found profiles without role filter but not with it, the role might be wrong
+        if (allProfiles && allProfiles.length > 0 && (!players || players.length === 0)) {
+          console.warn('⚠️ Found profiles but role filter excluded them. Profiles have roles:', allProfiles.map(p => ({ user_id: p.user_id, role: p.role })))
+          
+          // Auto-fix: Update role to 'player' for profiles that are linked but have wrong role
+          const profilesToFix = allProfiles.filter(p => p.role !== 'player')
+          if (profilesToFix.length > 0) {
+            console.log('🔧 Auto-fixing roles for', profilesToFix.length, 'profile(s)')
+            for (const profileToFix of profilesToFix) {
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ role: 'player' })
+                .eq('user_id', profileToFix.user_id)
+              
+              if (updateError) {
+                console.error(`❌ Error fixing role for ${profileToFix.user_id}:`, updateError)
+              } else {
+                console.log(`✅ Fixed role for profile ${profileToFix.user_id} (was: ${profileToFix.role}, now: player)`)
+              }
+            }
+            
+            // Reload players after fixing roles
+            const { data: fixedPlayers, error: fixedPlayersError } = await supabase
+              .from('profiles')
+              .select('*')
+              .in('user_id', allProfiles.map(p => p.user_id))
+              .eq('role', 'player')
+            
+            if (!fixedPlayersError && fixedPlayers && fixedPlayers.length > 0) {
+              console.log('✅ Loaded players after auto-fix:', fixedPlayers.length, fixedPlayers)
+              setLinkedChildren(fixedPlayers)
+            } else {
+              // Fallback: Use profiles even if role fix didn't work
+              const { data: fallbackPlayers, error: fallbackError } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('user_id', allProfiles.map(p => p.user_id))
+              
+              if (!fallbackError && fallbackPlayers) {
+                console.log('✅ Using fallback players (after failed auto-fix):', fallbackPlayers.length, fallbackPlayers)
+                setLinkedChildren(fallbackPlayers)
+              } else {
+                setLinkedChildren([])
+              }
+            }
+          } else {
+            // No profiles to fix, just use fallback
+            const { data: fallbackPlayers, error: fallbackError } = await supabase
+              .from('profiles')
+              .select('*')
+              .in('user_id', allProfiles.map(p => p.user_id))
+            
+            if (!fallbackError && fallbackPlayers) {
+              console.log('✅ Using fallback players (wrong role):', fallbackPlayers.length, fallbackPlayers)
+              setLinkedChildren(fallbackPlayers)
+            } else {
+              setLinkedChildren([])
+            }
+          }
+        } else {
+          setLinkedChildren(players || [])
+        }
       }
     } catch (error) {
-      console.error('Error in loadLinkedChildren:', error)
+      console.error('❌ Error in loadLinkedChildren:', error)
       setLinkedChildren([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, profile])
+
+  useEffect(() => {
+    console.log('🔄 ParentDashboard useEffect triggered, profile.user_id:', profile?.user_id)
+    if (profile?.user_id) {
+      loadLinkedChildren()
+    } else {
+      console.warn('⚠️ Profile user_id is missing, cannot load children')
+    }
+  }, [profile?.user_id, profile?.id, loadLinkedChildren])
 
   // Search for players when query changes
   useEffect(() => {
@@ -157,48 +283,6 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
 
   const handleCreatePlayer = () => {
     router.push('/profile/parent/create-player')
-  }
-
-  const handleUnlinkPlayer = async (playerId: string) => {
-    if (!confirm('Are you sure you want to unlink this player? You will no longer be able to manage their profile or purchase evaluations on their behalf.')) {
-      return
-    }
-
-    try {
-      setUnlinkingPlayerId(playerId)
-      
-      console.log('🔍 Attempting to unlink player via API:', { player_id: playerId })
-
-      // Use API route instead of direct Supabase call to bypass potential RLS issues
-      const response = await fetch('/api/parent/unlink-player', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Ensure cookies are sent
-        body: JSON.stringify({ player_id: playerId }),
-      })
-
-      console.log('🔍 API Response status:', response.status, response.statusText)
-
-      const data = await response.json()
-      console.log('🔍 API Response data:', data)
-
-      if (!response.ok) {
-        console.error('❌ API Error:', data)
-        throw new Error(data.error || 'Failed to unlink player')
-      }
-
-      console.log('✅ Successfully unlinked player')
-      
-      // Reload linked children
-      await loadLinkedChildren()
-    } catch (error: any) {
-      console.error('❌ Error unlinking player:', error)
-      alert(error.message || 'Failed to unlink player. Please check the browser console for details.')
-    } finally {
-      setUnlinkingPlayerId(null)
-    }
   }
 
   if (loading) {
@@ -304,22 +388,11 @@ export default function ParentDashboard({ profile }: ParentDashboardProps) {
                     {/* Actions */}
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
-                        onClick={() => handleUnlinkPlayer(player.user_id)}
-                        disabled={unlinkingPlayerId === player.user_id}
-                        className="interactive-press inline-flex items-center justify-center h-8 md:h-9 px-3 md:px-4 rounded-full border border-red-200 bg-white text-xs md:text-sm font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        onClick={() => router.push(`/profile/parent/edit-player/${player.id}`)}
+                        className="interactive-press inline-flex items-center justify-center h-8 md:h-9 px-3 md:px-4 rounded-full border border-gray-200 bg-white text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
                       >
-                        {unlinkingPlayerId === player.user_id ? (
-                          <>
-                            <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin mr-1.5 md:mr-2"></div>
-                            <span className="hidden sm:inline">Unlinking...</span>
-                            <span className="sm:hidden">...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="hidden sm:inline">Unlink Player</span>
-                            <span className="sm:hidden">Unlink</span>
-                          </>
-                        )}
+                        <span className="hidden sm:inline">Edit</span>
+                        <span className="sm:hidden">Edit</span>
                       </button>
                     </div>
                   </div>

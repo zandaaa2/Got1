@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
-import CollegeSelector from '@/components/profile/CollegeSelector'
 
 interface HudlLink {
   link: string
@@ -31,9 +30,20 @@ interface ParentCreatePlayerFormProps {
   parentProfile: any
 }
 
+const RESERVED_USERNAMES = new Set([
+  'profile', 'profiles', 'browse', 'teams', 'team', 'api', 'terms-of-service',
+  'privacy-policy', 'login', 'signup', 'my-evals', 'evaluations', 'stripe',
+  'auth', 'admin', 'settings', 'money', 'marketing'
+])
+
 export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePlayerFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checking: boolean
+    available: boolean | null
+    message: string | null
+  }>({ checking: false, available: null, message: null })
   const router = useRouter()
   const supabase = createClient()
 
@@ -46,7 +56,6 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
     school: '',
     graduation_month: '',
     graduation_year: '',
-    bio: '',
   })
 
   const normalizeUsername = (value: string) => {
@@ -57,6 +66,85 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
       .replace(/^[-_]+|[-_]+$/g, '')
       .slice(0, 30)
   }
+
+  // Real-time username availability checking
+  useEffect(() => {
+    const normalizedUsername = normalizeUsername(formData.username.trim())
+    
+    // Reset status if username is empty
+    if (!normalizedUsername) {
+      setUsernameStatus({ checking: false, available: null, message: null })
+      return
+    }
+
+    // Don't check if it's too short
+    if (normalizedUsername.length < 3) {
+      setUsernameStatus({ 
+        checking: false, 
+        available: false, 
+        message: 'Username must be at least 3 characters' 
+      })
+      return
+    }
+
+    // Check if it's reserved
+    if (RESERVED_USERNAMES.has(normalizedUsername)) {
+      setUsernameStatus({ 
+        checking: false, 
+        available: false, 
+        message: 'This username is reserved' 
+      })
+      return
+    }
+
+    // Debounce the database check
+    const timeoutId = setTimeout(async () => {
+      setUsernameStatus({ checking: true, available: null, message: 'Checking availability...' })
+      
+      try {
+        const { data: existingUsername, error } = await supabase
+          .from('profiles')
+          .select('id, user_id')
+          .eq('username', normalizedUsername)
+          .maybeSingle()
+        
+        if (error) {
+          console.error('Error checking username:', error)
+          setUsernameStatus({ 
+            checking: false, 
+            available: null, 
+            message: 'Error checking username' 
+          })
+          return
+        }
+
+        // If username exists, it's taken
+        if (existingUsername) {
+          setUsernameStatus({ 
+            checking: false, 
+            available: false, 
+            message: 'This username is already taken' 
+          })
+        } else {
+          // Username is available
+          setUsernameStatus({ 
+            checking: false, 
+            available: true, 
+            message: 'Username is available' 
+          })
+        }
+      } catch (err) {
+        console.error('Error checking username:', err)
+        setUsernameStatus({ 
+          checking: false, 
+          available: null, 
+          message: 'Error checking username' 
+        })
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [formData.username, supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,16 +202,6 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
         return
       }
 
-      // Validate sport for each link
-      for (const link of validHudlLinks) {
-        const validSports = ['football', 'mens-basketball']
-        if (!link.sport || !validSports.includes(link.sport)) {
-          setError('Please select a sport (football or men\'s basketball) for each film link.')
-          setLoading(false)
-          return
-        }
-      }
-
       if (!formData.position || formData.position.trim() === '') {
         setError('Position is required.')
         setLoading(false)
@@ -151,66 +229,36 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
-      // Generate a placeholder UUID for the player profile
-      // This will be updated when the player claims their account
-      // Use crypto.randomUUID() if available, otherwise generate a UUID v4
-      const generateUUID = () => {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-          return crypto.randomUUID()
-        }
-        // Fallback: Generate UUID v4 format
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-          const r = Math.random() * 16 | 0
-          const v = c === 'x' ? r : (r & 0x3 | 0x8)
-          return v.toString(16)
-        })
-      }
-      const placeholderUserId = generateUUID()
-
       // Prepare hudl_links as JSONB array
       const hudlLinksArray = validHudlLinks.map((hl: HudlLink) => ({
         link: hl.link.trim(),
-        sport: hl.sport,
+        sport: null, // sport no longer required
       }))
 
-      // Create new player profile with placeholder user_id
-      const playerProfileData: any = {
-        user_id: placeholderUserId, // Placeholder - will be updated when player claims account
-        role: 'player',
-        full_name: formData.full_name.trim(),
-        username: normalizedUsername,
-        social_link: formData.social_link.trim(),
-        hudl_links: hudlLinksArray,
-        hudl_link: hudlLinksArray.length > 0 ? hudlLinksArray[0].link : null, // Backward compatibility
-        sport: hudlLinksArray.length > 0 ? hudlLinksArray[0].sport : null,
-        position: formData.position.trim(),
-        school: formData.school.trim(),
-        graduation_month: parseInt(formData.graduation_month),
-        graduation_year: parseInt(formData.graduation_year),
-        bio: formData.bio?.trim() || null,
-        created_by_parent: true, // Mark that parent created this profile
-      }
+      // Use API endpoint to create player profile (bypasses RLS using admin client)
+      const response = await fetch('/api/parent/create-player', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          full_name: formData.full_name.trim(),
+          username: normalizedUsername,
+          social_link: formData.social_link.trim(),
+          hudl_links: hudlLinksArray,
+          hudl_link: hudlLinksArray.length > 0 ? hudlLinksArray[0].link : null, // Backward compatibility
+          position: formData.position.trim(),
+          school: formData.school.trim(),
+          graduation_month: parseInt(formData.graduation_month),
+          graduation_year: parseInt(formData.graduation_year),
+        }),
+      })
 
-      const { data: playerProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert(playerProfileData)
-        .select()
-        .single()
+      const data = await response.json()
 
-      if (createError) throw createError
-
-      // Create parent_children relationship
-      const { error: linkError } = await supabase
-        .from('parent_children')
-        .insert({
-          parent_id: session.user.id,
-          player_id: placeholderUserId,
-        })
-
-      if (linkError) {
-        // If linking fails, try to delete the player profile we just created
-        await supabase.from('profiles').delete().eq('id', playerProfile.id)
-        throw linkError
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create player profile')
       }
 
       // Redirect to parent profile
@@ -252,10 +300,6 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
             value={formData.full_name}
             onChange={(e) => {
               setFormData({ ...formData, full_name: e.target.value })
-              // Auto-generate username from name
-              if (!formData.username) {
-                setFormData(prev => ({ ...prev, username: normalizeUsername(e.target.value) }))
-              }
             }}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
             required
@@ -268,18 +312,64 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
           <label htmlFor="username" className="block text-sm font-medium text-black mb-2">
             Username <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            id="username"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: normalizeUsername(e.target.value) })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            required
-            placeholder="username"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              id="username"
+              value={formData.username}
+              onChange={(e) => {
+                setFormData({ ...formData, username: normalizeUsername(e.target.value) })
+                setError(null)
+              }}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                usernameStatus.available === true
+                  ? 'border-green-500 focus:ring-green-500'
+                  : usernameStatus.available === false
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-black'
+              }`}
+              required
+              placeholder="username"
+            />
+            {usernameStatus.checking && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
+              </div>
+            )}
+            {!usernameStatus.checking && usernameStatus.available === true && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+            {!usernameStatus.checking && usernameStatus.available === false && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            )}
+          </div>
           <p className="text-xs text-gray-500 mt-1">
             This will be the player's unique username on Got1.
           </p>
+          {formData.username && (
+            <p className="text-xs text-blue-600 mt-1">
+              Preview: /{normalizeUsername(formData.username)}
+            </p>
+          )}
+          {usernameStatus.message && (
+            <p className={`text-xs mt-1 ${
+              usernameStatus.available === true
+                ? 'text-green-600'
+                : usernameStatus.available === false
+                ? 'text-red-600'
+                : 'text-gray-600'
+            }`}>
+              {usernameStatus.message}
+            </p>
+          )}
         </div>
 
         {/* Social Media Link */}
@@ -303,15 +393,12 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
 
         {/* Film Links */}
         <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Film Link <span className="text-red-500">*</span>
-          </label>
           <HudlLinkSelector
             hudlLinks={formData.hudl_links}
             onChange={handleHudlLinksChange}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Add at least one link to the player's film (HUDL, QwikCut, or YouTube). Select the sport for each link.
+            Add at least one link to the player's film (HUDL, QwikCut, or YouTube).
           </p>
         </div>
 
@@ -336,10 +423,14 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
           <label htmlFor="school" className="block text-sm font-medium text-black mb-2">
             School <span className="text-red-500">*</span>
           </label>
-          <CollegeSelector
+          <input
+            type="text"
+            id="school"
             value={formData.school}
-            onChange={(value) => setFormData({ ...formData, school: value })}
-            placeholder="Search for school"
+            onChange={(e) => setFormData({ ...formData, school: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            required
+            placeholder="High school name"
           />
         </div>
 
@@ -379,21 +470,6 @@ export default function ParentCreatePlayerForm({ parentProfile }: ParentCreatePl
               placeholder="2025"
             />
           </div>
-        </div>
-
-        {/* Bio */}
-        <div>
-          <label htmlFor="bio" className="block text-sm font-medium text-black mb-2">
-            Bio
-          </label>
-          <textarea
-            id="bio"
-            value={formData.bio}
-            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            rows={4}
-            placeholder="Tell scouts about the player..."
-          />
         </div>
 
         {/* Submit Button */}
