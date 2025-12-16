@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuthModal } from '@/contexts/AuthModalContext'
+import { useRouter } from 'next/navigation'
 import Logo from '@/components/shared/Logo'
 
 interface WelcomeNavbarProps {
@@ -18,6 +19,19 @@ const blogPosts = [
 
 export default function WelcomeNavbar({ showBecomeScout = true, variant = 'transparent' }: WelcomeNavbarProps) {
   const { openSignUp } = useAuthModal()
+  const router = useRouter()
+  
+  const handleGetStarted = () => {
+    // Set flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+    }
+    // Navigate to player/parent onboarding step 1
+    router.push('/playerparent?step=1')
+  }
   const [showBlogDropdown, setShowBlogDropdown] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [isAppInstalled, setIsAppInstalled] = useState(false)
@@ -25,6 +39,14 @@ export default function WelcomeNavbar({ showBecomeScout = true, variant = 'trans
   
   const handleBecomeScoutClick = (e: React.MouseEvent) => {
     e.preventDefault()
+    // Set flag that user wants to become a scout
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('scout_onboarding', 'true')
+      localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'scout_onboarding=true; path=/; max-age=3600' // 1 hour
+      document.cookie = 'playerparent_onboarding=; path=/; max-age=0' // Clear player/parent cookie
+    }
     // Navigate to new scout onboarding flow
     window.location.href = '/scout'
   }
@@ -160,7 +182,7 @@ export default function WelcomeNavbar({ showBecomeScout = true, variant = 'trans
             </div>
 
             <button
-              onClick={openSignUp}
+              onClick={handleGetStarted}
               className="inline-flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-white hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#233dff' }}
             >

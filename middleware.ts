@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
     '/privacy-policy',
     '/teams',
     '/scout', // Scout onboarding flow - steps 1-2 don't require auth
+    '/playerparent', // Player/parent onboarding flow - steps 1-2 don't require auth
   ]
 
   // Check if pathname matches a username route (e.g., /john-doe)
@@ -180,7 +181,33 @@ export async function middleware(request: NextRequest) {
               profile.birthday
 
             if (!hasRequiredFields) {
-              // Redirect to user-setup if profile is incomplete
+              // Don't redirect if user is in onboarding flows (scout or player/parent)
+              // These flows handle profile setup themselves
+              const isOnboardingRoute = pathname.startsWith('/scout') || pathname.startsWith('/playerparent')
+              
+              // If already on onboarding route, don't redirect - let the flow handle it
+              if (isOnboardingRoute) {
+                // Allow the request to continue to the onboarding page
+                return response
+              }
+              
+              // Check for onboarding cookies (set when user clicks "Get Started" or "Become a Scout")
+              const playerparentOnboarding = request.cookies.get('playerparent_onboarding')?.value === 'true'
+              const scoutOnboarding = request.cookies.get('scout_onboarding')?.value === 'true'
+              
+              // If user has playerparent_onboarding cookie and not already on playerparent route, redirect
+              if (playerparentOnboarding && !pathname.startsWith('/playerparent')) {
+                const redirectUrl = new URL('/playerparent?step=2', request.url)
+                return NextResponse.redirect(redirectUrl)
+              }
+              
+              // If user has scout_onboarding cookie and not already on scout route, redirect
+              if (scoutOnboarding && !pathname.startsWith('/scout')) {
+                const redirectUrl = new URL('/scout?step=3', request.url)
+                return NextResponse.redirect(redirectUrl)
+              }
+              
+              // Default: redirect to user-setup if not on onboarding routes and no onboarding cookies
               if (pathname !== '/profile/user-setup') {
                 const redirectUrl = new URL('/profile/user-setup', request.url)
                 return NextResponse.redirect(redirectUrl)

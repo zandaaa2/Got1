@@ -146,6 +146,9 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
       setLoading(true)
       setError(null)
       
+      // Preserve scout_onboarding flag if it exists (user is on scout flow)
+      // Don't clear it here - let the auth callback handle routing based on flags
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -305,7 +308,13 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
                   Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => onModeChange('signin')}
+                    onClick={() => {
+                      // Clear playerparent flag when switching to signin
+                      if (typeof window !== 'undefined') {
+                        localStorage.removeItem('playerparent_onboarding')
+                      }
+                      onModeChange('signin')
+                    }}
                     className="text-black font-medium underline hover:no-underline"
                   >
                     Sign in
@@ -318,13 +327,23 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, hideSig
             {mode === 'signin' && onModeChange && (
               <p className="text-center text-sm text-gray-600">
                 Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => onModeChange('signup')}
-                  className="text-black font-medium underline hover:no-underline"
-                >
-                  Sign up instead
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Set playerparent flag when switching to signup
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('playerparent_onboarding', 'true')
+                        localStorage.removeItem('scout_onboarding')
+                        // Set cookie so middleware can check it server-side
+                        document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+                        console.log('✅ Switched to signup mode - set playerparent_onboarding flag')
+                      }
+                      onModeChange('signup')
+                    }}
+                    className="text-black font-medium underline hover:no-underline"
+                  >
+                    Sign up instead
+                  </button>
               </p>
             )}
           </>

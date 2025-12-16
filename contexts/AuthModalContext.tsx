@@ -26,6 +26,14 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   const openSignUp = () => {
     setSignInOpen(false)
     setSignUpOnlyOpen(false)
+    // Store flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+      console.log('✅ Get Started clicked - set playerparent_onboarding flag, cleared scout_onboarding')
+    }
     setSignUpOpen(true)
   }
 

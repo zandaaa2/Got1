@@ -15,6 +15,18 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
   const { openSignUp } = useAuthModal()
   const router = useRouter()
   const [hasSession, setHasSession] = useState(false)
+  
+  const handleGetStarted = () => {
+    // Set flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+    }
+    // Navigate to player/parent onboarding step 1
+    router.push('/playerparent?step=1')
+  }
 
   useEffect(() => {
     const checkSession = async () => {
@@ -77,7 +89,7 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
               <span className="text-gray-400 font-normal">have connections with these schools.</span>
             </h2>
             <button
-              onClick={openSignUp}
+              onClick={handleGetStarted}
               className="text-blue-600 hover:text-blue-800 transition-colors underline font-medium text-lg whitespace-nowrap"
             >
               See all schools
@@ -145,7 +157,7 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
               Our scouts have connections with these schools{' '}
               <span className="mx-1">|</span>{' '}
               <button
-                onClick={openSignUp}
+                onClick={handleGetStarted}
                 className="text-blue-600 hover:text-blue-800 transition-colors underline font-medium"
               >
                 See all schools

@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuthModal } from '@/contexts/AuthModalContext'
+import { useRouter } from 'next/navigation'
 import WelcomeHero from '@/components/welcome/WelcomeHero'
 import TeamLogosBar from '@/components/welcome/TeamLogosBar'
 import TopScouts from '@/components/welcome/TopScouts'
@@ -53,6 +54,19 @@ export default function WelcomeContent({
   profileAvatars = [],
 }: WelcomeContentProps) {
   const { openSignUp } = useAuthModal()
+  const router = useRouter()
+  
+  const handleGetStarted = () => {
+    // Set flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+    }
+    // Navigate to player/parent onboarding step 1
+    router.push('/playerparent?step=1')
+  }
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
   const findCollegeMatch = (organization: string | null) => {
@@ -173,7 +187,7 @@ export default function WelcomeContent({
           
           {/* CTA Button */}
           <button
-            onClick={openSignUp}
+            onClick={handleGetStarted}
             className="inline-flex items-center justify-center px-8 md:px-10 py-3 md:py-4 rounded-full text-white font-medium hover:opacity-90 active:scale-95 transition-all text-base md:text-lg shadow-lg hover:shadow-xl mb-12 md:mb-16"
             style={{ backgroundColor: '#233dff' }}
           >
@@ -355,7 +369,7 @@ export default function WelcomeContent({
             Join Got1 today and connect with verified college scouts who can help take your recruiting to the next level.
           </p>
           <button
-            onClick={openSignUp}
+            onClick={handleGetStarted}
             className="inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-medium hover:opacity-90 transition-opacity text-base md:text-lg shadow-lg"
             style={{ backgroundColor: '#233dff' }}
           >

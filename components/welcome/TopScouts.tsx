@@ -32,6 +32,18 @@ interface TopScoutsProps {
 export default function TopScouts({ scouts = [] }: TopScoutsProps) {
   const router = useRouter()
   const { openSignUp } = useAuthModal()
+  
+  const handleGetStarted = () => {
+    // Set flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+    }
+    // Navigate to player/parent onboarding step 1
+    router.push('/playerparent?step=1')
+  }
   const [hasSession, setHasSession] = useState(false)
 
   useEffect(() => {
@@ -89,7 +101,7 @@ export default function TopScouts({ scouts = [] }: TopScoutsProps) {
 
   const handleScoutClick = (scoutId: string, username: string | null | undefined) => {
     if (!hasSession) {
-      openSignUp()
+      handleGetStarted()
     } else {
       router.push(getProfilePath(scoutId, username))
     }

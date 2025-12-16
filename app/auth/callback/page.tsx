@@ -104,40 +104,73 @@ function AuthCallbackContent() {
             profile = fixedProfile
           }
 
-          // Determine redirect destination with priority:
-          // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)
-          // 2. postSignUpRedirect (from protected footer links like "Make a claim")
-          // 3. become_scout_signup (from "Become a Scout" button)
-          // 4. scout_onboarding (from scout onboarding flow)
-          // 5. Default to /browse
-          let finalRedirect = '/browse'
-          if (typeof window !== 'undefined') {
-            // First check for redirect query parameter (highest priority)
-            if (redirectParam) {
-              finalRedirect = redirectParam
-              console.log('✅ Using redirect parameter from URL:', finalRedirect)
+        // Determine redirect destination with priority:
+        // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)
+        // 2. postSignUpRedirect (from protected footer links like "Make a claim")
+        // 3. playerparent_onboarding (from "Get Started" button) - for player/parent flow
+        // 4. become_scout_signup (from "Become a Scout" button)
+        // 5. scout_onboarding (from scout onboarding flow)
+        // 6. For new users (no profile) OR users without role, default to player/parent onboarding
+        // 7. Default to /browse
+        let finalRedirect = '/browse'
+        
+        if (typeof window !== 'undefined') {
+          // First check for redirect query parameter (highest priority)
+          if (redirectParam) {
+            finalRedirect = redirectParam
+            console.log('✅ Using redirect parameter from URL:', finalRedirect)
+          } else {
+            // Check for postSignUpRedirect
+            const storedRedirect = localStorage.getItem('postSignUpRedirect')
+            if (storedRedirect) {
+              finalRedirect = storedRedirect
+              localStorage.removeItem('postSignUpRedirect')
             } else {
-              // Check for postSignUpRedirect
-              const storedRedirect = localStorage.getItem('postSignUpRedirect')
-              if (storedRedirect) {
-                finalRedirect = storedRedirect
-                localStorage.removeItem('postSignUpRedirect')
+              // Check for playerparent_onboarding flag (from "Get Started" button)
+              const playerparentOnboarding = localStorage.getItem('playerparent_onboarding')
+              const scoutOnboardingCheck = localStorage.getItem('scout_onboarding')
+              console.log('🔍 Auth callback flags check (Email):', {
+                playerparentOnboarding,
+                scoutOnboarding: scoutOnboardingCheck,
+                becomeScoutSignup: localStorage.getItem('become_scout_signup')
+              })
+              if (playerparentOnboarding === 'true') {
+                localStorage.removeItem('playerparent_onboarding')
+                localStorage.removeItem('scout_onboarding') // Clear scout flag
+                // Clear cookie
+                if (typeof document !== 'undefined') {
+                  document.cookie = 'playerparent_onboarding=; path=/; max-age=0'
+                }
+                finalRedirect = '/playerparent?step=2'
+                console.log('✅ Player/parent onboarding flag detected, redirecting to:', finalRedirect)
               } else {
-                // Then check for become_scout_signup (legacy - redirect to new flow)
+                // Then check for become_scout_signup (from "Become a Scout" button)
                 const becomeScoutSignup = localStorage.getItem('become_scout_signup')
                 if (becomeScoutSignup === 'true') {
                   localStorage.removeItem('become_scout_signup')
+                  localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
                   finalRedirect = '/scout'
-                }
-                // Check for scout onboarding flag
-                const scoutOnboarding = localStorage.getItem('scout_onboarding')
-                if (scoutOnboarding === 'true') {
-                  localStorage.removeItem('scout_onboarding')
-                  finalRedirect = '/scout?step=3'
+                  console.log('✅ Become scout signup flag detected, redirecting to:', finalRedirect)
+                } else {
+                  // Check for scout onboarding flag (from scout onboarding flow)
+                  const scoutOnboarding = localStorage.getItem('scout_onboarding')
+                  if (scoutOnboarding === 'true') {
+                    localStorage.removeItem('scout_onboarding')
+                    localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
+                    finalRedirect = '/scout?step=3'
+                    console.log('✅ Scout onboarding flag detected, redirecting to:', finalRedirect)
+                  } else {
+                    // Default: For new users (no profile) OR users without role, redirect to player/parent onboarding
+                    if (!profile || !profile.role || profile.role === 'user') {
+                      console.log('✅ New user or user without role detected, defaulting to player/parent onboarding')
+                      finalRedirect = '/playerparent?step=2'
+                    }
+                  }
                 }
               }
             }
           }
+        }
 
           console.log('✅ Email verification session verified, redirecting through sync page to:', finalRedirect)
           
@@ -434,10 +467,13 @@ function AuthCallbackContent() {
         // Determine redirect destination with priority:
         // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)
         // 2. postSignUpRedirect (from protected footer links like "Make a claim")
-        // 3. become_scout_signup (from "Become a Scout" button)
-        // 4. scout_onboarding (from scout onboarding flow)
-        // 5. Default to /browse
+        // 3. playerparent_onboarding (from "Get Started" button) - for player/parent flow
+        // 4. become_scout_signup (from "Become a Scout" button)
+        // 5. scout_onboarding (from scout onboarding flow)
+        // 6. For new users (no profile) OR users without role, default to player/parent onboarding
+        // 7. Default to /browse
         let finalRedirect = '/browse'
+        
         if (typeof window !== 'undefined') {
           // First check for redirect query parameter (highest priority)
           if (redirectParam) {
@@ -450,17 +486,47 @@ function AuthCallbackContent() {
               finalRedirect = storedRedirect
               localStorage.removeItem('postSignUpRedirect')
             } else {
-              // Then check for become_scout_signup (legacy - redirect to new flow)
-              const becomeScoutSignup = localStorage.getItem('become_scout_signup')
-              if (becomeScoutSignup === 'true') {
-                localStorage.removeItem('become_scout_signup')
-                finalRedirect = '/scout'
-              }
-              // Check for scout onboarding flag
-              const scoutOnboarding = localStorage.getItem('scout_onboarding')
-              if (scoutOnboarding === 'true') {
-                localStorage.removeItem('scout_onboarding')
-                finalRedirect = '/scout?step=3'
+              // Check for playerparent_onboarding flag (from "Get Started" button)
+              const playerparentOnboarding = localStorage.getItem('playerparent_onboarding')
+              const scoutOnboardingCheck = localStorage.getItem('scout_onboarding')
+              console.log('🔍 Auth callback flags check (OAuth):', {
+                playerparentOnboarding,
+                scoutOnboarding: scoutOnboardingCheck,
+                becomeScoutSignup: localStorage.getItem('become_scout_signup')
+              })
+              if (playerparentOnboarding === 'true') {
+                localStorage.removeItem('playerparent_onboarding')
+                localStorage.removeItem('scout_onboarding') // Clear scout flag
+                // Clear cookie
+                if (typeof document !== 'undefined') {
+                  document.cookie = 'playerparent_onboarding=; path=/; max-age=0'
+                }
+                finalRedirect = '/playerparent?step=2'
+                console.log('✅ Player/parent onboarding flag detected, redirecting to:', finalRedirect)
+              } else {
+                // Then check for become_scout_signup (from "Become a Scout" button)
+                const becomeScoutSignup = localStorage.getItem('become_scout_signup')
+                if (becomeScoutSignup === 'true') {
+                  localStorage.removeItem('become_scout_signup')
+                  localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
+                  finalRedirect = '/scout'
+                  console.log('✅ Become scout signup flag detected, redirecting to:', finalRedirect)
+                } else {
+                  // Check for scout onboarding flag (from scout onboarding flow)
+                  const scoutOnboarding = localStorage.getItem('scout_onboarding')
+                  if (scoutOnboarding === 'true') {
+                    localStorage.removeItem('scout_onboarding')
+                    localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
+                    finalRedirect = '/scout?step=3'
+                    console.log('✅ Scout onboarding flag detected, redirecting to:', finalRedirect)
+                  } else {
+                    // Default: For new users (no profile) OR users without role, redirect to player/parent onboarding
+                    if (!profile || !profile.role || profile.role === 'user') {
+                      console.log('✅ New user or user without role detected, defaulting to player/parent onboarding')
+                      finalRedirect = '/playerparent?step=2'
+                    }
+                  }
+                }
               }
             }
           }

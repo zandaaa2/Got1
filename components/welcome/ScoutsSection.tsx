@@ -9,6 +9,7 @@ import { getProfilePath } from '@/lib/profile-url'
 import { collegeEntries } from '@/lib/college-data'
 import { createClient } from '@/lib/supabase-client'
 import { useAuthModal } from '@/contexts/AuthModalContext'
+import { useRouter } from 'next/navigation'
 
 interface Scout {
   id: string
@@ -32,6 +33,19 @@ interface ScoutsSectionProps {
 export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSectionProps) {
   const router = useRouter()
   const { openSignUp } = useAuthModal()
+  const router = useRouter()
+  
+  const handleGetStarted = () => {
+    // Set flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+    }
+    // Navigate to player/parent onboarding step 1
+    router.push('/playerparent?step=1')
+  }
   const [hasSession, setHasSession] = useState(false)
   const [scouts, setScouts] = useState<Scout[]>(scoutsProp)
   const [loading, setLoading] = useState(true) // Start with loading true, will be set to false after initial check
@@ -186,7 +200,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
 
   const handleScoutClick = (scoutId: string, username: string | null | undefined) => {
     if (!hasSession) {
-      openSignUp()
+      handleGetStarted()
     } else {
       router.push(getProfilePath(scoutId, username))
     }
@@ -205,7 +219,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
               <span className="text-black">Top schools across the country are connected with our scouts</span>{' '}
               <span className="mx-2">|</span>{' '}
               <button
-                onClick={openSignUp}
+                onClick={handleGetStarted}
                 className="text-blue-600 hover:text-blue-800 transition-colors underline font-medium text-lg whitespace-nowrap"
               >
                 See all scouts
@@ -303,7 +317,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
               Top schools across the country are connected with our scouts{' '}
               <span className="mx-1">|</span>{' '}
               <button
-                onClick={openSignUp}
+                onClick={handleGetStarted}
                 className="text-blue-600 hover:text-blue-800 transition-colors underline font-medium"
               >
                 See all scouts

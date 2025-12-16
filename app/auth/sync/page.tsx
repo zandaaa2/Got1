@@ -26,19 +26,51 @@ function AuthSyncContent() {
         const postSignUpRedirect = typeof window !== 'undefined' 
           ? localStorage.getItem('postSignUpRedirect') 
           : null
+        const playerparentOnboarding = typeof window !== 'undefined'
+          ? localStorage.getItem('playerparent_onboarding')
+          : null
+        const becomeScoutSignup = typeof window !== 'undefined'
+          ? localStorage.getItem('become_scout_signup')
+          : null
         const scoutOnboarding = typeof window !== 'undefined'
           ? localStorage.getItem('scout_onboarding')
           : null
         
+        console.log('🔍 Auth sync flags check:', {
+          queryRedirect,
+          postSignUpRedirect,
+          playerparentOnboarding,
+          becomeScoutSignup,
+          scoutOnboarding
+        })
+        
         // Use query param first (from callback), then localStorage flags, then default to /browse
         let redirect = queryRedirect || postSignUpRedirect || '/browse'
         
-        // Check for scout onboarding flag if no other redirect is set
-        if (!queryRedirect && !postSignUpRedirect && scoutOnboarding === 'true') {
+        // Check for playerparent_onboarding flag if no other redirect is set
+        if (!queryRedirect && !postSignUpRedirect && playerparentOnboarding === 'true') {
+          redirect = '/playerparent?step=2'
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('playerparent_onboarding')
+            localStorage.removeItem('scout_onboarding') // Clear scout flag
+            // Clear cookie
+            document.cookie = 'playerparent_onboarding=; path=/; max-age=0'
+          }
+          console.log('✅ Player/parent onboarding flag detected in sync, redirecting to:', redirect)
+        } else if (!queryRedirect && !postSignUpRedirect && becomeScoutSignup === 'true') {
+          redirect = '/scout'
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('become_scout_signup')
+            localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
+          }
+          console.log('✅ Become scout signup flag detected in sync, redirecting to:', redirect)
+        } else if (!queryRedirect && !postSignUpRedirect && scoutOnboarding === 'true') {
           redirect = '/scout?step=3'
           if (typeof window !== 'undefined') {
             localStorage.removeItem('scout_onboarding')
+            localStorage.removeItem('playerparent_onboarding') // Clear player/parent flag
           }
+          console.log('✅ Scout onboarding flag detected in sync, redirecting to:', redirect)
         }
         
         // Clear the localStorage redirect after using it (if it was used)

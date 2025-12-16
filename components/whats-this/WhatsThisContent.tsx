@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthModal } from '@/contexts/AuthModalContext'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getGradientForId } from '@/lib/gradients'
 
@@ -18,6 +19,19 @@ interface WhatsThisContentProps {
 
 export default function WhatsThisContent({ organizations, hasSession, profileAvatars }: WhatsThisContentProps) {
   const { openSignUp } = useAuthModal()
+  const router = useRouter()
+  
+  const handleGetStarted = () => {
+    // Set flag that user wants to sign up for player/parent flow
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('playerparent_onboarding', 'true')
+      localStorage.removeItem('scout_onboarding') // Clear any stale scout flag
+      // Set cookie so middleware can check it server-side
+      document.cookie = 'playerparent_onboarding=true; path=/; max-age=3600' // 1 hour
+    }
+    // Navigate to player/parent onboarding step 1
+    router.push('/playerparent?step=1')
+  }
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'player' | 'scout'>('player')
 
@@ -55,7 +69,7 @@ export default function WhatsThisContent({ organizations, hasSession, profileAva
           {!hasSession && (
             <div className="flex justify-center items-center mb-6">
               <button
-                onClick={openSignUp}
+                onClick={handleGetStarted}
                 className="interactive-press inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-semibold hover:opacity-90 transition-opacity text-base md:text-lg"
                 style={{ backgroundColor: '#233dff' }}
               >

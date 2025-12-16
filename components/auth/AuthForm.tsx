@@ -30,14 +30,12 @@ export default function AuthForm({ mode, redirectParam }: AuthFormProps) {
       setError(null)
       
       // Don't store role - role selection happens after account info is completed
-      // Clear any old signup_role from localStorage to prevent issues
+      // Clear any old signup_role flag
+      // Preserve scout_onboarding and playerparent_onboarding flags - let auth callback handle routing
       if (typeof window !== 'undefined') {
         localStorage.removeItem('signup_role')
-        
-        // If there's a redirect param, preserve it
-        if (redirectParam) {
-          localStorage.setItem('scout_onboarding', 'true')
-        }
+        // Don't clear scout_onboarding or playerparent_onboarding here
+        // The auth callback will check these flags and route accordingly
       }
       
       // Build redirect URL with redirect parameter if provided
