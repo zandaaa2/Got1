@@ -29,6 +29,51 @@ export default async function ProfilePage() {
     redirect('/profile/user-setup')
   }
 
+  // Auto-fix: If role is 'user' but profile has player or parent data, update role accordingly
+  // This handles cases where the role update in step 3 didn't persist
+  if (profile.role === 'user') {
+    // Check if user has parent_children links (indicates they're a parent)
+    const { data: parentLinks } = await supabase
+      .from('parent_children')
+      .select('id')
+      .eq('parent_id', session.user.id)
+      .limit(1)
+    
+    if (parentLinks && parentLinks.length > 0) {
+      // User has linked children, they should be a parent
+      console.log('⚠️ ProfilePage - Auto-fixing role from "user" to "parent" (has linked children)')
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: 'parent' })
+        .eq('user_id', session.user.id)
+        .select()
+        .single()
+      
+      if (updateError) {
+        console.error('❌ ProfilePage - Error auto-fixing role to parent:', updateError)
+      } else if (updatedProfile) {
+        console.log('✅ ProfilePage - Role auto-fixed to:', updatedProfile.role)
+        profile = updatedProfile
+      }
+    } else if (profile.hudl_link || profile.position || profile.school) {
+      // User has player data, they should be a player
+      console.log('⚠️ ProfilePage - Auto-fixing role from "user" to "player" (has player data)')
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: 'player' })
+        .eq('user_id', session.user.id)
+        .select()
+        .single()
+      
+      if (updateError) {
+        console.error('❌ ProfilePage - Error auto-fixing role to player:', updateError)
+      } else if (updatedProfile) {
+        console.log('✅ ProfilePage - Role auto-fixed to:', updatedProfile.role)
+        profile = updatedProfile
+      }
+    }
+  }
+
   // Check if user has pending or approved scout application
   const { data: scoutApplication } = await supabase
     .from('scout_applications')
