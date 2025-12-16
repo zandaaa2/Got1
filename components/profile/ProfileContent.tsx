@@ -984,15 +984,21 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
     profileUserId: profile.user_id,
   })
 
-  const completedSteps = [referrerSelected, stripeStarted, stripeComplete].filter(Boolean).length
+  // If referrer selection is not needed, count it as complete
+  // Otherwise, only count it if actually selected
+  const referrerStepComplete = referrerSelected || !needsReferrerSelection
+  
+  const completedSteps = [referrerStepComplete, stripeStarted, stripeComplete].filter(Boolean).length
   const progressPercent = (completedSteps / 3) * 100
 
   console.log('📊 Progress calculation:', {
-    completedSteps,
-    progressPercent,
+    referrerStepComplete,
     referrerSelected,
+    needsReferrerSelection,
     stripeStarted,
     stripeComplete,
+    completedSteps,
+    progressPercent,
     willShowReferrerSelection: !referrerSelected && needsReferrerSelection,
   })
 
