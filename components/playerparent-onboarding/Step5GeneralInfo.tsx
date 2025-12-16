@@ -175,11 +175,83 @@ export default function Step5GeneralInfo({ profile, playerProfile, accountType, 
   }
 
   const handleSubmit = async () => {
-    // For parents, ensure playerProfile exists
+    // For parents, create player profile if it doesn't exist
     if (accountType === 'parent' && !playerProfile) {
-      console.error('❌ Step 5 - playerProfile is null for parent account!')
-      setError('Player profile not found. Please go back and create/link a player first.')
-      return
+      // Need to create player profile first
+      if (!playerName.trim()) {
+        setError('Player name is required')
+        return
+      }
+      
+      if (!playerUsername.trim()) {
+        setError('Username is required for the player profile')
+        return
+      }
+      
+      const normalizedUsername = normalizeUsername(playerUsername.trim())
+      if (normalizedUsername.length < 3) {
+        setError('Username must be at least 3 characters long')
+        return
+      }
+      
+      if (RESERVED_USERNAMES.has(normalizedUsername)) {
+        setError('This username is reserved. Please choose another.')
+        return
+      }
+      
+      // Check if username is already taken
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('id, user_id')
+        .eq('username', normalizedUsername)
+        .maybeSingle()
+      
+      if (existingUsername) {
+        setError('This username is already taken. Please choose another.')
+        return
+      }
+      
+      // Create player profile via API
+      setLoading(true)
+      setError(null)
+      
+      try {
+        const response = await fetch('/api/parent/create-player', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            full_name: playerName.trim(),
+            username: normalizedUsername,
+            position: position.trim(),
+            school: school.trim(),
+            graduation_month: graduationMonth,
+            graduation_year: parseInt(graduationYear),
+            social_link: socialLink.trim() || null,
+          }),
+        })
+        
+        const data = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create player profile')
+        }
+        
+        // Player profile created, continue with the rest of the form submission
+        // The playerProfile will be set by the parent component on next render
+        // For now, we'll just proceed - the parent component should refresh and get the new profile
+        console.log('✅ Player profile created:', data.playerProfile)
+        
+        // Reload the page to get the updated playerProfile
+        window.location.reload()
+        return
+      } catch (err: any) {
+        setError(err.message || 'Failed to create player profile')
+        setLoading(false)
+        return
+      }
     }
     
     // For parents creating a new player, player name is required
