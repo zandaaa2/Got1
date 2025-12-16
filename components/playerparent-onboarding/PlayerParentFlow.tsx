@@ -440,10 +440,19 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
                 const newRole = refreshedProfile.role as 'player' | 'parent'
                 setAccountType(newRole)
                 console.log('✅ AccountType state updated to:', newRole)
+                console.log('✅ Profile role after Step 3:', refreshedProfile.role)
                 handleStepComplete(4)
               } else {
                 console.error('❌ Failed to refresh profile after multiple attempts')
                 // Still proceed to next step, but log the issue
+                // Try to get accountType from localStorage as fallback
+                if (typeof window !== 'undefined') {
+                  const storedAccountType = localStorage.getItem(`onboarding_accountType_${profile.user_id}`)
+                  if (storedAccountType === 'player' || storedAccountType === 'parent') {
+                    setAccountType(storedAccountType as 'player' | 'parent')
+                    console.log('✅ Using stored accountType from localStorage:', storedAccountType)
+                  }
+                }
                 handleStepComplete(4)
               }
             }}

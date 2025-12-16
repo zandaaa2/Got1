@@ -12,8 +12,72 @@ interface Step3SelectRoleProps {
 export default function Step3SelectRole({ profile, onComplete, onBack }: Step3SelectRoleProps) {
   const [accountType, setAccountType] = useState<'player' | 'parent' | null>(null)
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Update role immediately when user selects a role button
+  const handleRoleSelect = async (selectedRole: 'player' | 'parent') => {
+    setAccountType(selectedRole)
+    setError(null)
+    setSaving(true)
+
+    try {
+      console.log('📝 Step3SelectRole - Immediately updating role to:', {
+        user_id: profile.user_id,
+        currentRole: profile.role,
+        newRole: selectedRole
+      })
+
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: selectedRole })
+        .eq('user_id', profile.user_id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error('❌ Error updating role in Step3:', updateError)
+        setError(`Failed to update role: ${updateError.message || 'Unknown error'}`)
+        setSaving(false)
+        return
+      }
+
+      if (!updatedProfile) {
+        console.error('❌ Step3SelectRole - No profile returned after update')
+        setError('Failed to update role. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      console.log('✅ Step 3 role updated immediately:', {
+        user_id: profile.user_id,
+        oldRole: profile.role,
+        newRole: updatedProfile.role,
+        selectedRole: selectedRole,
+        match: updatedProfile.role === selectedRole
+      })
+
+      // Verify the role was actually saved
+      if (updatedProfile.role !== selectedRole) {
+        console.error('❌ Step3SelectRole - Role mismatch! Expected:', selectedRole, 'Got:', updatedProfile.role)
+        setError(`Role update failed. Expected '${selectedRole}' but got '${updatedProfile.role}'.`)
+        setSaving(false)
+        return
+      }
+
+      // Save to localStorage for other steps
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`onboarding_accountType_${profile.user_id}`, selectedRole)
+      }
+
+      setSaving(false)
+    } catch (err: any) {
+      console.error('❌ Step3SelectRole error:', err)
+      setError(err.message || 'Failed to update account type')
+      setSaving(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!accountType) {
@@ -21,91 +85,44 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
       return
     }
 
+    // Role should already be saved from handleRoleSelect, but verify it's correct
     setLoading(true)
     setError(null)
 
     try {
-      console.log('📝 Step3SelectRole - Attempting to update role:', {
-        user_id: profile.user_id,
-        currentRole: profile.role,
-        newRole: accountType
-      })
-
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('profiles')
-        .update({ role: accountType })
-        .eq('user_id', profile.user_id)
-        .select()
-        .single()
-
-      if (updateError) {
-        console.error('❌ Error updating role in Step3:', updateError)
-        console.error('❌ Error details:', {
-          code: updateError.code,
-          message: updateError.message,
-          details: updateError.details,
-          hint: updateError.hint
-        })
-        
-        // Check if it's a constraint violation
-        if (updateError.code === '23514' || updateError.message?.includes('check constraint') || updateError.message?.includes('role')) {
-          setError(`Database constraint error: The role '${accountType}' may not be allowed. Please contact support. Error: ${updateError.message}`)
-        } else {
-          setError(`Failed to update role: ${updateError.message || 'Unknown error'}. Please try again or contact support.`)
-        }
-        setLoading(false)
-        return
-      }
-
-      if (!updatedProfile) {
-        console.error('❌ Step3SelectRole - No profile returned after update')
-        throw new Error('Profile update returned no data')
-      }
-
-      console.log('✅ Step 3 role updated successfully:', {
-        user_id: profile.user_id,
-        oldRole: profile.role,
-        newRole: updatedProfile.role,
-        accountType: accountType,
-        match: updatedProfile.role === accountType
-      })
-
-      // Verify the role was actually saved
-      if (updatedProfile.role !== accountType) {
-        console.error('❌ Step3SelectRole - Role mismatch! Expected:', accountType, 'Got:', updatedProfile.role)
-        setError(`Role update failed. Expected '${accountType}' but got '${updatedProfile.role}'. This may be a database constraint issue.`)
-        setLoading(false)
-        return
-      }
-
-      // Double-check by fetching the profile again to ensure it was saved
-      console.log('🔍 Step3SelectRole - Verifying role was saved by fetching profile again...')
-      const { data: verifiedProfile, error: verifyError } = await supabase
+      // Double-check the role is correct before proceeding
+      const { data: currentProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('role')
         .eq('user_id', profile.user_id)
         .single()
 
-      if (verifyError) {
-        console.error('❌ Step3SelectRole - Error verifying role:', verifyError)
-      } else {
-        console.log('✅ Step3SelectRole - Verified role in database:', verifiedProfile?.role)
-        if (verifiedProfile?.role !== accountType) {
-          console.error('❌ Step3SelectRole - Verification failed! Role in DB:', verifiedProfile?.role, 'Expected:', accountType)
-          setError(`Role verification failed. The role may not have been saved correctly.`)
+      if (fetchError) {
+        console.error('❌ Error fetching profile to verify role:', fetchError)
+      } else if (currentProfile?.role !== accountType) {
+        // Role doesn't match - update it now
+        console.warn('⚠️ Role mismatch detected, updating now:', {
+          expected: accountType,
+          actual: currentProfile?.role
+        })
+        
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ role: accountType })
+          .eq('user_id', profile.user_id)
+
+        if (updateError) {
+          console.error('❌ Error updating role on submit:', updateError)
+          setError(`Failed to update role: ${updateError.message || 'Unknown error'}`)
           setLoading(false)
           return
         }
       }
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`onboarding_accountType_${profile.user_id}`, accountType)
-      }
-
       onComplete()
     } catch (err: any) {
-      console.error('❌ Step3SelectRole error:', err)
-      setError(err.message || 'Failed to update account type')
+      console.error('❌ Step3SelectRole submit error:', err)
+      setError(err.message || 'Failed to proceed')
     } finally {
       setLoading(false)
     }
@@ -128,31 +145,39 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
-          onClick={() => setAccountType('player')}
+          onClick={() => handleRoleSelect('player')}
+          disabled={saving}
           className={`p-6 rounded-lg border-2 text-left transition-all ${
             accountType === 'player'
               ? 'border-black bg-gray-50'
               : 'border-gray-200 hover:border-gray-300'
-          }`}
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <div className="font-bold text-black mb-2">Player</div>
           <div className="text-sm text-gray-600">
             This account is for a high school football player who will receive evaluations.
           </div>
+          {saving && accountType === 'player' && (
+            <div className="mt-2 text-xs text-gray-500">Saving...</div>
+          )}
         </button>
 
         <button
-          onClick={() => setAccountType('parent')}
+          onClick={() => handleRoleSelect('parent')}
+          disabled={saving}
           className={`p-6 rounded-lg border-2 text-left transition-all ${
             accountType === 'parent'
               ? 'border-black bg-gray-50'
               : 'border-gray-200 hover:border-gray-300'
-          }`}
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <div className="font-bold text-black mb-2">Parent</div>
           <div className="text-sm text-gray-600">
             This account is for a parent managing their child's football profile and evaluations.
           </div>
+          {saving && accountType === 'parent' && (
+            <div className="mt-2 text-xs text-gray-500">Saving...</div>
+          )}
         </button>
       </div>
 
@@ -167,10 +192,10 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
         )}
         <button
           onClick={handleSubmit}
-          disabled={!accountType || loading}
+          disabled={!accountType || loading || saving}
           className={`${onBack !== undefined ? 'flex-1' : 'w-full'} py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {loading ? 'Saving...' : 'Continue'}
+          {loading ? 'Verifying...' : 'Continue'}
         </button>
       </div>
     </div>
