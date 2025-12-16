@@ -827,9 +827,13 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
           setReferrerSelected(false)
         }
 
-        // Check if they need to select a referrer (recently approved scout)
-        // Only show if no referral exists AND they were recently approved
+        // Check if they need to select a referrer
+        // New scouts (without Stripe started) MUST select a referrer
+        // Existing scouts (with Stripe started) don't need to select one
         if (!hasReferrer) {
+          // First check if they have Stripe started (existing scout)
+          // We'll check this after we get Stripe status, but for now set a flag
+          // New scouts without Stripe must select a referrer
           const { data: approvedApp } = await supabase
             .from('scout_applications')
             .select('reviewed_at')
@@ -837,10 +841,13 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
             .eq('status', 'approved')
             .maybeSingle()
           
+          // We'll determine if they need referrer selection after checking Stripe status
+          // For now, assume they need it if recently approved (will be overridden if Stripe is started)
           if (approvedApp?.reviewed_at) {
             const recentlyApproved = new Date(approvedApp.reviewed_at) > new Date(Date.now() - 24 * 3600000)
+            // Will be updated after Stripe check
             setNeedsReferrerSelection(recentlyApproved)
-            console.log('📋 Needs referrer selection:', recentlyApproved, 'approved at:', approvedApp.reviewed_at)
+            console.log('📋 Initial referrer selection need:', recentlyApproved, 'approved at:', approvedApp.reviewed_at)
           } else {
             setNeedsReferrerSelection(false)
           }
@@ -875,13 +882,29 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
             fullResponse: data,
           })
           
-          setStripeStarted(data.hasAccount || false)
+          const hasStripeAccount = data.hasAccount || false
+          setStripeStarted(hasStripeAccount)
+          
+          // Update referrer selection requirement based on Stripe status
+          // Existing scouts (with Stripe started) don't need referrer selection
+          // New scouts (without Stripe) MUST select a referrer
+          if (!referrerSelected && !hasStripeAccount) {
+            // New scout without Stripe - must select referrer
+            setNeedsReferrerSelection(true)
+            console.log('📋 New scout without Stripe - requiring referrer selection')
+          } else if (hasStripeAccount) {
+            // Existing scout with Stripe - don't require referrer selection
+            setNeedsReferrerSelection(false)
+            console.log('📋 Existing scout with Stripe - referrer selection not required')
+          }
+          // If referrerSelected is true, needsReferrerSelection is already false
+          
           // Stripe is complete if onboarding is complete (which means account can receive payments)
           // We don't require both chargesEnabled AND payoutsEnabled because:
           // - Payouts can take 1-2 business days to enable after onboarding
           // - Express accounts can have details_submitted = true but charges not yet enabled
           // - If onboardingComplete = true, the account is functional for receiving payments
-          const isComplete = data.hasAccount && data.onboardingComplete
+          const isComplete = hasStripeAccount && data.onboardingComplete
           console.log('🔍 Stripe Complete Calculation:', {
             hasAccount: data.hasAccount,
             onboardingComplete: data.onboardingComplete,
@@ -984,9 +1007,11 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
     profileUserId: profile.user_id,
   })
 
-  // If referrer selection is not needed, count it as complete
-  // Otherwise, only count it if actually selected
-  const referrerStepComplete = referrerSelected || !needsReferrerSelection
+  // Referrer step is complete if:
+  // 1. They already selected a referrer, OR
+  // 2. They're an existing scout (have Stripe started) and don't need referrer selection
+  // New scouts (without Stripe) MUST select a referrer
+  const referrerStepComplete = referrerSelected || (stripeStarted && !needsReferrerSelection)
   
   const completedSteps = [referrerStepComplete, stripeStarted, stripeComplete].filter(Boolean).length
   const progressPercent = (completedSteps / 3) * 100
