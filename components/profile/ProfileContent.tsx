@@ -872,18 +872,28 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
           setStripeStarted(hasStripeAccount)
           
           // Update referrer selection requirement based on Stripe status
-          // Existing scouts (with Stripe started) don't need referrer selection
-          // New scouts (without Stripe) MUST select a referrer
-          if (hasStripeAccount) {
-            // Existing scout with Stripe - don't require referrer selection
+          // IMPORTANT: Even if they have a Stripe account (auto-created on approval),
+          // they still need to select a referrer if they haven't already
+          // Only skip referrer selection if they have BOTH:
+          // 1. A referrer selected, OR
+          // 2. Stripe account AND onboarding complete (existing scout who's been through the flow)
+          if (!referrerSelected) {
+            // No referrer selected - check if they're an existing scout with completed Stripe
+            const isExistingScout = hasStripeAccount && data.onboardingComplete
+            if (isExistingScout) {
+              // Existing scout with completed Stripe - don't require referrer selection
+              setNeedsReferrerSelection(false)
+              console.log('📋 Existing scout with completed Stripe - referrer selection not required')
+            } else {
+              // New scout (even with Stripe account created) - must select referrer first
+              setNeedsReferrerSelection(true)
+              console.log('📋 New scout - requiring referrer selection (Stripe account exists but onboarding not complete)')
+            }
+          } else {
+            // Referrer already selected - don't require selection
             setNeedsReferrerSelection(false)
-            console.log('📋 Existing scout with Stripe - referrer selection not required')
-          } else if (!referrerSelected) {
-            // New scout without Stripe - must select referrer
-            // (needsReferrerSelection is already true from above if no referrer found)
-            console.log('📋 New scout without Stripe - requiring referrer selection')
+            console.log('📋 Referrer already selected - not requiring referrer selection')
           }
-          // If referrerSelected is true, needsReferrerSelection is already false
           
           // Stripe is complete if onboarding is complete (which means account can receive payments)
           // We don't require both chargesEnabled AND payoutsEnabled because:
