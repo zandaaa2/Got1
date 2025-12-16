@@ -343,20 +343,22 @@ export default function Step5GeneralInfo({ profile, playerProfile, accountType, 
         }
       } else if (accountType === 'parent' && !playerProfile) {
         // For parents editing existing player, update avatar
-        const fileExt = playerAvatarFile.name.split('.').pop()
-        const fileName = `${playerProfile.user_id}-${Date.now()}.${fileExt}`
-        const filePath = `player-avatars/${fileName}`
+        if (playerAvatarFile) {
+          const fileExt = playerAvatarFile.name.split('.').pop()
+          const fileName = `${playerProfile.user_id}-${Date.now()}.${fileExt}`
+          const filePath = `player-avatars/${fileName}`
 
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, playerAvatarFile)
-
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('avatars')
-            .getPublicUrl(filePath)
-          
-          updateData.avatar_url = publicUrl
+            .upload(filePath, playerAvatarFile)
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(filePath)
+            
+            updateData.avatar_url = publicUrl
+          }
         }
       }
 
