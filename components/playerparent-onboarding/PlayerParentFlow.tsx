@@ -332,7 +332,7 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         { number: 1, label: 'Sign Up', shortLabel: 'Sign Up' },
         { number: 2, label: 'Basic Info', shortLabel: 'Basic' },
         { number: 3, label: 'Select Role', shortLabel: 'Role' },
-        { number: 4, label: 'Link Player', shortLabel: 'Link' },
+        { number: 4, label: 'Link Player', shortLabel: 'Child' },
         { number: 5, label: 'HUDL Link', shortLabel: 'HUDL' },
         { number: 6, label: 'General Info', shortLabel: 'General' },
         { number: 7, label: 'Specific Info', shortLabel: 'Specific' },

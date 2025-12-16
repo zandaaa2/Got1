@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import PlayerDeleteUnlinkButtons from '@/components/profile/PlayerDeleteUnlinkButtons'
+import { getUserEmail } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -63,9 +64,11 @@ export default async function ParentEditPlayerPage({
   const timeDiff = Math.abs(profileUpdatedAt.getTime() - profileCreatedAt.getTime())
   const isNewProfile = timeDiff < 5000
 
-  // Check if player was created by parent (has system email pattern)
-  // We'll check this on the client side using the API endpoint
-  const isCreatedByParent = playerProfile.username?.startsWith('player-') || false
+  // Check if player was created by parent vs tagged
+  // Players created by parents have system emails: player+{timestamp}-{random}@got1.app
+  // Tagged players have regular user emails
+  const playerEmail = await getUserEmail(playerProfile.user_id)
+  const isCreatedByParent = playerEmail?.startsWith('player+') && playerEmail?.endsWith('@got1.app') || false
 
   return (
     <div className="min-h-screen bg-white flex">
