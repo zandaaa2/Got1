@@ -537,12 +537,11 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           />
         )}
 
-        {/* Step 5: Create/update player profile (parents) OR General info (players) */}
+        {/* Step 5: HUDL link (parents) OR General info (players) */}
         {currentStep === 5 && session && profile && accountType === 'parent' && (
-          <Step5GeneralInfo
-            profile={profile}
+          <Step4HudlLink
+            profile={playerProfile}
             playerProfile={playerProfile}
-            accountType={accountType}
             onComplete={() => handleStepComplete(6)}
             onBack={handleStepBack}
           />
@@ -557,11 +556,12 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           />
         )}
 
-        {/* Step 6: Add HUDL link (parents) OR Complete player info (players) */}
+        {/* Step 6: General info (parents) OR Complete player info (players) */}
         {currentStep === 6 && session && profile && accountType === 'parent' && (
-          <Step4HudlLink
-            profile={playerProfile}
+          <Step5GeneralInfo
+            profile={profile}
             playerProfile={playerProfile}
+            accountType={accountType}
             onComplete={() => handleStepComplete(7)}
             onBack={handleStepBack}
           />
