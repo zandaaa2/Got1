@@ -9,7 +9,6 @@ import { getProfilePath } from '@/lib/profile-url'
 import { collegeEntries } from '@/lib/college-data'
 import { createClient } from '@/lib/supabase-client'
 import { useAuthModal } from '@/contexts/AuthModalContext'
-import { useRouter } from 'next/navigation'
 
 interface Scout {
   id: string
@@ -33,7 +32,6 @@ interface ScoutsSectionProps {
 export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSectionProps) {
   const router = useRouter()
   const { openSignUp } = useAuthModal()
-  const router = useRouter()
   
   const handleGetStarted = () => {
     // Set flag that user wants to sign up for player/parent flow
