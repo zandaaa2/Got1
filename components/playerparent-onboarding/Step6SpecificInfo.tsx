@@ -36,15 +36,49 @@ export default function Step6SpecificInfo({ profile, playerProfile, accountType,
     try {
       const updateData: any = {}
       
-      // Ensure role is set (always set it to be safe)
-      if (accountType === 'player') {
-        updateData.role = 'player'
-      } else if (accountType === 'parent') {
-        updateData.role = 'parent'
+      // CRITICAL: Always ensure role is set correctly based on Step 3 selection
+      // The role should have been set in Step3SelectRole, but we ensure it's correct here
+      // Priority: 1) accountType prop (from Step 3), 2) existing role in profile, 3) infer from profile data
+      let finalRole: 'player' | 'parent' | null = null
+      
+      if (accountType === 'player' || accountType === 'parent') {
+        // Use accountType if provided (this is set in Step 3)
+        finalRole = accountType
       } else if (targetProfile.role === 'player' || targetProfile.role === 'parent') {
-        // Fallback: preserve existing role if accountType is null
-        updateData.role = targetProfile.role
+        // Preserve existing role if it's already set correctly (from Step 3)
+        finalRole = targetProfile.role
+      } else {
+        // Fallback: If role is still 'user', try to infer from profile data
+        // If profile has player-specific data (hudl_link, position, school), it's a player
+        if (targetProfile.hudl_link || targetProfile.position || targetProfile.school) {
+          finalRole = 'player'
+        } else {
+          // Last resort: check localStorage for the accountType that was set in Step 3
+          if (typeof window !== 'undefined') {
+            const storedAccountType = localStorage.getItem(`onboarding_accountType_${targetProfile.user_id}`)
+            if (storedAccountType === 'player' || storedAccountType === 'parent') {
+              finalRole = storedAccountType as 'player' | 'parent'
+            }
+          }
+          
+          // If still no role determined, default to player (safer than leaving as 'user')
+          if (!finalRole) {
+            finalRole = 'player'
+          }
+        }
       }
+      
+      // Always set the role in the update
+      if (finalRole) {
+        updateData.role = finalRole
+      }
+      
+      console.log('🔍 Step6SpecificInfo - Setting role:', {
+        accountType,
+        currentRole: targetProfile.role,
+        finalRole: updateData.role,
+        storedAccountType: typeof window !== 'undefined' ? localStorage.getItem(`onboarding_accountType_${targetProfile.user_id}`) : null
+      })
       
       if (!skip) {
         if (gpa) updateData.gpa = parseFloat(gpa)
