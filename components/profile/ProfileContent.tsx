@@ -994,9 +994,9 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
 
   // Referrer step is complete if:
   // 1. They already selected a referrer, OR
-  // 2. They're an existing scout (have Stripe started) and don't need referrer selection
-  // New scouts (without Stripe) MUST select a referrer
-  const referrerStepComplete = referrerSelected || (stripeStarted && !needsReferrerSelection)
+  // 2. They don't need to select a referrer (existing scout or skipped)
+  // New scouts will start at step 1 if they need to select a referrer
+  const referrerStepComplete = referrerSelected || !needsReferrerSelection
   
   const completedSteps = [referrerStepComplete, stripeStarted, stripeComplete].filter(Boolean).length
   const progressPercent = (completedSteps / 3) * 100
@@ -1047,9 +1047,10 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         <ReferrerSelectionInline 
           profile={profile}
           onComplete={() => {
-            setReferrerSelected(true)
+            // Mark referrer step as complete (either selected or skipped)
+            // Setting needsReferrerSelection to false marks the step as complete
             setNeedsReferrerSelection(false)
-            // Force full page reload to ensure referral check runs again
+            // Force full page reload to ensure state updates correctly
             window.location.reload()
           }}
         />
