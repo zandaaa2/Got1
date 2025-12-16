@@ -192,14 +192,25 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         }
 
         // Only redirect if URL step doesn't match target step
-        // This prevents flickering when already on correct step
+        // BUT: Don't auto-navigate forward if user is actively on a form step (steps 2-7)
+        // This prevents jumping ahead when user is still filling out forms
+        // Only allow auto-navigation if user is behind where they should be (targetStep > urlStepNum)
         if (isMounted) {
           setLoading(false)
           
           if (urlStepNum !== targetStep) {
-            // Only update state and redirect if URL doesn't match
-            setCurrentStep(targetStep)
-            router.replace(`/playerparent?step=${targetStep}`)
+            // Check if we should allow auto-navigation
+            // Don't auto-navigate forward if user is on a form step (steps 2-7) and target is ahead
+            const isOnFormStep = urlStepNum !== null && urlStepNum >= 2 && urlStepNum <= 7
+            const targetIsAhead = urlStepNum !== null && targetStep > urlStepNum
+            // Allow navigation if: not on form step, OR target is ahead (user needs to catch up), OR on step 1
+            const shouldAutoNavigate = !isOnFormStep || targetIsAhead || urlStepNum === 1
+            
+            if (shouldAutoNavigate) {
+              // Only update state and redirect if auto-navigation is allowed
+              setCurrentStep(targetStep)
+              router.replace(`/playerparent?step=${targetStep}`)
+            }
           } else {
             // URL matches, just update currentStep state if needed (without causing re-render loop)
             if (currentStep !== targetStep) {
