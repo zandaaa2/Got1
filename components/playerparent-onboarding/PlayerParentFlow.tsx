@@ -174,6 +174,38 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
           setAccountType(determinedAccountType)
         }
 
+        // For parents, load linked player profile if it exists
+        if (determinedAccountType === 'parent' && profileData && currentSession?.user?.id) {
+          try {
+            const { data: parentLink } = await supabase
+              .from('parent_children')
+              .select('player_id')
+              .eq('parent_id', currentSession.user.id)
+              .limit(1)
+              .maybeSingle()
+            
+            if (parentLink?.player_id) {
+              const { data: linkedPlayerProfile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', parentLink.player_id)
+                .maybeSingle()
+              
+              if (linkedPlayerProfile && isMounted) {
+                console.log('✅ Loaded existing player profile for parent:', {
+                  id: linkedPlayerProfile.id,
+                  user_id: linkedPlayerProfile.user_id,
+                  username: linkedPlayerProfile.username
+                })
+                setPlayerProfile(linkedPlayerProfile)
+              }
+            }
+          } catch (linkError) {
+            console.error('Error loading linked player profile:', linkError)
+            // Don't block the flow if we can't load the linked player
+          }
+        }
+
         // Determine what step we should be on based on profile
         // Use determinedAccountType (not state) to ensure we have the correct value
         // If no profile exists, user should be on step 2 (basic info)
