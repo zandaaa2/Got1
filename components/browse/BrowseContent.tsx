@@ -164,6 +164,21 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       
       console.log('✅ Filtered active profiles:', activeProfiles.length)
       console.log('Active profiles:', activeProfiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+      
+      // Debug: Check for specific players that should be visible
+      const harrisonProfile = (data || []).find(p => p.full_name?.toLowerCase().includes('harrison') && p.full_name?.toLowerCase().includes('houch'))
+      if (harrisonProfile) {
+        console.log('🔍 Harrison Houch profile found:', {
+          id: harrisonProfile.id,
+          full_name: harrisonProfile.full_name,
+          role: harrisonProfile.role,
+          username: harrisonProfile.username,
+          in_filtered: activeProfiles.some(p => p.id === harrisonProfile.id),
+          filtered_out_reason: harrisonProfile.role === 'user' ? 'role is user' : 
+                               (harrisonProfile.role !== 'player' ? `role is ${harrisonProfile.role}` : 'should be visible')
+        })
+      }
+      
       setProfiles(activeProfiles)
     } catch (error: any) {
       console.error('Error loading profiles:', error)
