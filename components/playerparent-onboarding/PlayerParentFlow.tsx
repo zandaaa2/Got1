@@ -223,8 +223,8 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
       const newSessionId = newSession?.user?.id || null
       if (isMounted && newSessionId !== lastSessionId) {
         lastSessionId = newSessionId
-        // Only refresh if session actually changed
-        if (newSession && !currentSession) {
+        // Only refresh if session actually changed (new session but no previous session)
+        if (newSession && !sessionRef.current) {
           checkAuth()
         }
       }
@@ -389,6 +389,7 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         {currentStep === 3 && session && profile && (
           <Step3SelectRole
             profile={profile}
+            onBack={handleStepBack}
             onComplete={async () => {
               // Wait a brief moment to ensure the database update has propagated
               await new Promise(resolve => setTimeout(resolve, 500))
