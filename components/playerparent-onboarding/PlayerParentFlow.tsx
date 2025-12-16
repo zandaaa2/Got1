@@ -215,19 +215,30 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         } else if (!profileData?.role || profileData.role === 'user') {
           targetStep = 3
         } else if (determinedAccountType === 'parent') {
-          // For parents, always start at step 4 (tag/create player)
-          // The component will handle checking if playerProfile exists
-          targetStep = 4
-        } else if (!profileData?.hudl_link) {
-          // For players, go to step 4 (HUDL link)
-          targetStep = 4
-        } else if (!profileData?.position || !profileData?.school || !profileData?.graduation_year) {
-          targetStep = determinedAccountType === 'parent' ? 5 : 5
-        } else if (!profileData?.hudl_link && determinedAccountType === 'parent') {
-          // For parents, if they have position/school but no HUDL link, go to step 6
-          targetStep = 6
+          // For parents, check what step they should be on
+          // Step 4: Tag/create player (always start here)
+          // Step 5: Create/update player profile
+          // Step 6: Add HUDL link
+          // Step 7: Complete player info
+          if (!profileData?.position || !profileData?.school || !profileData?.graduation_year) {
+            // Missing position/school/graduation - go to step 5 (create player profile)
+            targetStep = 5
+          } else if (!profileData?.hudl_link) {
+            // Has position/school but no HUDL link - go to step 6
+            targetStep = 6
+          } else {
+            // Has everything - go to step 7 (complete info)
+            targetStep = 7
+          }
         } else {
-          targetStep = determinedAccountType === 'parent' ? 7 : 6
+          // For players
+          if (!profileData?.hudl_link) {
+            targetStep = 4
+          } else if (!profileData?.position || !profileData?.school || !profileData?.graduation_year) {
+            targetStep = 5
+          } else {
+            targetStep = 6
+          }
         }
 
         // Only redirect if URL step doesn't match target step
