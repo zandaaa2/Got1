@@ -853,8 +853,17 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         // Step 2 & 3: Check Stripe account status
         const response = await fetch('/api/stripe/connect/account-link', {
           method: 'GET',
+          cache: 'no-store', // Prevent caching to get fresh data
         })
         const data = await response.json()
+        
+        console.log('🔍 Stripe API Response:', {
+          hasAccount: data.hasAccount,
+          onboardingComplete: data.onboardingComplete,
+          chargesEnabled: data.chargesEnabled,
+          payoutsEnabled: data.payoutsEnabled,
+          detailsSubmitted: data.detailsSubmitted,
+        })
         
         setStripeStarted(data.hasAccount || false)
         // Stripe is complete if onboarding is complete (which means account can receive payments)
@@ -862,10 +871,13 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         // - Payouts can take 1-2 business days to enable after onboarding
         // - Express accounts can have details_submitted = true but charges not yet enabled
         // - If onboardingComplete = true, the account is functional for receiving payments
-        setStripeComplete(
-          data.hasAccount && 
-          data.onboardingComplete
-        )
+        const isComplete = data.hasAccount && data.onboardingComplete
+        console.log('🔍 Stripe Complete Calculation:', {
+          hasAccount: data.hasAccount,
+          onboardingComplete: data.onboardingComplete,
+          isComplete,
+        })
+        setStripeComplete(isComplete)
       } catch (error) {
         console.error('Error checking setup progress:', error)
       } finally {
