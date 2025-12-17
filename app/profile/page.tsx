@@ -4,7 +4,11 @@ import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
-import ProfileContent from '@/components/profile/ProfileContent'
+import dynamicImport from 'next/dynamic'
+
+const ProfileContent = dynamicImport(() => import('@/components/profile/ProfileContent'), {
+  ssr: false,
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
@@ -161,14 +165,15 @@ export default async function ProfilePage() {
       <AuthRefreshHandler />
       <Sidebar />
       <DynamicLayout header={null}>
-        <ProfileContent 
-          profile={profile} 
-          hasPendingApplication={!!scoutApplication}
-          pendingScoutApplication={scoutApplication || null}
-          needsReferrerSelection={needsReferrerSelection}
-        />
+        <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading profile...</div>}>
+          <ProfileContent 
+            profile={profile} 
+            hasPendingApplication={!!scoutApplication}
+            pendingScoutApplication={scoutApplication || null}
+            needsReferrerSelection={needsReferrerSelection}
+          />
+        </Suspense>
       </DynamicLayout>
     </div>
   )
 }
-
