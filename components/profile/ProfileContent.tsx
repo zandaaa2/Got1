@@ -127,6 +127,9 @@ function MoneyDashboard({ profile }: { profile: any }) {
   const [offerBio, setOfferBio] = useState(profile.bio || '')
   const [pricePerEval, setPricePerEval] = useState(profile.price_per_eval?.toString() || '99')
   const [turnaroundTime, setTurnaroundTime] = useState(profile.turnaround_time || '72 hrs')
+  const [freeEvalEnabled, setFreeEvalEnabled] = useState(profile.free_eval_enabled || false)
+  const [freeEvalDescription, setFreeEvalDescription] = useState(profile.free_eval_description || '')
+  const [isEditingFreeEval, setIsEditingFreeEval] = useState(false)
   // For positions and college connections - temporarily stored as JSONB in profile
   // Later this will be stored per-offer in scout_offers table
   const [selectedPositions, setSelectedPositions] = useState<string[]>(() => {
@@ -329,6 +332,11 @@ function MoneyDashboard({ profile }: { profile: any }) {
         throw new Error('Price must be a positive number')
       }
 
+      // Validate free eval description if enabled
+      if (freeEvalEnabled && freeEvalDescription.trim().length < 250) {
+        throw new Error('Free eval description must be at least 250 characters')
+      }
+
       const { data, error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -338,6 +346,8 @@ function MoneyDashboard({ profile }: { profile: any }) {
           offer_title: offerTitle || 'Standard Evaluation',
           positions: selectedPositions.length > 0 ? JSON.stringify(selectedPositions) : null,
           college_connections: selectedCollegeSlugs.length > 0 ? JSON.stringify(selectedCollegeSlugs) : null,
+          free_eval_enabled: freeEvalEnabled,
+          free_eval_description: freeEvalEnabled ? freeEvalDescription.trim() : null,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', session.user.id)
@@ -429,7 +439,98 @@ function MoneyDashboard({ profile }: { profile: any }) {
       <div className="space-y-3 md:space-y-4">
         {/* Offer cards - grid layout for multiple offers */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          {/* Single offer card - compact version */}
+          {/* Free Eval Offer Card - positioned first (left) */}
+          <div className="surface-card p-3 md:p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <h4 className="text-base md:text-lg font-bold text-black">
+                    Free Evaluation
+                  </h4>
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
+                    Free
+                  </span>
+                </div>
+                {isEditingFreeEval ? (
+                  <textarea
+                    value={freeEvalDescription}
+                    onChange={(e) => setFreeEvalDescription(e.target.value)}
+                    className="text-xs md:text-sm text-gray-600 border border-gray-300 rounded px-2 py-1.5 w-full min-h-[100px] resize-y"
+                    placeholder="Describe your free evaluation offer (minimum 250 characters)..."
+                  />
+                ) : (
+                  <div>
+                    {freeEvalDescription ? (
+                      <p className="text-xs md:text-sm text-gray-600 mb-0">
+                        {freeEvalDescription}
+                      </p>
+                    ) : (
+                      <p className="text-xs md:text-sm text-gray-400 italic">No description provided.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!isEditingFreeEval && (
+                <button
+                  onClick={() => setIsEditingFreeEval(true)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors ml-2 flex-shrink-0"
+                  title="Edit free eval offer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Toggle and character count */}
+            <div className="pt-3 border-t border-gray-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={freeEvalEnabled}
+                    onChange={(e) => setFreeEvalEnabled(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-xs md:text-sm text-gray-700">Enable free eval offer</span>
+                </label>
+              </div>
+              {isEditingFreeEval && (
+                <div className="flex items-center justify-between">
+                  <p className={`text-xs ${freeEvalDescription.length < 250 ? 'text-red-600' : 'text-gray-600'}`}>
+                    {freeEvalDescription.length} / 250 characters minimum
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setIsEditingFreeEval(false)
+                        setFreeEvalDescription(profile.free_eval_description || '')
+                      }}
+                      className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (freeEvalDescription.trim().length < 250) {
+                          alert('Description must be at least 250 characters')
+                          return
+                        }
+                        await handleSavePricing()
+                        setIsEditingFreeEval(false)
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Paid offer card - compact version */}
           <div className="surface-card p-3 md:p-4 border border-gray-200 rounded-lg">
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
@@ -1843,6 +1944,7 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
   }, [profile])
   
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
+  const [activeTab, setActiveTab] = useState<'offers' | 'posts'>('offers')
   const router = useRouter()
   const supabase = createClient()
   
@@ -2386,12 +2488,54 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         </Link>
       </div>
 
+      {/* Tabs - Only show for scouts */}
+      {profile.role === 'scout' && (
+        <div className="mb-6 md:mb-8">
+          <div className="flex gap-2 md:gap-4 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('offers')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'offers'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Eval Offers
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'posts'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Posts
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Scout Setup Progress - Only show for scouts */}
       {profile.role === 'scout' && <ScoutSetupProgress key={`setup-${refreshKey}`} profile={profile} />}
 
-      {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
-      {profile.role === 'scout' && <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />}
+      {/* Tab Content - Only show for scouts */}
+      {profile.role === 'scout' && (
+        <div className="mb-6 md:mb-8">
+          {activeTab === 'offers' && (
+            <div>
+              {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
+              <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />
+            </div>
+          )}
+          {activeTab === 'posts' && (
+            <div className="text-center py-12 text-gray-500">
+              Posts coming soon
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* Parent Dashboard - Only show for parents */}
       {profile.role === 'parent' && <ParentDashboard profile={profile} />}

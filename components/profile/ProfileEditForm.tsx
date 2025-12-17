@@ -46,8 +46,10 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
   // Determine if we should show player fields
   // Show player fields if role is 'player' OR if profile has player data (hudl_link, position, school)
   // This handles cases where role might be 'user' but the profile has player data
-  const shouldShowPlayerFields = profile?.role === 'player' || 
-    !!(profile?.hudl_link || profile?.position || profile?.school || profile?.graduation_year)
+  // Never show player fields for scouts
+  const shouldShowPlayerFields = profile?.role !== 'scout' && 
+    (profile?.role === 'player' || 
+    !!(profile?.hudl_link || profile?.position || profile?.school || profile?.graduation_year))
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
