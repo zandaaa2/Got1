@@ -78,14 +78,14 @@ function EvalCard({
   processing: boolean
 }) {
   return (
-    <div>
+    <div className="bg-white border border-gray-200 rounded-lg p-6">
       {/* Offer Title */}
       <h2 className="text-lg font-semibold text-black mb-4">
         {title}
       </h2>
       
-      {/* Bio - Show for all users on evaluation offer */}
-      {scout.bio && (
+      {/* Bio - Show only for paid eval */}
+      {!isFree && scout.bio && (
         <div className="mb-6">
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
             {scout.bio}
@@ -93,7 +93,7 @@ function EvalCard({
         </div>
       )}
 
-      {/* Description for free eval */}
+      {/* Description for free eval - only show free description, not bio */}
       {isFree && description && (
         <div className="mb-6">
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
@@ -549,7 +549,7 @@ export default function PurchaseEvaluation({
           {/* Free Eval Card - Separate */}
           <div className="mb-6">
             <EvalCard
-              title={scout.offer_title || 'Standard Evaluation'}
+              title="Free Evaluation"
               price={0}
               description={scout.free_eval_description}
               onButtonClick={handleRequestFreeEval}
