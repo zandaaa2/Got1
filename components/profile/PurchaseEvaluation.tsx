@@ -338,7 +338,8 @@ export default function PurchaseEvaluation({
     onButtonClick: () => void,
     buttonText: string,
     isFree: boolean = false
-  ) => (
+  ) => {
+    return (
     <div>
       {/* Offer Title */}
       <h2 className="text-lg font-semibold text-black mb-4">
@@ -517,7 +518,8 @@ export default function PurchaseEvaluation({
         </>
       )}
     </div>
-  )
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
