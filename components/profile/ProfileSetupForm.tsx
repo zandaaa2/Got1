@@ -62,7 +62,7 @@ export default function ProfileSetupForm({
     referrer_username: '', // Username for display
     // Scout fields
     organization: '',
-    price_per_eval: '99',
+    price_per_eval: '', // Only set for scouts
     social_link: '',
     turnaround_time: '',
     bio: '',
@@ -276,14 +276,17 @@ export default function ProfileSetupForm({
         profileData.organization = formData.organization || null
         profileData.price_per_eval = formData.price_per_eval
           ? parseFloat(formData.price_per_eval)
-          : 99
+          : null // Scouts should set their own price, default to null
         profileData.social_link = formData.social_link || null
         profileData.turnaround_time = formData.turnaround_time || null
         profileData.sports = Array.isArray(formData.sports) ? formData.sports : []
       } else if (role === 'parent') {
         // Parent profile - minimal data needed
-        // No additional fields required for parent role
+        // Explicitly set price_per_eval to null for non-scouts
+        profileData.price_per_eval = null
       } else if (role === 'player') {
+        // Explicitly set price_per_eval to null for non-scouts
+        profileData.price_per_eval = null
         // Save hudl_links as JSONB array, filtering out empty entries
         const validHudlLinks = formData.hudl_links
           .filter((hl: HudlLink) => hl.link && hl.link.trim() !== '')
@@ -298,6 +301,9 @@ export default function ProfileSetupForm({
           ? parseInt(formData.graduation_year)
           : null
         profileData.parent_name = formData.parent_name || null
+      } else {
+        // For 'user' role or null role, explicitly set price_per_eval to null
+        profileData.price_per_eval = null
       }
       // If role is null/'user', don't set player or scout specific fields
 
