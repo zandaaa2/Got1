@@ -2046,14 +2046,73 @@ function StripeConnectSection({ profile }: { profile: any }) {
 }
 
 export default function ProfileContent({ profile, hasPendingApplication, pendingScoutApplication, needsReferrerSelection = false }: ProfileContentProps) {
+  const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
+  const [activeTab, setActiveTab] = useState<'offers' | 'posts'>('offers')
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [showInstallButton, setShowInstallButton] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+
   useEffect(() => {
     console.log('ProfileContent mounted', { profileId: profile?.id, role: profile?.role })
   }, [profile])
-  
-  const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
-  const [activeTab, setActiveTab] = useState<'offers' | 'posts'>('offers')
-  const router = useRouter()
-  const supabase = createClient()
+
+  // Handle PWA install prompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault()
+      // Save the event so it can be triggered later
+      setDeferredPrompt(e)
+      setShowInstallButton(true)
+    }
+
+    const handleAppInstalled = () => {
+      // Hide the install button after app is installed
+      setShowInstallButton(false)
+      setDeferredPrompt(null)
+    }
+
+    // Check if app is already installed (standalone mode)
+    if (typeof window !== 'undefined') {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      const isIOSStandalone = (window.navigator as any).standalone === true
+      
+      if (!isStandalone && !isIOSStandalone) {
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+        window.addEventListener('appinstalled', handleAppInstalled)
+      }
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+        window.removeEventListener('appinstalled', handleAppInstalled)
+      }
+    }
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      return
+    }
+
+    // Show the install prompt
+    deferredPrompt.prompt()
+
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice
+
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt')
+    } else {
+      console.log('User dismissed the install prompt')
+    }
+
+    // Clear the deferredPrompt so it can only be used once
+    setDeferredPrompt(null)
+    setShowInstallButton(false)
+  }
   
   // Early return if profile is missing
   if (!profile) {
@@ -2524,32 +2583,58 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
     <div>
       <div className="flex items-center justify-between mb-4 md:mb-8">
         <h1 className="text-xl md:text-2xl font-bold text-black">Profile</h1>
-        {/* Settings icon for mobile */}
-        <Link
-          href="/settings"
-          className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Settings"
-        >
-          <svg
-            className="w-6 h-6 text-gray-700"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Mobile action buttons */}
+        <div className="md:hidden flex items-center gap-2">
+          {/* Install button for mobile */}
+          {showInstallButton && (
+            <button
+              onClick={handleInstallClick}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Install App"
+              title="Install Got1 App"
+            >
+              <svg
+                className="w-6 h-6 text-gray-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+            </button>
+          )}
+          {/* Settings icon for mobile */}
+          <Link
+            href="/settings"
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Settings"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-        </Link>
+            <svg
+              className="w-6 h-6 text-gray-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          </Link>
+        </div>
       </div>
 
       {/* Profile Card */}
