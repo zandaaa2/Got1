@@ -160,12 +160,19 @@ function MoneyDashboard({ profile }: { profile: any }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [infoModal, setInfoModal] = useState<'price' | 'turnaround' | null>(null)
   const [isBioExpanded, setIsBioExpanded] = useState(false)
+  const [isFreeEvalBioExpanded, setIsFreeEvalBioExpanded] = useState(false)
   
   // Truncate bio if longer than 100 characters
   const shouldTruncateBio = offerBio && offerBio.length > 100 && !isEditingPricing
   const displayBio = shouldTruncateBio && !isBioExpanded 
     ? offerBio.substring(0, 100) + '...' 
     : offerBio
+  
+  // Truncate free eval description if longer than 100 characters
+  const shouldTruncateFreeEvalBio = freeEvalDescription && freeEvalDescription.length > 100 && !isEditingFreeEval
+  const displayFreeEvalBio = shouldTruncateFreeEvalBio && !isFreeEvalBioExpanded
+    ? freeEvalDescription.substring(0, 100) + '...'
+    : freeEvalDescription
 
   useEffect(() => {
     checkAccountStatus({ suppressSkeleton: Boolean(globalAccountStatus) })
@@ -437,32 +444,57 @@ function MoneyDashboard({ profile }: { profile: any }) {
         </div>
       )}
       <div className="space-y-3 md:space-y-4">
+        {/* Free Eval Enable Checkbox - Above cards */}
+        <div className="flex items-center gap-2 mb-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={freeEvalEnabled}
+              onChange={(e) => setFreeEvalEnabled(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm md:text-base text-gray-700 font-medium">Enable free evaluation offer</span>
+          </label>
+        </div>
+
         {/* Offer cards - grid layout for multiple offers */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {/* Free Eval Offer Card - positioned first (left) */}
-          <div className="surface-card p-3 md:p-4 border border-gray-200 rounded-lg">
+          <div className={`surface-card p-3 md:p-4 border border-gray-200 rounded-lg relative ${!freeEvalEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <h4 className="text-base md:text-lg font-bold text-black">
+                {isEditingFreeEval ? (
+                  <input
+                    type="text"
+                    value="Free Evaluation"
+                    readOnly
+                    className="text-base md:text-lg font-bold text-black border border-gray-300 rounded px-2 py-1.5 w-full mb-2"
+                  />
+                ) : (
+                  <h4 className="text-base md:text-lg font-bold text-black mb-1.5">
                     Free Evaluation
                   </h4>
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">
-                    Free
-                  </span>
-                </div>
+                )}
                 {isEditingFreeEval ? (
                   <textarea
                     value={freeEvalDescription}
                     onChange={(e) => setFreeEvalDescription(e.target.value)}
-                    className="text-xs md:text-sm text-gray-600 border border-gray-300 rounded px-2 py-1.5 w-full min-h-[100px] resize-y"
-                    placeholder="Describe your free evaluation offer (minimum 250 characters)..."
+                    className="text-xs md:text-sm text-gray-600 border border-gray-300 rounded px-2 py-1.5 w-full min-h-[70px] resize-y"
+                    placeholder="Describe what players will get with this evaluation..."
                   />
                 ) : (
                   <div>
-                    {freeEvalDescription ? (
+                    {displayFreeEvalBio ? (
                       <p className="text-xs md:text-sm text-gray-600 mb-0">
-                        {freeEvalDescription}
+                        {displayFreeEvalBio}
+                        {shouldTruncateFreeEvalBio && (
+                          <button
+                            onClick={() => setIsFreeEvalBioExpanded(!isFreeEvalBioExpanded)}
+                            className="ml-1 text-blue-600 hover:text-blue-700 underline"
+                          >
+                            {isFreeEvalBioExpanded ? 'Show less' : 'Show more'}
+                          </button>
+                        )}
                       </p>
                     ) : (
                       <p className="text-xs md:text-sm text-gray-400 italic">No description provided.</p>
@@ -470,7 +502,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
                   </div>
                 )}
               </div>
-              {!isEditingFreeEval && (
+              {!isEditingFreeEval && freeEvalEnabled && (
                 <button
                   onClick={() => setIsEditingFreeEval(true)}
                   className="text-gray-400 hover:text-gray-600 transition-colors ml-2 flex-shrink-0"
@@ -483,48 +515,123 @@ function MoneyDashboard({ profile }: { profile: any }) {
               )}
             </div>
 
-            {/* Toggle and character count */}
-            <div className="pt-3 border-t border-gray-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={freeEvalEnabled}
-                    onChange={(e) => setFreeEvalEnabled(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-xs md:text-sm text-gray-700">Enable free eval offer</span>
-                </label>
+            {/* Price and Turnaround in a row */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <p className="text-xs text-gray-600">Price</p>
+                </div>
+                <p className="text-base md:text-lg font-bold text-black">$0</p>
               </div>
-              {isEditingFreeEval && (
-                <div className="flex items-center justify-between">
-                  <p className={`text-xs ${freeEvalDescription.length < 250 ? 'text-red-600' : 'text-gray-600'}`}>
-                    {freeEvalDescription.length} / 250 characters minimum
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setIsEditingFreeEval(false)
-                        setFreeEvalDescription(profile.free_eval_description || '')
-                      }}
-                      className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (freeEvalDescription.trim().length < 250) {
-                          alert('Description must be at least 250 characters')
-                          return
-                        }
-                        await handleSavePricing()
-                        setIsEditingFreeEval(false)
-                      }}
-                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      Save
-                    </button>
+              <div>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <p className="text-xs text-gray-600">Turnaround</p>
+                </div>
+                <p className="text-base md:text-lg font-bold text-black">{profile.turnaround_time || '72 hrs'}</p>
+              </div>
+            </div>
+
+            {/* Positions and College Connections */}
+            <div className="pt-3 border-t border-gray-200 space-y-3">
+              {isEditingFreeEval ? (
+                <>
+                  <PositionMultiSelect
+                    selectedPositions={selectedPositions}
+                    onChange={setSelectedPositions}
+                    label="Position(s)"
+                    disabled={false}
+                  />
+                  <CollegeMultiSelect
+                    selectedColleges={selectedCollegeSlugs}
+                    onChange={setSelectedCollegeSlugs}
+                    label="College Connections"
+                    disabled={false}
+                    maxSelections={7}
+                  />
+                  <div className="flex items-center justify-between pt-2">
+                    <p className={`text-xs ${freeEvalDescription.length < 250 ? 'text-red-600' : 'text-gray-600'}`}>
+                      {freeEvalDescription.length} / 250 characters minimum
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsEditingFreeEval(false)
+                          setFreeEvalDescription(profile.free_eval_description || '')
+                        }}
+                        className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (freeEvalDescription.trim().length < 250) {
+                            alert('Description must be at least 250 characters')
+                            return
+                          }
+                          await handleSavePricing()
+                          setIsEditingFreeEval(false)
+                        }}
+                        className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  {/* Display Positions */}
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1.5 font-medium">Positions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPositions.length > 0 ? (
+                        selectedPositions.map((pos) => (
+                          <span
+                            key={pos}
+                            className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
+                          >
+                            {pos}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                          All positions
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Display College Connections */}
+                  {selectedCollegeSlugs.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1.5 font-medium">Connections:</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedCollegeSlugs.slice(0, 5).map((slug) => {
+                          const college = collegeEntries.find((c) => c.slug === slug)
+                          if (!college) return null
+                          return (
+                            <div
+                              key={slug}
+                              className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-md border border-gray-200"
+                            >
+                              {college.logo && (
+                                <Image
+                                  src={college.logo}
+                                  alt={college.name}
+                                  width={20}
+                                  height={20}
+                                  className="object-contain"
+                                  unoptimized
+                                />
+                              )}
+                              <span className="text-xs text-gray-700">{college.name}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No college connections specified</p>
+                  )}
                 </div>
               )}
             </div>
