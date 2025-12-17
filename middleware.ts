@@ -214,10 +214,12 @@ export async function middleware(request: NextRequest) {
                 if (profile && profile.role === 'player') {
                   console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
                   // Try to fix, but don't block if it fails
-                  supabase
-                    .from('profiles')
-                    .update({ role: 'user' })
-                    .eq('user_id', user.id)
+                  Promise.resolve(
+                    supabase
+                      .from('profiles')
+                      .update({ role: 'user' })
+                      .eq('user_id', user.id)
+                  )
                     .then(() => {
                       console.log('✅ Middleware - Profile role fixed')
                     })
