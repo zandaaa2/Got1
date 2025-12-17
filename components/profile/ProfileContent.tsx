@@ -2582,11 +2582,11 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
   return (
     <div>
       <div className="flex items-center justify-between mb-4 md:mb-8">
-        <h1 className="text-xl md:text-2xl font-bold text-black flex-1 min-w-0">Profile</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-black">Profile</h1>
         {/* Mobile action buttons */}
-        <div className="md:hidden flex items-center gap-2 ml-2">
-          {/* Install button for mobile - always render to reserve space */}
-          {showInstallButton ? (
+        <div className="md:hidden flex items-center gap-3 flex-shrink-0">
+          {/* Install button for mobile */}
+          {showInstallButton && (
             <button
               onClick={handleInstallClick}
               className="p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
@@ -2607,8 +2607,8 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
                 />
               </svg>
             </button>
-          ) : null}
-          {/* Settings icon for mobile - always visible */}
+          )}
+          {/* Settings icon for mobile */}
           <Link
             href="/settings"
             className="p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
