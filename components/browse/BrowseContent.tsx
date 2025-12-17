@@ -1115,6 +1115,19 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => {
+                setViewMode('profiles')
+                setRoleFilter('all')
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                viewMode === 'profiles' && roleFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Home
+            </button>
+            <button
               onClick={handleScoutsClick}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 viewMode === 'profiles' && roleFilter === 'scout'
@@ -1145,10 +1158,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
               Universities
             </button>
             
-            {/* Clear filters button - only show when filters are active */}
+            {/* Clear filters button - only show when filters are active (not on Home tab) */}
             {viewMode === 'profiles' && roleFilter !== 'all' && (
               <button
-                onClick={() => setRoleFilter('all')}
+                onClick={() => {
+                  setViewMode('profiles')
+                  setRoleFilter('all')
+                }}
                 className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
               >
                 Clear filters
