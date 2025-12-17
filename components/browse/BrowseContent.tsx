@@ -806,7 +806,18 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         if (roleFilter === 'all' && profile.role !== 'scout') {
           return false
         }
-        const matchesRole = roleFilter === 'all' || profile.role === roleFilter
+        let matchesRole = roleFilter === 'all' || profile.role === roleFilter
+        
+        // Price filtering: 
+        // - Default view (roleFilter === 'all'): only show scouts with price different than $99
+        // - Scouts tab (roleFilter === 'scout'): show ALL scouts regardless of price
+        if (profile.role === 'scout' && roleFilter === 'all') {
+          const price = profile.price_per_eval
+          if (!price || price === 99) {
+            matchesRole = false
+          }
+        }
+        
         return matchesRole
       }
       
