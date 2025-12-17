@@ -287,6 +287,33 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     return () => window.removeEventListener('focus', handleFocus)
   }, [loadProfiles])
 
+  // Set up real-time subscription for profile changes
+  useEffect(() => {
+    console.log('🔄 Setting up real-time subscription for profiles')
+    
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          console.log('🔄 Profile change detected:', payload.eventType, payload.new || payload.old)
+          // Reload profiles when any change occurs
+          loadProfiles()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      console.log('🔄 Cleaning up real-time subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, loadProfiles])
+
   const handleCardClick = useCallback((profile: Profile) => {
     router.push(getProfilePath(profile.id, profile.username))
   }, [router])
