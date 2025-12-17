@@ -15,6 +15,7 @@ interface EvaluationDetailProps {
   isScout: boolean
   userId: string
   scoutProfile?: any // Optional scout profile for displaying scout's own profile card (includes turnaround_time)
+  profilePath?: string // Optional profile path for back button (e.g., "/-nthony-anza" or "/profile/[id]")
 }
 
 export default function EvaluationDetail({
@@ -22,17 +23,20 @@ export default function EvaluationDetail({
   isScout,
   userId,
   scoutProfile,
+  profilePath,
 }: EvaluationDetailProps) {
   const [notes, setNotes] = useState(evaluation.notes || '')
   const [submitting, setSubmitting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [denying, setDenying] = useState(false)
   const [deniedReason, setDeniedReason] = useState('')
+  const [cancelling, setCancelling] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   
-  // Minimum character requirement
-  const MIN_CHARACTERS = 1000
+  // Minimum character requirement: 250 for free evals, 1000 for paid evals
+  const isFreeEval = evaluation.price === 0
+  const MIN_CHARACTERS = isFreeEval ? 250 : 1000
   
   /**
    * Gets the trimmed character count (excluding trailing whitespace).
@@ -202,6 +206,55 @@ export default function EvaluationDetail({
     }
   }
 
+  /**
+   * Handles cancellation/deletion of the evaluation by the scout.
+   * Uses the API endpoint to delete the evaluation and navigates back to my-evals.
+   * Only allowed for free in_progress evaluations.
+   */
+  const handleCancelEvaluation = async () => {
+    if (!isScout) return
+
+    // Only allow cancellation of free in_progress evaluations
+    if (!isFreeEval || evaluation.status !== 'in_progress') {
+      alert('You can only cancel free evaluations that are in progress.')
+      return
+    }
+
+    if (!confirm('Are you sure you want to cancel this evaluation? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setCancelling(true)
+
+      // Use API endpoint to cancel (which handles deletion for scouts)
+      const response = await fetch('/api/evaluation/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ evaluationId: evaluation.id }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('Cancel API error:', result)
+        throw new Error(result.error || 'Failed to cancel evaluation')
+      }
+
+      console.log('✅ Evaluation cancelled successfully:', evaluation.id)
+
+      // Navigate back to my-evals - the real-time subscription will update the list
+      router.push('/my-evals')
+    } catch (error: any) {
+      console.error('Error cancelling evaluation:', error)
+      const errorMessage = error?.message || 'Failed to cancel evaluation. Please try again.'
+      alert(`Failed to cancel evaluation: ${errorMessage}`)
+      setCancelling(false)
+    }
+  }
+
   const player = evaluation.player
 
   /**
@@ -222,27 +275,9 @@ export default function EvaluationDetail({
     
     return (
       <div className="max-w-4xl mx-auto">
-        {/* Header with back button and share button */}
+        {/* Header - back button removed */}
         <div className="mb-4 md:mb-6 flex items-center justify-between">
-          <button
-            onClick={() => router.push('/my-evals')}
-            className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-          >
-            <svg
-              className="w-5 h-5 md:w-6 md:h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="md:hidden">Back</span>
-          </button>
+          <div></div>
         </div>
 
         {/* Scout Profile Card - Show for requested status */}
@@ -463,25 +498,9 @@ export default function EvaluationDetail({
   if (isScout && evaluation.status === 'requested') {
     return (
       <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => router.push('/my-evals')}
-          className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-        >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          <span className="md:hidden">Back</span>
-        </button>
+        <div className="mb-4 md:mb-6">
+          <div></div>
+        </div>
 
         {/* Player Profile Section */}
         <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
@@ -617,27 +636,9 @@ export default function EvaluationDetail({
     
     return (
       <div className="max-w-4xl mx-auto">
-        {/* Header with back button */}
+        {/* Header - back button removed */}
         <div className="mb-4 md:mb-6 flex items-center justify-between">
-          <button
-            onClick={() => router.push('/my-evals')}
-            className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-          >
-            <svg
-              className="w-5 h-5 md:w-6 md:h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="md:hidden">Back</span>
-          </button>
+          <div></div>
         </div>
 
         {/* Cancelled Evaluation Message */}
@@ -676,27 +677,9 @@ export default function EvaluationDetail({
     
     return (
       <div className="max-w-4xl mx-auto">
-        {/* Header with back button and share button */}
+        {/* Header - back button removed */}
         <div className="mb-4 md:mb-6 flex items-center justify-between">
-          <button
-            onClick={() => router.push('/my-evals')}
-            className="flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-          >
-            <svg
-              className="w-5 h-5 md:w-6 md:h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="md:hidden">Back</span>
-          </button>
+          <div></div>
         </div>
 
         {/* Scout Profile Section - matches ProfileView exactly */}
@@ -824,26 +807,6 @@ export default function EvaluationDetail({
   // Pending/In Progress - show evaluation form
   return (
     <div className="max-w-4xl mx-auto">
-      <button
-        onClick={() => router.push('/my-evals')}
-        className="mb-4 md:mb-6 flex items-center gap-2 text-black hover:opacity-70 text-sm md:text-base"
-      >
-        <svg
-          className="w-5 h-5 md:w-6 md:h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        <span className="md:hidden">Back</span>
-      </button>
-
       {/* Player Profile Section */}
       <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
@@ -951,6 +914,17 @@ export default function EvaluationDetail({
       >
         {submitting ? 'Submitting...' : isValid ? 'Submit my evaluation' : `Write ${MIN_CHARACTERS - trimmedCount} more characters to submit`}
       </button>
+
+      {/* Cancel Button - Only show for scouts on free in_progress evaluations */}
+      {isScout && isFreeEval && evaluation.status === 'in_progress' && (
+        <button
+          onClick={handleCancelEvaluation}
+          disabled={cancelling || submitting}
+          className="w-full mt-3 px-4 md:px-6 py-3 md:py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm md:text-lg transition-colors"
+        >
+          {cancelling ? 'Cancelling...' : 'Cancel'}
+        </button>
+      )}
     </div>
   )
 }

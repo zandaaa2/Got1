@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { NextRequest } from 'next/server'
 import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
-import { getUserEmail } from '@/lib/supabase-admin'
+import { getUserEmail, createAdminClient } from '@/lib/supabase-admin'
 import { sendEvaluationCancelledEmail } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 
@@ -11,8 +11,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 /**
- * Player cancels an evaluation request.
- * If payment has already been collected (upfront flow), issues a refund and updates the evaluation row.
+ * Player or scout cancels an evaluation.
+ * - Players can cancel 'requested' evaluations (with refund if paid)
+ * - Scouts can cancel free 'in_progress' evaluations (deletes the evaluation)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -43,10 +44,65 @@ export async function POST(request: NextRequest) {
     // Check if user is the player OR the parent who purchased it
     const isPlayer = evaluation.player_id === session.user.id
     const isParentPurchaser = evaluation.purchased_by === session.user.id && evaluation.purchased_by_type === 'parent'
+    // Check if user is the scout (for canceling free in_progress evaluations)
+    const isScout = evaluation.scout_id === session.user.id
+    const isFreeEval = evaluation.price === 0
     
+    // Handle scout canceling free in_progress evaluations (delete the evaluation)
+    if (isScout && isFreeEval && evaluation.status === 'in_progress') {
+      // Use admin client to delete (bypasses RLS)
+      const adminClient = createAdminClient()
+      if (!adminClient) {
+        console.error('Admin client not available')
+        return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      }
+
+      // Delete the evaluation using admin client
+      const { error: deleteError } = await adminClient
+        .from('evaluations')
+        .delete()
+        .eq('id', evaluationId)
+        .eq('scout_id', session.user.id)
+
+      if (deleteError) {
+        console.error('Error deleting evaluation:', deleteError)
+        return NextResponse.json({ error: 'Failed to cancel evaluation' }, { status: 500 })
+      }
+
+      // Create notification for player
+      try {
+        const { data: scoutProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', evaluation.scout_id)
+          .maybeSingle()
+
+        await createNotification({
+          userId: evaluation.player_id,
+          type: 'evaluation_cancelled',
+          title: 'Evaluation Cancelled',
+          message: `${scoutProfile?.full_name || 'A scout'} has cancelled your free evaluation.`,
+          link: `/my-evals`,
+          metadata: {
+            evaluation_id: evaluationId,
+            scout_id: evaluation.scout_id,
+          },
+        })
+      } catch (notificationError) {
+        console.error('Error creating cancellation notification:', notificationError)
+        // Don't fail the request if notification fails
+      }
+
+      return successResponse({
+        success: true,
+        deleted: true,
+      })
+    }
+    
+    // Handle player/parent canceling requested evaluations
     if (!isPlayer && !isParentPurchaser) {
       return NextResponse.json(
-        { error: 'Only the requesting player or purchasing parent can cancel this evaluation.' },
+        { error: 'Only the requesting player, purchasing parent, or scout (for free in_progress evaluations) can cancel this evaluation.' },
         { status: 403 }
       )
     }
