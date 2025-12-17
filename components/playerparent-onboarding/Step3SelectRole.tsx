@@ -85,38 +85,48 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
       return
     }
 
-    // Role should already be saved from handleRoleSelect, but verify it's correct
+    // ALWAYS update the role when Continue is clicked - this ensures it's set correctly
     setLoading(true)
     setError(null)
 
     try {
-      // Double-check the role is correct before proceeding
-      const { data: currentProfile, error: fetchError } = await supabase
+      console.log('📝 Step3SelectRole - Submitting with role:', accountType, 'for user:', profile.user_id)
+      
+      // CRITICAL: Always update the role when submitting, regardless of previous state
+      const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
-        .select('role')
+        .update({ role: accountType })
         .eq('user_id', profile.user_id)
+        .select()
         .single()
 
-      if (fetchError) {
-        console.error('❌ Error fetching profile to verify role:', fetchError)
-      } else if (currentProfile?.role !== accountType) {
-        // Role doesn't match - update it now
-        console.warn('⚠️ Role mismatch detected, updating now:', {
-          expected: accountType,
-          actual: currentProfile?.role
-        })
-        
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: accountType })
-          .eq('user_id', profile.user_id)
+      if (updateError) {
+        console.error('❌ Error updating role on submit:', updateError)
+        setError(`Failed to update role: ${updateError.message || 'Unknown error'}`)
+        setLoading(false)
+        return
+      }
 
-        if (updateError) {
-          console.error('❌ Error updating role on submit:', updateError)
-          setError(`Failed to update role: ${updateError.message || 'Unknown error'}`)
-          setLoading(false)
-          return
-        }
+      if (!updatedProfile) {
+        console.error('❌ Step3SelectRole - No profile returned after update on submit')
+        setError('Failed to update role. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Verify the role was actually saved correctly
+      if (updatedProfile.role !== accountType) {
+        console.error('❌ Step3SelectRole - Role mismatch on submit! Expected:', accountType, 'Got:', updatedProfile.role)
+        setError(`Role update failed. Expected '${accountType}' but got '${updatedProfile.role}'.`)
+        setLoading(false)
+        return
+      }
+
+      console.log('✅ Step3SelectRole - Role successfully set to:', updatedProfile.role, 'for user:', profile.user_id)
+
+      // Save to localStorage for other steps
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`onboarding_accountType_${profile.user_id}`, accountType)
       }
 
       onComplete()
