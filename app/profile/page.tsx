@@ -54,52 +54,8 @@ export default async function ProfilePage() {
     new Date(app.reviewed_at) > new Date(Date.now() - 3600000)
   ) || null
 
-  // Auto-fix: If role is 'user' but profile has player or parent data, update role accordingly
-  // This handles cases where the role update in step 3 didn't persist
-  if (profile.role === 'user') {
-    // Only check parent_children if profile doesn't have player data
-    if (!(profile.hudl_link || profile.position || profile.school)) {
-      const { data: parentLinks } = await supabase
-        .from('parent_children')
-        .select('id')
-        .eq('parent_id', session.user.id)
-        .limit(1)
-      
-      if (parentLinks && parentLinks.length > 0) {
-        // User has linked children, they should be a parent
-        console.log('⚠️ ProfilePage - Auto-fixing role from "user" to "parent" (has linked children)')
-        const { data: updatedProfile, error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: 'parent' })
-          .eq('user_id', session.user.id)
-          .select()
-          .single()
-        
-        if (updateError) {
-          console.error('❌ ProfilePage - Error auto-fixing role to parent:', updateError)
-        } else if (updatedProfile) {
-          console.log('✅ ProfilePage - Role auto-fixed to:', updatedProfile.role)
-          profile = updatedProfile
-        }
-      }
-    } else {
-      // User has player data, they should be a player
-      console.log('⚠️ ProfilePage - Auto-fixing role from "user" to "player" (has player data)')
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('profiles')
-        .update({ role: 'player' })
-        .eq('user_id', session.user.id)
-        .select()
-        .single()
-      
-      if (updateError) {
-        console.error('❌ ProfilePage - Error auto-fixing role to player:', updateError)
-      } else if (updatedProfile) {
-        console.log('✅ ProfilePage - Role auto-fixed to:', updatedProfile.role)
-        profile = updatedProfile
-      }
-    }
-  }
+  // Note: Role is set correctly in ProfileSetupForm (step 3) when user selects player or parent
+  // No auto-fix needed based on data fields - role should match what user selected
 
   // Only auto-fix if there's an approved application AND no recent denial
   // This prevents restoring scout status after admin revocation

@@ -307,13 +307,17 @@ export default function ProfileSetupForm({
       }
       // If role is null/'user', don't set player or scout specific fields
 
-      const { error: insertError, data: insertedProfile } = await supabase
+      // Use upsert to handle both new profiles and updating existing profiles (from UserSetupForm)
+      const { error: upsertError, data: upsertedProfile } = await supabase
         .from('profiles')
-        .insert(profileData)
+        .upsert(profileData, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false,
+        })
         .select()
         .single()
 
-      if (insertError) throw insertError
+      if (upsertError) throw upsertError
 
       // Handle parent-specific flow: link to existing player
       if (role === 'parent' && selectedPlayerId) {
