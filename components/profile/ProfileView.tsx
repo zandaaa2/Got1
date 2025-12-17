@@ -248,7 +248,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
         // Try with share_token first
         let query = supabase
           .from('evaluations')
-          .select('id, notes, created_at, scout_id, player_id, share_token')
+          .select('id, notes, created_at, scout_id, player_id, share_token, price')
 
         if (profile.role === 'player') {
           // Get evaluations received by this player
@@ -269,7 +269,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           console.warn('share_token column not found, fetching without it')
           let queryWithoutToken = supabase
             .from('evaluations')
-            .select('id, notes, created_at, scout_id, player_id')
+            .select('id, notes, created_at, scout_id, player_id, price')
 
           if (profile.role === 'player') {
             queryWithoutToken = queryWithoutToken.eq('player_id', profile.user_id).eq('status', 'completed')
@@ -326,6 +326,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           created_at: evaluation.created_at,
           scout_id: evaluation.scout_id,
           player_id: evaluation.player_id,
+          price: evaluation.price || 0,
           scout: scoutProfile ? {
             id: scoutProfile.id,
             user_id: scoutProfile.user_id,
@@ -344,6 +345,17 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             username: playerProfile.username,
           } : null,
         }
+      })
+
+      // Sort evaluations by price: free first (price = 0), then lowest to highest
+      evaluationsWithProfiles.sort((a, b) => {
+        const priceA = a.price || 0
+        const priceB = b.price || 0
+        // Free evals (price = 0) come first
+        if (priceA === 0 && priceB !== 0) return -1
+        if (priceA !== 0 && priceB === 0) return 1
+        // Then sort by price ascending
+        return priceA - priceB
       })
 
       setEvaluations(evaluationsWithProfiles as Evaluation[])
@@ -375,6 +387,48 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     setRequesting(true)
     router.push(`/profile/${profile.id}/purchase`)
     setRequesting(false)
+  }
+
+  /**
+   * Handles scout giving a free evaluation to a player.
+   * Creates a free evaluation and navigates to the evaluation detail page.
+   */
+  const handleGiveFreeEval = async () => {
+    if (!profile || profile.role !== 'player') return
+    if (!currentUserProfile || currentUserProfile.role !== 'scout') return
+
+    try {
+      setRequesting(true)
+      
+      const response = await fetch('/api/evaluation/give-free', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          playerId: profile.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create free evaluation')
+      }
+
+      // Navigate to the profile-scoped evaluation page
+      if (data.evaluationId) {
+        const evalPath = profile.username 
+          ? `/${profile.username}/eval`
+          : `/profile/${profile.id}/eval`
+        router.push(evalPath)
+      }
+    } catch (error: any) {
+      console.error('Error giving free evaluation:', error)
+      alert(error.message || 'Failed to create free evaluation. Please try again.')
+    } finally {
+      setRequesting(false)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -677,6 +731,22 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                   isOwnProfile={isOwnProfile}
                 />
               </div>
+
+              {/* Give Eval Button - Only visible to scouts viewing player profiles */}
+              {!isOwnProfile && 
+               isSignedIn && 
+               currentUserProfile?.role === 'scout' && 
+               profile.role === 'player' && (
+                <div className="mb-6 md:mb-8">
+                  <button
+                    onClick={handleGiveFreeEval}
+                    disabled={requesting}
+                    className="interactive-press w-full px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm md:text-base transition-colors disabled:active:scale-100"
+                  >
+                    {requesting ? 'Creating...' : 'Give eval'}
+                  </button>
+                </div>
+              )}
             </>
           }
           evaluationsContent={
@@ -758,9 +828,16 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                   )}
                                 </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                                  {evaluation.scout?.full_name || 'Unknown Scout'}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-bold text-black text-base md:text-lg truncate">
+                                    {evaluation.scout?.full_name || 'Unknown Scout'}
+                                  </h3>
+                                  {evaluation.price === 0 && (
+                                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0">
+                                      Free
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-black text-xs md:text-sm mb-1 truncate">
                                   {evaluation.scout?.organization || 'Scout'}
                                 </p>
@@ -860,7 +937,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
         {/* More Info Modal */}
         {showMoreInfo && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in p-4" 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4" 
             onClick={() => setShowMoreInfo(false)}
           >
             <div 
@@ -1177,7 +1254,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
       {/* More Info Modal */}
       {showMoreInfo && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in p-4" 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4" 
           onClick={() => setShowMoreInfo(false)}
         >
           <div 
@@ -1284,7 +1361,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
 
       {/* How It Works Modal */}
       {showHowItWorks && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowHowItWorks(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowHowItWorks(false)}>
           <div className="bg-white rounded-lg p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-2xl font-bold text-black">

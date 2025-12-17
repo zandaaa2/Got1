@@ -128,7 +128,7 @@ export default function PWAInstallButton() {
       {/* iOS Instructions Modal */}
       {showIOSInstructions && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
           onClick={() => setShowIOSInstructions(false)}
         >
           <div 

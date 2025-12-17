@@ -1577,7 +1577,7 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
 
       {/* Crop Modal */}
       {cropModalOpen && imageToCrop && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-black mb-4">Crop Your Photo</h3>
             <div className="relative w-full mb-4" style={{ height: '400px', background: '#333' }}>
