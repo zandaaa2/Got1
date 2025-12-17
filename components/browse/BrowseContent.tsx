@@ -153,10 +153,15 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           return false
         }
         
-        // If it's a scout, check if they have Stripe setup and are not suspended
+        // If it's a scout, check if they have Stripe setup, custom price, and are not suspended
         if (p.role === 'scout') {
           // Exclude scouts without Stripe account setup
           if (!p.stripe_account_id || p.stripe_account_id.trim() === '') {
+            return false
+          }
+          // Exclude scouts with default price ($99) or no price set
+          const price = p.price_per_eval
+          if (!price || price === 99) {
             return false
           }
           // Exclude suspended scouts
