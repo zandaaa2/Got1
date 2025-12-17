@@ -45,6 +45,217 @@ const stripePromise = getStripeKey()
   ? loadStripe(getStripeKey()!, { locale: 'auto' }) 
   : null
 
+// Evaluation Card Component
+function EvalCard({
+  title,
+  price,
+  description,
+  onButtonClick,
+  buttonText,
+  isFree,
+  scout,
+  error,
+  isParent,
+  player,
+  isSignedIn,
+  onSignUpClick,
+  router,
+  processing,
+}: {
+  title: string
+  price: number
+  description: string | null
+  onButtonClick: () => void
+  buttonText: string
+  isFree: boolean
+  scout: any
+  error: string | null
+  isParent: boolean
+  player: any
+  isSignedIn: boolean
+  onSignUpClick?: () => void
+  router: any
+  processing: boolean
+}) {
+  return (
+    <div>
+      {/* Offer Title */}
+      <h2 className="text-lg font-semibold text-black mb-4">
+        {title}
+      </h2>
+      
+      {/* Bio - Show for all users on evaluation offer */}
+      {scout.bio && (
+        <div className="mb-6">
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {scout.bio}
+          </p>
+        </div>
+      )}
+
+      {/* Description for free eval */}
+      {isFree && description && (
+        <div className="mb-6">
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {description}
+          </p>
+        </div>
+      )}
+
+      <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="space-y-4">
+          {/* Price and Turnaround Time */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-black">Evaluation Service</span>
+              <span className="font-bold text-black">
+                ${price.toFixed(2)}
+              </span>
+            </div>
+            {scout.turnaround_time && (
+              <p className="text-sm text-gray-600">
+                {scout.turnaround_time.includes('after scout confirmation') || scout.turnaround_time.includes('from scout confirmation')
+                  ? scout.turnaround_time.replace('from scout confirmation', 'after scout confirmation')
+                  : `${scout.turnaround_time} after scout confirmation`}
+              </p>
+            )}
+          </div>
+
+          {/* Positions */}
+          {(() => {
+            let positions: string[] = []
+            if (scout.positions && typeof scout.positions === 'string') {
+              try {
+                positions = JSON.parse(scout.positions)
+              } catch {
+                positions = [scout.positions]
+              }
+            } else if (Array.isArray(scout.positions)) {
+              positions = scout.positions
+            } else if (scout.position) {
+              positions = [scout.position]
+            }
+            return positions.length > 0 ? (
+              <div>
+                <span className="text-sm font-medium text-black block mb-2">Positions: </span>
+                <div className="flex flex-wrap gap-2">
+                  {positions.map((pos: string, idx: number) => (
+                    <span 
+                      key={idx}
+                      className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
+                    >
+                      {pos}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null
+          })()}
+
+          {/* College Connections */}
+          {(() => {
+            let connections: string[] = []
+            if (scout.college_connections) {
+              try {
+                if (typeof scout.college_connections === 'string') {
+                  const parsed = JSON.parse(scout.college_connections)
+                  connections = Array.isArray(parsed) ? parsed : Object.values(parsed)
+                } else if (Array.isArray(scout.college_connections)) {
+                  connections = scout.college_connections
+                }
+              } catch {
+                // If parsing fails, skip
+              }
+            }
+            
+            if (connections.length > 0) {
+              const connectionColleges = connections
+                .map(slug => collegeEntries.find(c => c.slug === slug))
+                .filter(Boolean)
+              
+              return connectionColleges.length > 0 ? (
+                <div>
+                  <span className="text-sm font-medium text-black block mb-2">Connections: </span>
+                  <div className="flex flex-wrap gap-2">
+                    {connectionColleges.map((college) => (
+                      <div key={college!.slug} className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
+                        {college!.logo && (
+                          <Image
+                            src={college!.logo}
+                            alt={college!.name}
+                            width={16}
+                            height={16}
+                            className="object-contain"
+                            unoptimized
+                          />
+                        )}
+                        <span className="text-xs text-gray-700">{college!.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            }
+            return null
+          })()}
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {isParent && !player && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            It looks like you're a parent account. Please select which child(ren) you're purchasing evaluations for.
+          </p>
+        </div>
+      )}
+      
+      {!isSignedIn ? (
+        <>
+          <button
+            onClick={() => {
+              if (isFree) {
+                onButtonClick()
+              } else {
+                if (onSignUpClick) {
+                  onSignUpClick()
+                } else {
+                  router.push('/auth/signup')
+                }
+              }
+            }}
+            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg transition-colors"
+            style={{ backgroundColor: '#233dff' }}
+          >
+            {isFree ? buttonText : `Request + Pay Now - $${price.toFixed(2)}`}
+          </button>
+          <p className="text-sm text-gray-600 mt-2 text-center mb-0">
+            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
+          </p>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={onButtonClick}
+            disabled={processing}
+            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+          >
+            {processing ? 'Processing...' : buttonText}
+          </button>
+          <p className="text-sm text-gray-600 mt-2 text-center mb-0">
+            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 /**
  * Component for purchasing an evaluation from a scout.
  * Uses Stripe Checkout for payment processing.
@@ -330,197 +541,6 @@ export default function PurchaseEvaluation({
     }
   }
 
-  // Helper function to render an evaluation card
-  const renderEvalCard = (
-    title: string,
-    price: number,
-    description: string | null,
-    onButtonClick: () => void,
-    buttonText: string,
-    isFree: boolean
-  ): JSX.Element => {
-    return (
-      <div>
-        {/* Offer Title */}
-        <h2 className="text-lg font-semibold text-black mb-4">
-          {title}
-        </h2>
-        
-        {/* Bio - Show for all users on evaluation offer */}
-        {scout.bio && (
-          <div className="mb-6">
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {scout.bio}
-            </p>
-          </div>
-        )}
-
-        {/* Description for free eval */}
-        {isFree && description && (
-          <div className="mb-6">
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {description}
-            </p>
-          </div>
-        )}
-
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
-          <div className="space-y-4">
-            {/* Price and Turnaround Time */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-black">Evaluation Service</span>
-                <span className="font-bold text-black">
-                  ${price.toFixed(2)}
-                </span>
-              </div>
-              {scout.turnaround_time && (
-                <p className="text-sm text-gray-600">
-                  {scout.turnaround_time.includes('after scout confirmation') || scout.turnaround_time.includes('from scout confirmation')
-                    ? scout.turnaround_time.replace('from scout confirmation', 'after scout confirmation')
-                    : `${scout.turnaround_time} after scout confirmation`}
-                </p>
-              )}
-            </div>
-
-            {/* Positions */}
-            {(() => {
-              let positions: string[] = []
-              // Try to load from positions JSONB array first (new format)
-              if (scout.positions && typeof scout.positions === 'string') {
-                try {
-                  positions = JSON.parse(scout.positions)
-                } catch {
-                  // If parsing fails, try as single string
-                  positions = [scout.positions]
-                }
-              } else if (Array.isArray(scout.positions)) {
-                positions = scout.positions
-              } else if (scout.position) {
-                // Fall back to single position field (backward compatibility)
-                positions = [scout.position]
-              }
-              return positions.length > 0 ? (
-                <div>
-                  <span className="text-sm font-medium text-black block mb-2">Positions: </span>
-                  <div className="flex flex-wrap gap-2">
-                    {positions.map((pos, idx) => (
-                      <span 
-                        key={idx}
-                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
-                      >
-                        {pos}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null
-            })()}
-
-            {/* College Connections */}
-            {(() => {
-              let connections: string[] = []
-              if (scout.college_connections) {
-                try {
-                  if (typeof scout.college_connections === 'string') {
-                    const parsed = JSON.parse(scout.college_connections)
-                    connections = Array.isArray(parsed) ? parsed : Object.values(parsed)
-                  } else if (Array.isArray(scout.college_connections)) {
-                    connections = scout.college_connections
-                  }
-                } catch {
-                  // If parsing fails, skip
-                }
-              }
-              
-              if (connections.length > 0) {
-                const connectionColleges = connections
-                  .map(slug => collegeEntries.find(c => c.slug === slug))
-                  .filter(Boolean)
-                
-                return connectionColleges.length > 0 ? (
-                  <div>
-                    <span className="text-sm font-medium text-black block mb-2">Connections: </span>
-                    <div className="flex flex-wrap gap-2">
-                      {connectionColleges.map((college) => (
-                        <div key={college!.slug} className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
-                          {college!.logo && (
-                            <Image
-                              src={college!.logo}
-                              alt={college!.name}
-                              width={16}
-                              height={16}
-                              className="object-contain"
-                              unoptimized
-                            />
-                          )}
-                          <span className="text-xs text-gray-700">{college!.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null
-              }
-              return null
-            })()}
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {isParent && !player && (
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              It looks like you're a parent account. Please select which child(ren) you're purchasing evaluations for.
-            </p>
-          </div>
-        )}
-        
-        {!isSignedIn ? (
-          <>
-            <button
-              onClick={() => {
-                if (isFree) {
-                  onButtonClick()
-                } else {
-                  if (onSignUpClick) {
-                    onSignUpClick()
-                  } else {
-                    router.push('/auth/signup')
-                  }
-                }
-              }}
-              className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg transition-colors"
-              style={{ backgroundColor: '#233dff' }}
-            >
-              {isFree ? buttonText : `Request + Pay Now - $${price.toFixed(2)}`}
-            </button>
-            <p className="text-sm text-gray-600 mt-2 text-center mb-0">
-              {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
-            </p>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={onButtonClick}
-              disabled={processing}
-              className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
-            >
-              {processing ? 'Processing...' : buttonText}
-            </button>
-            <p className="text-sm text-gray-600 mt-2 text-center mb-0">
-              {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
-            </p>
-          </>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-2xl mx-auto">
       {/* Evaluation Offers - Horizontal scroll on mobile, stacked on desktop */}
@@ -534,26 +554,42 @@ export default function PurchaseEvaluation({
             <div className="flex">
               {/* Free Eval Card - First */}
               <div className="flex-shrink-0 w-screen px-4 snap-start">
-                {renderEvalCard(
-                  scout.offer_title || 'Free Evaluation',
-                  0,
-                  scout.free_eval_description,
-                  handleRequestFreeEval,
-                  'Request Free Evaluation',
-                  true
-                )}
+                <EvalCard
+                  title={scout.offer_title || 'Free Evaluation'}
+                  price={0}
+                  description={scout.free_eval_description}
+                  onButtonClick={handleRequestFreeEval}
+                  buttonText="Request Free Evaluation"
+                  isFree={true}
+                  scout={scout}
+                  error={error}
+                  isParent={isParent}
+                  player={player}
+                  isSignedIn={isSignedIn}
+                  onSignUpClick={onSignUpClick}
+                  router={router}
+                  processing={processing}
+                />
               </div>
               
               {/* Standard Eval Card - Second */}
               <div className="flex-shrink-0 w-screen px-4 snap-start">
-                {renderEvalCard(
-                  scout.offer_title || 'Standard Evaluation',
-                  scout.price_per_eval || 99,
-                  null,
-                  handlePurchase,
-                  `Request Evaluation - $${scout.price_per_eval || 99}`,
-                  false
-                )}
+                <EvalCard
+                  title={scout.offer_title || 'Standard Evaluation'}
+                  price={scout.price_per_eval || 99}
+                  description={null}
+                  onButtonClick={handlePurchase}
+                  buttonText={`Request Evaluation - $${scout.price_per_eval || 99}`}
+                  isFree={false}
+                  scout={scout}
+                  error={error}
+                  isParent={isParent}
+                  player={player}
+                  isSignedIn={isSignedIn}
+                  onSignUpClick={onSignUpClick}
+                  router={router}
+                  processing={processing}
+                />
               </div>
             </div>
           </div>
@@ -561,24 +597,40 @@ export default function PurchaseEvaluation({
           {/* Desktop: Stacked vertically */}
           <div className="hidden md:block space-y-6">
             {/* Free Eval Card - First */}
-            {renderEvalCard(
-              scout.offer_title || 'Free Evaluation',
-              0,
-              scout.free_eval_description,
-              handleRequestFreeEval,
-              'Request Free Evaluation',
-              true
-            )}
+            <EvalCard
+              title={scout.offer_title || 'Free Evaluation'}
+              price={0}
+              description={scout.free_eval_description}
+              onButtonClick={handleRequestFreeEval}
+              buttonText="Request Free Evaluation"
+              isFree={true}
+              scout={scout}
+              error={error}
+              isParent={isParent}
+              player={player}
+              isSignedIn={isSignedIn}
+              onSignUpClick={onSignUpClick}
+              router={router}
+              processing={processing}
+            />
             
             {/* Standard Eval Card - Second */}
-            {renderEvalCard(
-              scout.offer_title || 'Standard Evaluation',
-              scout.price_per_eval || 99,
-              null,
-              handlePurchase,
-              `Request Evaluation - $${scout.price_per_eval || 99}`,
-              false
-            )}
+            <EvalCard
+              title={scout.offer_title || 'Standard Evaluation'}
+              price={scout.price_per_eval || 99}
+              description={null}
+              onButtonClick={handlePurchase}
+              buttonText={`Request Evaluation - $${scout.price_per_eval || 99}`}
+              isFree={false}
+              scout={scout}
+              error={error}
+              isParent={isParent}
+              player={player}
+              isSignedIn={isSignedIn}
+              onSignUpClick={onSignUpClick}
+              router={router}
+              processing={processing}
+            />
           </div>
         </div>
       ) : (
@@ -751,14 +803,22 @@ export default function PurchaseEvaluation({
         </div>
       ) : (
         /* Standard Eval Card - when free eval not enabled */
-        renderEvalCard(
-          scout.offer_title || 'Standard Evaluation',
-          scout.price_per_eval || 99,
-          null,
-          handlePurchase,
-          `Request Evaluation - $${scout.price_per_eval || 99}`,
-          false
-        )
+        <EvalCard
+          title={scout.offer_title || 'Standard Evaluation'}
+          price={scout.price_per_eval || 99}
+          description={null}
+          onButtonClick={handlePurchase}
+          buttonText={`Request Evaluation - $${scout.price_per_eval || 99}`}
+          isFree={false}
+          scout={scout}
+          error={error}
+          isParent={isParent}
+          player={player}
+          isSignedIn={isSignedIn}
+          onSignUpClick={onSignUpClick}
+          router={router}
+          processing={processing}
+        />
       )}
 
       {/* Children Selection Modal for Parents */}
