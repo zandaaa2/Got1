@@ -202,12 +202,14 @@ export async function middleware(request: NextRequest) {
             if (!isProfileSetupRoute) {
               // Check if profile has required fields (with timeout)
               try {
+                const profileQuery = supabase
+                  .from('profiles')
+                  .select('full_name, username, birthday, role')
+                  .eq('user_id', user.id)
+                  .maybeSingle()
+                
                 const profileResult = await withTimeout(
-                  supabase
-                    .from('profiles')
-                    .select('full_name, username, birthday, role')
-                    .eq('user_id', user.id)
-                    .maybeSingle(),
+                  profileQuery,
                   3000
                 )
 
@@ -217,20 +219,24 @@ export async function middleware(request: NextRequest) {
                 if (profile && profile.role === 'player') {
                   console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
                   try {
+                    const updateQuery = supabase
+                      .from('profiles')
+                      .update({ role: 'user' })
+                      .eq('user_id', user.id)
+                    
                     await withTimeout(
-                      supabase
-                        .from('profiles')
-                        .update({ role: 'user' })
-                        .eq('user_id', user.id),
+                      updateQuery,
                       2000
                     )
                     // Re-fetch profile after fix (with timeout)
+                    const fixedProfileQuery = supabase
+                      .from('profiles')
+                      .select('full_name, username, birthday, role')
+                      .eq('user_id', user.id)
+                      .maybeSingle()
+                    
                     const fixedProfileResult = await withTimeout(
-                      supabase
-                        .from('profiles')
-                        .select('full_name, username, birthday, role')
-                        .eq('user_id', user.id)
-                        .maybeSingle(),
+                      fixedProfileQuery,
                       2000
                     )
                     profile = fixedProfileResult.data
