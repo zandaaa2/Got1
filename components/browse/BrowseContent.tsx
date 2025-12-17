@@ -76,9 +76,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'scout' | 'player'>('all')
-  const [viewMode, setViewMode] = useState<'profiles' | 'universities'>('profiles')
+  const [viewMode, setViewMode] = useState<'profiles' | 'universities' | 'free-evals'>('profiles')
   const [divisionFilter, setDivisionFilter] = useState<'all' | 'D1' | 'D2' | 'D3' | 'FBS' | 'FCS' | 'NAIA'>('all')
-  const [evalType, setEvalType] = useState<'paid' | 'free'>('paid')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const [currentUserPosition, setCurrentUserPosition] = useState<string | null>(null)
@@ -163,14 +162,16 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             return false
           }
           
-          // Filter based on eval type
-          if (evalType === 'free') {
-            // For free evals: must have free eval enabled and description
-            if (!p.free_eval_enabled || !p.free_eval_description) {
+          // Filter based on view mode
+          if (viewMode === 'free-evals') {
+            // For free evals: must have free eval enabled OR price is $0
+            const hasFreeEval = p.free_eval_enabled && p.free_eval_description
+            const isFreePrice = p.price_per_eval === 0
+            if (!hasFreeEval && !isFreePrice) {
               return false
             }
           } else {
-            // For paid evals: exclude scouts with default price ($99) or no price set
+            // For paid evals (default): exclude scouts with default price ($99) or no price set
             const price = p.price_per_eval
             if (!price || price === 99) {
               return false
@@ -457,7 +458,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
         {isScout && roleFilter !== 'scout' && (
           <div className="flex-shrink-0 text-right">
-            {evalType === 'free' && profile.free_eval_enabled ? (
+            {viewMode === 'free-evals' && (profile.free_eval_enabled || profile.price_per_eval === 0) ? (
               <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">Free</span>
             ) : (
               <p className="text-sm md:text-base font-semibold text-blue-600">
@@ -471,7 +472,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         )}
       </Link>
     )
-  }, [findCollegeMatch, getProfileSubtitle, imageErrors, setImageErrors, roleFilter, getProfilePath, evalType])
+  }, [findCollegeMatch, getProfileSubtitle, imageErrors, setImageErrors, roleFilter, getProfilePath, viewMode])
 
   const renderProfileCard = useCallback((profile: Profile) => {
     const avatarUrl =
@@ -480,7 +481,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         : undefined
 
     const isScout = profile.role === 'scout'
-    const isFreeEval = evalType === 'free' && isScout && profile.free_eval_enabled
+    const isFreeEval = viewMode === 'free-evals' && isScout && (profile.free_eval_enabled || profile.price_per_eval === 0)
     const price = isScout ? (isFreeEval ? 0 : (profile.price_per_eval ?? 99)) : null
     const turnaround = isScout ? (profile.turnaround_time || '72 hrs') : null
     const collegeMatch = profile.organization ? findCollegeMatch(profile.organization) : null
@@ -702,7 +703,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         </button>
       </div>
     )
-  }, [findCollegeMatch, getProfileSubtitle, handleCardClick, handlePrimaryAction, imageErrors, setImageErrors, evalType])
+  }, [findCollegeMatch, getProfileSubtitle, handleCardClick, handlePrimaryAction, imageErrors, setImageErrors, viewMode])
 
   const organizationCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -954,13 +955,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       const matchesSearch = matchesBasicSearch || matchesCollegeConnection
       
       // Role filter - exclude parents from scout/player filters, but include in 'all' for search
-      // When on free evals tab, only show scouts
+      // When on free evals view, only show scouts
       let matchesRole = roleFilter === 'all' 
         ? profile.role !== 'parent' || trimmedQuery.length > 0 // Include parents only if searching
         : (profile.role === roleFilter) // roleFilter is 'scout' or 'player', so this already excludes 'parent'
       
-      // If on free evals tab, only show scouts
-      if (evalType === 'free' && profile.role !== 'scout') {
+      // If on free evals view, only show scouts
+      if (viewMode === 'free-evals' && profile.role !== 'scout') {
         matchesRole = false
       }
       
@@ -969,8 +970,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     
     console.log('🔍 filteredProfiles result:', filtered.length, 'profiles after filtering')
     
-    // Randomize order for scouts when showing all or scouts filter
-    if (roleFilter === 'all' || roleFilter === 'scout') {
+    // Randomize order for scouts when showing all, scouts filter, or free evals
+    if (roleFilter === 'all' || roleFilter === 'scout' || viewMode === 'free-evals') {
       // Separate scouts and non-scouts
       const scouts = filtered.filter(p => p.role === 'scout')
       const nonScouts = filtered.filter(p => p.role !== 'scout')
@@ -1032,7 +1033,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     }
     
     return filtered
-  }, [profiles, trimmedQuery, roleFilter, isProduction, currentUserRole, currentUserPosition, normalizedColleges, findCollegeMatch, playerOffers, evalType])
+  }, [profiles, trimmedQuery, roleFilter, isProduction, currentUserRole, currentUserPosition, normalizedColleges, findCollegeMatch, playerOffers, viewMode])
 
   const filteredTeams = useMemo(() => {
     return teamEntries.filter((team) => {
@@ -1066,30 +1067,19 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   const showTeamHighlights = viewMode !== 'universities' && trimmedQuery.length > 0 && filteredTeams.length > 0
 
   const handleScoutsClick = () => {
-    if (viewMode === 'universities') {
+    if (viewMode === 'universities' || viewMode === 'free-evals') {
       setViewMode('profiles')
       setRoleFilter('scout')
       return
     }
-    // If clicking scouts while on free evals, keep free evals
-    // If clicking scouts while on paid evals, toggle scout filter
-    if (evalType === 'free') {
-      // On free evals, clicking scouts toggles between 'scout' and 'all' (but free evals only show scouts anyway)
-      setRoleFilter(roleFilter === 'scout' ? 'all' : 'scout')
-    } else {
-      setRoleFilter(roleFilter === 'scout' ? 'all' : 'scout')
-    }
+    setRoleFilter(roleFilter === 'scout' ? 'all' : 'scout')
   }
 
   const handlePlayersClick = () => {
-    if (viewMode === 'universities') {
+    if (viewMode === 'universities' || viewMode === 'free-evals') {
       setViewMode('profiles')
       setRoleFilter('player')
       return
-    }
-    // If clicking players while on free evals, switch to paid evals (free evals only show scouts)
-    if (evalType === 'free') {
-      setEvalType('paid')
     }
     setRoleFilter(roleFilter === 'player' ? 'all' : 'player')
   }
@@ -1099,14 +1089,12 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       setViewMode('profiles')
       setRoleFilter('all')
       setDivisionFilter('all')
-      setEvalType('paid')
       return
     }
     setViewMode('universities')
     if (roleFilter !== 'all') {
       setRoleFilter('all')
     }
-    setEvalType('paid')
     // Keep division filter as is when switching to universities
   }
 
@@ -1144,47 +1132,22 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           />
         </div>
         
-        {/* Eval Type Tabs - only show when viewing profiles */}
-        {viewMode === 'profiles' && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+        {/* Filter Tabs */}
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
-                setEvalType('paid')
-                // If role filter is 'player', keep it; otherwise set to 'all' to show both scouts and players
-                if (roleFilter === 'player') {
-                  // Keep player filter
-                } else {
-                  setRoleFilter('all')
-                }
-              }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                evalType === 'paid'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Paid Evals
-            </button>
-            <button
-              onClick={() => {
-                setEvalType('free')
-                // Free evals only show scouts, so set role filter to 'scout'
+                setViewMode('free-evals')
                 setRoleFilter('scout')
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                evalType === 'free'
+                viewMode === 'free-evals'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Free Evals
             </button>
-          </div>
-        )}
-
-        {/* Filter Tabs */}
-        <div className="mt-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleScoutsClick}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -1217,14 +1180,17 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             </button>
             
             {/* Clear filters button - only show when filters are active */}
-            {viewMode === 'profiles' && roleFilter !== 'all' && (
+            {(viewMode === 'profiles' && roleFilter !== 'all') || viewMode === 'free-evals' ? (
               <button
-                onClick={() => setRoleFilter('all')}
+                onClick={() => {
+                  setViewMode('profiles')
+                  setRoleFilter('all')
+                }}
                 className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
               >
                 Clear filters
               </button>
-            )}
+            ) : null}
           </div>
           
           {/* Division Tabs - only show when on Universities view */}
