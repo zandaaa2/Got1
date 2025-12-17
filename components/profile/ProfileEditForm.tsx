@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/shared/Modal'
-import { SportSelector, MultiSportSelector } from '@/components/shared/SportSelector'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
 import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
@@ -641,19 +640,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
       } else if (profile.role === 'scout') {
         if (!formData.organization || formData.organization.trim() === '') {
           setError('Organization is required for scouts.')
-          setLoading(false)
-          return
-        }
-        if (!formData.sports || formData.sports.length === 0) {
-          setError('Please select at least one sport you evaluate (football or men\'s basketball).')
-          setLoading(false)
-          return
-        }
-        const validSports = formData.sports.filter((sport: string) => 
-          sport === 'football' || sport === 'mens-basketball'
-        )
-        if (validSports.length === 0) {
-          setError('Please select football or men\'s basketball as the sport you evaluate.')
           setLoading(false)
           return
         }
@@ -1404,30 +1390,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
                   Select from major colleges or type a custom organization (e.g., "Dallas Cowboys", "Auburn Player Personnel")
                 </p>
               </div>
-
-                {/* Sport selector only for approved scouts, not for pending applications */}
-                {profile.role === 'scout' && (
-                  <div>
-                    <label className="block text-sm font-medium text-black mb-2">
-                      Sport You Evaluate <span className="text-red-500">*</span>
-                    </label>
-                    <MultiSportSelector
-                      selectedSports={Array.isArray(formData.sports) ? formData.sports : []}
-                      onToggle={(sport) => {
-                        const currentSports = Array.isArray(formData.sports) ? formData.sports : []
-                        const newSports = currentSports.includes(sport)
-                          ? currentSports.filter(s => s !== sport)
-                          : [...currentSports, sport]
-                        setFormData((prev) => ({ ...prev, sports: newSports }))
-                      }}
-                      label=""
-                      availableSports={['football', 'basketball']}
-                    />
-                    <p className="mt-1 text-sm text-gray-600">
-                      Select at least one sport (football or men's basketball)
-                    </p>
-                  </div>
-                )}
 
               <div>
                 <label htmlFor="position" className="block text-sm font-medium text-black mb-2">
