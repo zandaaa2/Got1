@@ -60,9 +60,6 @@ export async function middleware(request: NextRequest) {
   try {
     // Only run on non-API routes
     if (!request.nextUrl.pathname.startsWith('/api')) {
-      const allCookies = request.cookies.getAll()
-      const supabaseCookies = allCookies.filter(c => c.name.startsWith('sb-'))
-
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -87,10 +84,36 @@ export async function middleware(request: NextRequest) {
         }
       )
 
-      // Try to get session (always attempt, even if no cookies, to handle edge cases)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession().catch((err) => {
-        return { data: { session: null }, error: err }
-      })
+      // Add timeout wrapper for session operations
+      const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => 
+            setTimeout(() => reject(new Error('Operation timeout')), timeoutMs)
+          )
+        ])
+      }
+
+      // Try to get session with timeout (5 seconds max)
+      let session = null
+      try {
+        const sessionResult = await withTimeout(
+          supabase.auth.getSession(),
+          5000
+        ).catch((err) => {
+          return { data: { session: null }, error: err }
+        })
+        session = sessionResult.data?.session || null
+      } catch (error) {
+        // If session check times out, treat as no session for public routes
+        // For protected routes, we'll redirect to sign-in
+        if (!isPublicRoute) {
+          console.error('Middleware: Session check timeout, redirecting to sign-in')
+          const signInUrl = new URL('/auth/signin', request.url)
+          signInUrl.searchParams.set('redirect', pathname)
+          return NextResponse.redirect(signInUrl)
+        }
+      }
 
       // If route is protected and user is not authenticated, redirect appropriately
       if (!isPublicRoute && !session) {
@@ -121,96 +144,144 @@ export async function middleware(request: NextRequest) {
 
       // If user is authenticated, handle session refresh and profile checks
       if (session) {
-        // Verify the session is valid by getting the user
-        const { data: { user }, error: userError } = await supabase.auth.getUser().catch((err) => {
-          return { data: { user: null }, error: err }
-        })
+        // Skip getUser check for public routes to reduce queries
+        // Only verify session for protected routes
+        if (!isPublicRoute) {
+          // Verify the session is valid by getting the user (with timeout)
+          let user = null
+          try {
+            const userResult = await withTimeout(
+              supabase.auth.getUser(),
+              3000
+            ).catch((err) => {
+              return { data: { user: null }, error: err }
+            })
+            user = userResult.data?.user || null
 
-        // If getUser fails, refresh the session
-        if (userError || !user) {
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session).catch((err) => {
-            return { data: { session: null }, error: err }
-          })
+            // If getUser fails, try to refresh the session (with timeout)
+            if (!user && userResult.error) {
+              try {
+                const refreshResult = await withTimeout(
+                  supabase.auth.refreshSession(session),
+                  3000
+                ).catch((err) => {
+                  return { data: { session: null }, error: err }
+                })
 
-          if (refreshData?.session && process.env.NODE_ENV === 'development') {
-            console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshData.session.user.id)
-          } else if (refreshError && process.env.NODE_ENV === 'development') {
-            console.log('Middleware: Session refresh error:', refreshError.message)
-          }
-        } else if (process.env.NODE_ENV === 'development') {
-          console.log('Middleware: Session valid, user ID:', user.id)
-        }
-
-        // For authenticated users on protected routes, check profile completion
-        if (!isPublicRoute && user) {
-          // Profile setup routes should be allowed without completion check
-          const profileSetupRoutes = [
-            '/profile/user-setup',
-            '/profile/parent-setup',
-            '/profile/parent/create-player',
-          ]
-          const isProfileSetupRoute = profileSetupRoutes.some(route => pathname.startsWith(route))
-
-          if (!isProfileSetupRoute) {
-            // Check if profile has required fields
-            let { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, username, birthday, role')
-              .eq('user_id', user.id)
-              .maybeSingle()
-
-            // CRITICAL FIX: If profile exists with role='player', fix it immediately
-            if (profile && profile.role === 'player') {
-              console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
-              await supabase
-                .from('profiles')
-                .update({ role: 'user' })
-                .eq('user_id', user.id)
-              // Re-fetch profile after fix
-              const { data: fixedProfile } = await supabase
-                .from('profiles')
-                .select('full_name, username, birthday, role')
-                .eq('user_id', user.id)
-                .maybeSingle()
-              profile = fixedProfile
+                if (refreshResult?.session && process.env.NODE_ENV === 'development') {
+                  console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshResult.session.user.id)
+                } else if (refreshResult?.error && process.env.NODE_ENV === 'development') {
+                  console.log('Middleware: Session refresh error:', refreshResult.error.message)
+                }
+                // Use refreshed session user if available
+                if (refreshResult?.session?.user) {
+                  user = refreshResult.session.user
+                }
+              } catch (refreshError) {
+                // If refresh fails, continue without user - let the page handle it
+                console.error('Middleware: Session refresh timeout/error')
+              }
+            } else if (user && process.env.NODE_ENV === 'development') {
+              console.log('Middleware: Session valid, user ID:', user.id)
             }
+          } catch (error) {
+            // If getUser times out, continue without user check
+            console.error('Middleware: getUser timeout, continuing without user verification')
+          }
 
-            const hasRequiredFields = profile && 
-              profile.full_name && 
-              profile.username && 
-              profile.birthday
+          // For authenticated users on protected routes, check profile completion
+          if (user) {
+            // Profile setup routes should be allowed without completion check
+            const profileSetupRoutes = [
+              '/profile/user-setup',
+              '/profile/parent-setup',
+              '/profile/parent/create-player',
+            ]
+            const isProfileSetupRoute = profileSetupRoutes.some(route => pathname.startsWith(route))
 
-            if (!hasRequiredFields) {
-              // Don't redirect if user is in onboarding flows (scout or player/parent)
-              // These flows handle profile setup themselves
-              const isOnboardingRoute = pathname.startsWith('/scout') || pathname.startsWith('/playerparent')
-              
-              // If already on onboarding route, don't redirect - let the flow handle it
-              if (isOnboardingRoute) {
-                // Allow the request to continue to the onboarding page
-                return response
-              }
-              
-              // Check for onboarding cookies (set when user clicks "Get Started" or "Become a Scout")
-              const playerparentOnboarding = request.cookies.get('playerparent_onboarding')?.value === 'true'
-              const scoutOnboarding = request.cookies.get('scout_onboarding')?.value === 'true'
-              
-              // If user has playerparent_onboarding cookie and not already on playerparent route, redirect
-              if (playerparentOnboarding && !pathname.startsWith('/playerparent')) {
-                const redirectUrl = new URL('/playerparent?step=2', request.url)
-                return NextResponse.redirect(redirectUrl)
-              }
-              
-              // If user has scout_onboarding cookie and not already on scout route, redirect
-              if (scoutOnboarding && !pathname.startsWith('/scout')) {
-                const redirectUrl = new URL('/scout?step=3', request.url)
-                return NextResponse.redirect(redirectUrl)
-              }
-              
-              // Default: redirect to user-setup if not on onboarding routes and no onboarding cookies
-              if (pathname !== '/profile/user-setup') {
-                const redirectUrl = new URL('/profile/user-setup', request.url)
-                return NextResponse.redirect(redirectUrl)
+            if (!isProfileSetupRoute) {
+              // Check if profile has required fields (with timeout)
+              try {
+                const profileResult = await withTimeout(
+                  supabase
+                    .from('profiles')
+                    .select('full_name, username, birthday, role')
+                    .eq('user_id', user.id)
+                    .maybeSingle(),
+                  3000
+                )
+
+                let profile = profileResult.data
+
+                // CRITICAL FIX: If profile exists with role='player', fix it immediately
+                if (profile && profile.role === 'player') {
+                  console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
+                  try {
+                    await withTimeout(
+                      supabase
+                        .from('profiles')
+                        .update({ role: 'user' })
+                        .eq('user_id', user.id),
+                      2000
+                    )
+                    // Re-fetch profile after fix (with timeout)
+                    const fixedProfileResult = await withTimeout(
+                      supabase
+                        .from('profiles')
+                        .select('full_name, username, birthday, role')
+                        .eq('user_id', user.id)
+                        .maybeSingle(),
+                      2000
+                    )
+                    profile = fixedProfileResult.data
+                  } catch (fixError) {
+                    // If fix times out, continue with original profile
+                    console.error('Middleware: Profile fix timeout/error')
+                  }
+                }
+
+                const hasRequiredFields = profile && 
+                  profile.full_name && 
+                  profile.username && 
+                  profile.birthday
+
+                if (!hasRequiredFields) {
+                  // Don't redirect if user is in onboarding flows (scout or player/parent)
+                  // These flows handle profile setup themselves
+                  const isOnboardingRoute = pathname.startsWith('/scout') || pathname.startsWith('/playerparent')
+                  
+                  // If already on onboarding route, don't redirect - let the flow handle it
+                  if (isOnboardingRoute) {
+                    // Allow the request to continue to the onboarding page
+                    return response
+                  }
+                  
+                  // Check for onboarding cookies (set when user clicks "Get Started" or "Become a Scout")
+                  const playerparentOnboarding = request.cookies.get('playerparent_onboarding')?.value === 'true'
+                  const scoutOnboarding = request.cookies.get('scout_onboarding')?.value === 'true'
+                  
+                  // If user has playerparent_onboarding cookie and not already on playerparent route, redirect
+                  if (playerparentOnboarding && !pathname.startsWith('/playerparent')) {
+                    const redirectUrl = new URL('/playerparent?step=2', request.url)
+                    return NextResponse.redirect(redirectUrl)
+                  }
+                  
+                  // If user has scout_onboarding cookie and not already on scout route, redirect
+                  if (scoutOnboarding && !pathname.startsWith('/scout')) {
+                    const redirectUrl = new URL('/scout?step=3', request.url)
+                    return NextResponse.redirect(redirectUrl)
+                  }
+                  
+                  // Default: redirect to user-setup if not on onboarding routes and no onboarding cookies
+                  if (pathname !== '/profile/user-setup') {
+                    const redirectUrl = new URL('/profile/user-setup', request.url)
+                    return NextResponse.redirect(redirectUrl)
+                  }
+                }
+              } catch (profileError) {
+                // If profile check times out, allow request to continue
+                // The page will handle the profile check itself
+                console.error('Middleware: Profile check timeout, allowing request to continue')
               }
             }
           }
@@ -220,6 +291,12 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     // If middleware fails, just continue without session refresh
     console.error('Middleware error:', error)
+    // For protected routes, if we can't verify auth, redirect to sign-in
+    if (!isPublicRoute) {
+      const signInUrl = new URL('/auth/signin', request.url)
+      signInUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(signInUrl)
+    }
   }
 
   return response
