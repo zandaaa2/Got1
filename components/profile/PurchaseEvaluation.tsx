@@ -78,7 +78,7 @@ function EvalCard({
   processing: boolean
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
+    <div>
       {/* Offer Title */}
       <h2 className="text-lg font-semibold text-black mb-4">
         {title}
