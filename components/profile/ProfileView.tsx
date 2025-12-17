@@ -100,6 +100,7 @@ interface Evaluation {
   id: string
   notes: string | null
   created_at: string
+  price?: number | null
   share_token?: string | null
   scout_id?: string | null
   player_id?: string | null
