@@ -168,14 +168,14 @@ export async function middleware(request: NextRequest) {
                   return { data: { session: null }, error: err }
                 })
 
-                if (refreshResult?.session && process.env.NODE_ENV === 'development') {
-                  console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshResult.session.user.id)
+                if (refreshResult?.data?.session && process.env.NODE_ENV === 'development') {
+                  console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshResult.data.session.user.id)
                 } else if (refreshResult?.error && process.env.NODE_ENV === 'development') {
                   console.log('Middleware: Session refresh error:', refreshResult.error.message)
                 }
                 // Use refreshed session user if available
-                if (refreshResult?.session?.user) {
-                  user = refreshResult.session.user
+                if (refreshResult?.data?.session?.user) {
+                  user = refreshResult.data.session.user
                 }
               } catch (refreshError) {
                 // If refresh fails, continue without user - let the page handle it
