@@ -155,27 +155,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           return false
         }
         
-        // If it's a scout, check if they have Stripe setup, custom price, and are not suspended
+        // If it's a scout, check if they have Stripe setup and are not suspended
         if (p.role === 'scout') {
           // Exclude scouts without Stripe account setup
           if (!p.stripe_account_id || p.stripe_account_id.trim() === '') {
             return false
-          }
-          
-          // Filter based on view mode
-          if (viewMode === 'free-evals') {
-            // For free evals: must have free eval enabled OR price is $0
-            const hasFreeEval = p.free_eval_enabled && p.free_eval_description
-            const isFreePrice = p.price_per_eval === 0
-            if (!hasFreeEval && !isFreePrice) {
-              return false
-            }
-          } else {
-            // For paid evals (default): exclude scouts with default price ($99) or no price set
-            const price = p.price_per_eval
-            if (!price || price === 99) {
-              return false
-            }
           }
           
           // Exclude suspended scouts
@@ -960,9 +944,16 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         ? profile.role !== 'parent' || trimmedQuery.length > 0 // Include parents only if searching
         : (profile.role === roleFilter) // roleFilter is 'scout' or 'player', so this already excludes 'parent'
       
-      // If on free evals view, only show scouts
-      if (viewMode === 'free-evals' && profile.role !== 'scout') {
-        matchesRole = false
+      // If on free evals view, only show scouts with free_eval_enabled === true
+      if (viewMode === 'free-evals') {
+        if (profile.role !== 'scout') {
+          matchesRole = false
+        } else {
+          // Only show scouts with free eval enabled
+          if (!profile.free_eval_enabled) {
+            matchesRole = false
+          }
+        }
       }
       
       return matchesSearch && matchesRole
