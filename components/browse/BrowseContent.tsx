@@ -33,6 +33,7 @@ interface Profile {
   turnaround_time?: string | null
   positions?: string[] | string | null // JSONB array or JSON string
   college_connections?: string[] | string | null // JSONB array or JSON string
+  stripe_account_id?: string | null
 }
 
 interface TeamEntry {
@@ -99,7 +100,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Build query step by step to avoid any construction issues
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until, positions, college_connections')
+        .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until, positions, college_connections, stripe_account_id')
         .order('full_name', { ascending: true })
 
       console.log('🔄 Query completed. Error:', error, 'Data length:', data?.length ?? 0)
@@ -152,11 +153,18 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           return false
         }
         
-        // If it's a scout and suspended, exclude it
+        // If it's a scout, check if they have Stripe setup and are not suspended
         if (p.role === 'scout') {
+          // Exclude scouts without Stripe account setup
+          if (!p.stripe_account_id || p.stripe_account_id.trim() === '') {
+            return false
+          }
+          // Exclude suspended scouts
           const suspendedUntil = p.suspended_until
-          if (!suspendedUntil || typeof suspendedUntil !== 'string') return true
-          return new Date(suspendedUntil) <= now
+          if (suspendedUntil && typeof suspendedUntil === 'string') {
+            return new Date(suspendedUntil) <= now
+          }
+          return true
         }
         
         return true
@@ -176,6 +184,20 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           in_filtered: activeProfiles.some(p => p.id === harrisonProfile.id),
           filtered_out_reason: harrisonProfile.role === 'user' ? 'role is user' : 
                                (harrisonProfile.role !== 'player' ? `role is ${harrisonProfile.role}` : 'should be visible')
+        })
+      }
+      
+      // Debug: Check for zanderplayer account
+      const zanderPlayerProfile = (data || []).find(p => p.username?.toLowerCase() === 'zanderplayer' || p.full_name?.toLowerCase().includes('zanderplayer'))
+      if (zanderPlayerProfile) {
+        console.log('🔍 Zanderplayer profile found:', {
+          id: zanderPlayerProfile.id,
+          full_name: zanderPlayerProfile.full_name,
+          role: zanderPlayerProfile.role,
+          username: zanderPlayerProfile.username,
+          in_filtered: activeProfiles.some(p => p.id === zanderPlayerProfile.id),
+          filtered_out_reason: zanderPlayerProfile.role === 'user' ? 'role is user' : 
+                               (zanderPlayerProfile.role !== 'player' ? `role is ${zanderPlayerProfile.role}` : 'should be visible')
         })
       }
       
