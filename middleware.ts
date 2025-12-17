@@ -200,50 +200,30 @@ export async function middleware(request: NextRequest) {
             const isProfileSetupRoute = profileSetupRoutes.some(route => pathname.startsWith(route))
 
             if (!isProfileSetupRoute) {
-              // Check if profile has required fields (with timeout)
+              // Check if profile has required fields
+              // Note: We don't use timeout here - if this query is slow, we let it continue
+              // The page will handle profile validation if needed
               try {
-                const profileQuery = supabase
+                const { data: profile } = await supabase
                   .from('profiles')
                   .select('full_name, username, birthday, role')
                   .eq('user_id', user.id)
                   .maybeSingle()
-                
-                const profileResult = await withTimeout(
-                  profileQuery,
-                  3000
-                )
-
-                let profile = profileResult.data
 
                 // CRITICAL FIX: If profile exists with role='player', fix it immediately
                 if (profile && profile.role === 'player') {
                   console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
-                  try {
-                    const updateQuery = supabase
-                      .from('profiles')
-                      .update({ role: 'user' })
-                      .eq('user_id', user.id)
-                    
-                    await withTimeout(
-                      updateQuery,
-                      2000
-                    )
-                    // Re-fetch profile after fix (with timeout)
-                    const fixedProfileQuery = supabase
-                      .from('profiles')
-                      .select('full_name, username, birthday, role')
-                      .eq('user_id', user.id)
-                      .maybeSingle()
-                    
-                    const fixedProfileResult = await withTimeout(
-                      fixedProfileQuery,
-                      2000
-                    )
-                    profile = fixedProfileResult.data
-                  } catch (fixError) {
-                    // If fix times out, continue with original profile
-                    console.error('Middleware: Profile fix timeout/error')
-                  }
+                  // Try to fix, but don't block if it fails
+                  supabase
+                    .from('profiles')
+                    .update({ role: 'user' })
+                    .eq('user_id', user.id)
+                    .then(() => {
+                      console.log('✅ Middleware - Profile role fixed')
+                    })
+                    .catch((fixError) => {
+                      console.error('Middleware: Profile fix error:', fixError)
+                    })
                 }
 
                 const hasRequiredFields = profile && 
