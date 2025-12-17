@@ -331,14 +331,14 @@ export default function PurchaseEvaluation({
   }
 
   // Helper function to render an evaluation card
-  const renderEvalCard = (
+  function renderEvalCard(
     title: string,
     price: number,
     description: string | null,
     onButtonClick: () => void,
     buttonText: string,
     isFree: boolean = false
-  ) => {
+  ) {
     return (
       <div>
         {/* Offer Title */}
