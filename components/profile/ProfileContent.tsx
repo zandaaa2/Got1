@@ -2800,160 +2800,47 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         <PendingScoutApplication application={pendingScoutApplication} />
       )}
 
-      {/* General Info Section */}
-      <div className="mt-8">
-        <h2 className="text-lg font-bold text-black mb-4">General Info</h2>
-        <div className="space-y-3 md:space-y-2">
-          {/* Help / 1:1 Support with Founder */}
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Need help?</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">
-                Schedule a 15-minute call with the founder to walk through anything you’re stuck on.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link
-                href="/faq"
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+      {/* Information Modal */}
+      {infoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setInfoModal(null)}>
+          <div className="surface-card max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-bold text-black">
+                {infoModal === 'price' ? 'Price per Evaluation' : 'Turnaround Time'}
+              </h3>
+              <button
+                onClick={() => setInfoModal(null)}
+                className="interactive-press text-gray-500 hover:text-black text-2xl leading-none"
+                aria-label="Close"
               >
-                FAQ
-              </Link>
-              <a
-                href="https://calendly.com/zander-got1/30min"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Schedule
-              </a>
-            </div>
-          </div>
-
-          {/* Suggest a Feature */}
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Suggest a Feature</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">Share your ideas to help us improve Got1</p>
-            </div>
-            <Link
-              href="/suggest-feature"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              View
-            </Link>
-          </div>
-
-          {/* Make a Claim - Only show to players and parents */}
-          {(profile.role === 'player' || profile.role === 'parent') && (
-            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Make a Claim</h3>
-                <p className="text-xs md:text-sm text-gray-600 break-words">Submit a claim for a recent evaluation if you're not satisfied</p>
-              </div>
-              <Link
-                href="/make-a-claim"
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-              >
-                View
-              </Link>
-            </div>
-          )}
-
-          {profile.role === 'scout' && (
-            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Stripe</h3>
-                <p className="text-xs md:text-sm text-gray-600 break-words">Update my stripe billing, card info, and more.</p>
-              </div>
-              <button 
-                onClick={handleViewStripeAccount}
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-              >
-                View
+                ×
               </button>
             </div>
-          )}
-
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Terms of Service</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">Our Standard on Service</p>
+            <div className="text-black mb-4">
+              {infoModal === 'price' ? (
+                <p className="leading-relaxed">
+                  This is the price players will pay to purchase an evaluation from you. Set this based on your experience level, 
+                  the depth of analysis you provide, and the market rate for similar services. Players will see this price when 
+                  browsing scouts and will pay this amount when they request an evaluation.
+                </p>
+              ) : (
+                <p className="leading-relaxed">
+                  This is the estimated time it takes you to complete and deliver an evaluation after a player purchases one. 
+                  Common examples include "24 hrs", "48 hrs", "1 week", etc. This helps players understand when they can expect 
+                  to receive their evaluation and sets clear expectations for your service. The default turnaround time is 72 hours.
+                </p>
+              )}
             </div>
-            <a
-              href="/terms-of-service"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              View
-            </a>
-          </div>
-
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Privacy Policy</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">Our Standard on Privacy</p>
-            </div>
-            <a
-              href="/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              View
-            </a>
-          </div>
-
-
-          <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="font-bold text-black mb-1 text-sm md:text-base">Account Ownership</h3>
-              <p className="text-xs md:text-sm text-gray-600 break-words">Delete your account or download your data</p>
-            </div>
-            <Link
-              href="/profile/account-ownership"
-              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0"
-            >
-              View
-            </Link>
-          </div>
-
-
-          {/* Referral Program - Only show to Chasity and Zander */}
-          {userEmail && (userEmail === 'douyonchasity@gmail.com' || userEmail === 'zander@got1.app') && (
-            <div className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 md:p-4 shadow-sm">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="font-bold text-black mb-1 text-sm md:text-base">Referral Program</h3>
-                <p className="text-xs md:text-sm text-gray-600 break-words">Earn money by referring scouts and players to Got1</p>
-              </div>
-              <Link
-                href="/make-money"
-                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-green-600 bg-green-600 text-sm font-medium text-white hover:bg-green-700 flex-shrink-0"
-              >
-                View
-              </Link>
-            </div>
-          )}
-
-          <div className="rounded-2xl bg-white p-4 md:p-4 shadow-sm flex flex-col items-start gap-3">
-            {userEmail === 'zander@got1.app' && (
-              <Link
-                href="/admin/scouts"
-                className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full border border-blue-600 bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                Scout Admins
-              </Link>
-            )}
             <button
-              onClick={handleLogout}
-              className="interactive-press inline-flex items-center justify-center h-10 px-6 rounded-full border border-red-500 bg-white text-sm font-semibold text-red-600 hover:bg-red-50"
+              onClick={() => setInfoModal(null)}
+              className="interactive-press w-full px-6 py-3 rounded-full bg-black text-sm font-semibold text-white hover:bg-gray-900"
             >
-              Log Out
+              Got it
             </button>
           </div>
         </div>
-      </div>
+      )}
+
 
       {/* Information Modal */}
       {infoModal && (
