@@ -13,7 +13,7 @@ export const collegeEntries: CollegeEntry[] = [
     slug: 'got1',
     conference: 'Independent',
     division: 'Other',
-    logo: '/got1-logos/got1-icon.png',
+    logo: '/got1-logos/black.png',
   },
   {
     name: 'East Carolina University',
