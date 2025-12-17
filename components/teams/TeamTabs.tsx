@@ -5,11 +5,13 @@ import Link from 'next/link'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import { getProfilePath } from '@/lib/profile-url'
 
 interface Profile {
   id: string
   user_id: string | null
   full_name: string | null
+  username?: string | null
   avatar_url: string | null
   position: string | null
   role: 'scout' | 'player'
@@ -53,7 +55,7 @@ const renderProfileAvatar = (profile: Profile) => {
 const renderProfileCard = (profile: Profile) => (
   <Link
     key={profile.id}
-    href={`/profile/${profile.id}`}
+    href={getProfilePath(profile.id, profile.username)}
     className="flex items-center gap-3 md:gap-4 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
   >
     {renderProfileAvatar(profile)}

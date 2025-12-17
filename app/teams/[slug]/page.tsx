@@ -95,7 +95,7 @@ export default async function TeamPage({ params }: PageParams) {
   // Fetch all profiles (scouts and players) with college_connections
   const { data: allProfiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, user_id, full_name, organization, position, avatar_url, price_per_eval, suspended_until, sports, role, college_connections')
+    .select('id, user_id, username, full_name, organization, position, avatar_url, price_per_eval, suspended_until, sports, role, college_connections')
     .order('full_name', { ascending: true })
 
   if (profilesError) {
