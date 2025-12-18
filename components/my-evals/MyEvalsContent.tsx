@@ -217,6 +217,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
             avatar_url: playerProfile.avatar_url,
             school: playerProfile.school,
             graduation_year: playerProfile.graduation_year,
+            position: playerProfile.position || null,
           } : null,
         }
       })
