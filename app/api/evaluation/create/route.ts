@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { scoutId, price, playerId } = body
 
-    if (!scoutId || !price) {
+    // Check for scoutId and price (price can be 0 for free evaluations, so check for undefined/null explicitly)
+    if (!scoutId || price === undefined || price === null) {
       return NextResponse.json(
         { error: 'Missing scoutId or price' },
         { status: 400 }
@@ -166,6 +167,93 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Handle free evals (price = 0) - check if scout has free eval offer enabled
+    const clientPrice = typeof price === 'number' ? price : parseFloat(String(price))
+    const isFreeEval = clientPrice === 0
+
+    if (isFreeEval) {
+      // For free evals, verify scout has free eval offer enabled
+      if (!scout.free_eval_enabled) {
+        return NextResponse.json(
+          { error: 'This scout does not offer free evaluations' },
+          { status: 400 }
+        )
+      }
+
+      // Check if evaluation already exists
+      const { data: existingEvaluation } = await supabase
+        .from('evaluations')
+        .select('id, status')
+        .eq('scout_id', scout.user_id)
+        .eq('player_id', player.user_id)
+        .in('status', ['pending', 'confirmed', 'in_progress', 'completed'])
+        .maybeSingle()
+
+      if (existingEvaluation) {
+        if (existingEvaluation.status === 'completed') {
+          return NextResponse.json(
+            { 
+              error: 'Evaluation already completed',
+              evaluationId: existingEvaluation.id
+            },
+            { status: 400 }
+          )
+        }
+        return NextResponse.json(
+          { 
+            error: 'Evaluation already requested or in progress',
+            evaluationId: existingEvaluation.id,
+            status: existingEvaluation.status
+          },
+          { status: 400 }
+        )
+      }
+
+      // Create free evaluation directly (no Stripe needed)
+      const { data: evaluation, error: evalError } = await supabase
+        .from('evaluations')
+        .insert({
+          scout_id: scout.user_id,
+          player_id: player.user_id,
+          status: 'in_progress',
+          price: 0,
+          payment_status: 'paid', // Free evals are considered "paid"
+        })
+        .select()
+        .single()
+
+      if (evalError || !evaluation) {
+        console.error('Error creating free evaluation:', evalError)
+        return handleApiError(evalError, 'Failed to create evaluation')
+      }
+
+      // Create notification for scout
+      try {
+        const { createNotification } = await import('@/lib/notifications')
+        await createNotification({
+          userId: scout.user_id,
+          type: 'evaluation_requested',
+          title: 'Free Evaluation Requested',
+          message: `${player.full_name || 'A player'} requested your free evaluation offer.`,
+          link: `/evaluations/${evaluation.id}`,
+          metadata: {
+            evaluation_id: evaluation.id,
+            player_id: player.user_id,
+          },
+        })
+      } catch (notificationError) {
+        console.error('Error creating notification:', notificationError)
+        // Don't fail the request if notification fails
+      }
+
+      return successResponse({ 
+        success: true,
+        evaluationId: evaluation.id,
+        isFree: true
+      })
+    }
+
+    // For paid evals, continue with existing flow
     // Derive price server-side to protect against client tampering
     const scoutPrice = typeof scout.price_per_eval === 'number'
       ? scout.price_per_eval
@@ -182,7 +270,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Detect tampering if client-supplied price doesn't match stored price (within $0.01)
-    const clientPrice = typeof price === 'number' ? price : parseFloat(String(price))
     if (clientPrice && Math.abs(clientPrice - scoutPrice) > 0.01) {
       console.warn('⚠️ Price mismatch detected between client and server values', {
         scoutId,
