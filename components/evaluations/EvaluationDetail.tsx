@@ -808,20 +808,20 @@ export default function EvaluationDetail({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Compact Player Info Section */}
-      <div className="mb-4 md:mb-6">
-        <div className="flex items-center gap-3 md:gap-4 mb-3">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0">
+      <div className="mb-4">
+        <div className="flex items-start gap-2.5 mb-2">
+          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
             {isMeaningfulAvatar(player?.avatar_url) ? (
               <Image
                 src={player.avatar_url}
                 alt={player.full_name || 'Player'}
-                width={56}
-                height={56}
+                width={40}
+                height={40}
                 className="w-full h-full object-cover"
               />
             ) : (
               <div
-                className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(
+                className={`w-full h-full flex items-center justify-center text-base font-semibold text-white ${getGradientForId(
                   player?.user_id || evaluation.player_id || player?.id || evaluation.id
                 )}`}
               >
@@ -830,15 +830,15 @@ export default function EvaluationDetail({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-black truncate">
+            <h1 className="text-base font-bold text-black truncate mb-0.5">
               {player?.full_name || 'Unknown Player'}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs md:text-sm text-gray-600">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-600">
               {player?.position && <span>{player.position}</span>}
-              {player?.school && <span>{player.school}</span>}
-              {player?.state && <span>{player.state}</span>}
-              {player?.classification && <span>{player.classification}</span>}
-              {player?.graduation_year && <span>Class of {player.graduation_year}</span>}
+              {player?.school && <span>• {player.school}</span>}
+              {player?.state && <span>• {player.state}</span>}
+              {player?.classification && <span>• {player.classification}</span>}
+              {player?.graduation_year && <span>• Class of {player.graduation_year}</span>}
             </div>
           </div>
         </div>
@@ -848,8 +848,8 @@ export default function EvaluationDetail({
           const fortyTime = player?.forty_yard_dash || player?.forty_yd_dash
           const hasAnyData = player?.height || player?.weight || fortyTime || player?.gpa || player?.bench_max || player?.squat_max || player?.clean_max || player?.hudl_link || player?.college_offers
           return hasAnyData ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-xs md:text-sm">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-1.5 text-xs">
                 {player?.height && (
                   <div>
                     <span className="text-gray-500">Height:</span>{' '}
@@ -893,19 +893,19 @@ export default function EvaluationDetail({
                   </div>
                 )}
                 {player?.hudl_link && (
-                  <div className="col-span-2 md:col-span-1">
+                  <div className="col-span-3 md:col-span-1">
                     <a
                       href={player.hudl_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline font-medium truncate block"
+                      className="text-blue-600 hover:underline font-medium text-xs"
                     >
                       View Hudl →
                     </a>
                   </div>
                 )}
                 {player?.college_offers && (
-                  <div className="col-span-2 md:col-span-4 mt-2 pt-2 border-t border-gray-300">
+                  <div className="col-span-3 md:col-span-4 mt-1.5 pt-1.5 border-t border-gray-300">
                     <span className="text-gray-500">College Offers:</span>{' '}
                     <span className="text-black font-medium">{player.college_offers}</span>
                   </div>
