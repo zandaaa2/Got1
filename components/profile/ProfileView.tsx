@@ -417,12 +417,9 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
         throw new Error(data.error || 'Failed to create free evaluation')
       }
 
-      // Navigate to the profile-scoped evaluation page
+      // Navigate to the evaluation detail page
       if (data.evaluationId) {
-        const evalPath = profile.username 
-          ? `/${profile.username}/eval`
-          : `/profile/${profile.id}/eval`
-        router.push(evalPath)
+        router.push(`/evaluations/${data.evaluationId}`)
       }
     } catch (error: any) {
       console.error('Error giving free evaluation:', error)
