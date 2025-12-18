@@ -799,11 +799,11 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
 
                         return (
                           <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                            <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
-                              <Link 
-                                href={evaluation.scout?.id ? getProfilePath(evaluation.scout.id, evaluation.scout.username) : '#'}
-                                className="flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
-                              >
+                            <Link 
+                              href={`/evaluations/${evaluation.id}`}
+                              className="block"
+                            >
+                              <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity cursor-pointer">
                                 <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
                                   {showScoutAvatar ? (
                                     <Image
@@ -825,54 +825,58 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                     </div>
                                   )}
                                 </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-bold text-black text-base md:text-lg truncate">
-                                    {evaluation.scout?.full_name || 'Unknown Scout'}
-                                  </h3>
-                                  {evaluation.price === 0 && (
-                                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0">
-                                      Free
-                                    </span>
-                                  )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-bold text-black text-base md:text-lg truncate">
+                                      {evaluation.scout?.full_name || 'Unknown Scout'}
+                                    </h3>
+                                    {evaluation.price === 0 && (
+                                      <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded flex-shrink-0">
+                                        Free
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-black text-xs md:text-sm mb-1 truncate">
+                                    {evaluation.scout?.organization || 'Scout'}
+                                  </p>
+                                  <p className="text-black text-xs md:text-sm text-gray-600">
+                                    {formatDate(evaluation.created_at)}
+                                  </p>
                                 </div>
-                                <p className="text-black text-xs md:text-sm mb-1 truncate">
-                                  {evaluation.scout?.organization || 'Scout'}
-                                </p>
-                                <p className="text-black text-xs md:text-sm text-gray-600">
-                                  {formatDate(evaluation.created_at)}
-                                </p>
+                                {evaluation.notes && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      toggleEvalMinimize(evaluation.id)
+                                    }}
+                                    className="flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
+                                    title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
+                                  >
+                                    <svg
+                                      className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 9l-7 7-7-7"
+                                      />
+                                    </svg>
+                                  </button>
+                                )}
                               </div>
+                              {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
+                                <div className="pl-0 md:pl-20 mt-4 md:mt-0">
+                                  <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                                    {evaluation.notes}
+                                  </p>
+                                </div>
+                              )}
                             </Link>
-                            {evaluation.notes && (
-                              <button
-                                onClick={() => toggleEvalMinimize(evaluation.id)}
-                                className="flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
-                                title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
-                              >
-                                <svg
-                                  className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                  />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                            {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
-                              <div className="pl-0 md:pl-20 mt-4 md:mt-0">
-                                <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
-                                  {evaluation.notes}
-                                </p>
-                              </div>
-                            )}
                             {/* Share button - bottom left underneath evaluation (always visible) */}
                             <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
                               <ShareButton 
