@@ -37,6 +37,7 @@ interface Evaluation {
     avatar_url: string | null
     school: string | null
     graduation_year: number | null
+    position: string | null
   } | null
 }
 
@@ -389,9 +390,17 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                         {evaluation.player?.full_name || 'Unknown Player'}
                       </h3>
                       <p className="text-black text-xs md:text-sm truncate">
-                        {evaluation.player?.school || 'Unknown School'}
-                        {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
-                        {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
+                        {[
+                          evaluation.player?.position,
+                          evaluation.player?.school,
+                          evaluation.player?.graduation_year ? `Class of ${evaluation.player.graduation_year}` : null
+                        ].filter(Boolean).join(' • ')}
+                        {evaluation.price !== undefined && evaluation.price !== null && (
+                          <>
+                            {' • '}
+                            <span className="font-medium">${evaluation.price === 0 ? 'Free' : evaluation.price.toFixed(2)}</span>
+                          </>
+                        )}
                       </p>
                       {/* Status badge */}
                       <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
