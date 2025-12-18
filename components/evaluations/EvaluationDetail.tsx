@@ -729,9 +729,14 @@ export default function EvaluationDetail({
                     try {
                       const response = await fetch(`/api/evaluation/${evaluation.id}/download-pdf`)
                       if (!response.ok) {
-                        throw new Error('Failed to download PDF')
+                        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                        console.error('PDF download failed:', response.status, errorData)
+                        throw new Error(errorData.error || `Failed to download PDF (${response.status})`)
                       }
                       const blob = await response.blob()
+                      if (blob.size === 0) {
+                        throw new Error('PDF file is empty')
+                      }
                       const url = window.URL.createObjectURL(blob)
                       const a = document.createElement('a')
                       a.href = url
@@ -741,9 +746,9 @@ export default function EvaluationDetail({
                       window.URL.revokeObjectURL(url)
                       document.body.removeChild(a)
                       setMenuOpen(false)
-                    } catch (error) {
+                    } catch (error: any) {
                       console.error('Error downloading PDF:', error)
-                      alert('Failed to download PDF. Please try again.')
+                      alert(error?.message || 'Failed to download PDF. Please try again.')
                     } finally {
                       setDownloading(false)
                     }
