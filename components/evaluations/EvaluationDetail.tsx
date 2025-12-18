@@ -836,6 +836,8 @@ export default function EvaluationDetail({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs md:text-sm text-gray-600">
               {player?.position && <span>{player.position}</span>}
               {player?.school && <span>{player.school}</span>}
+              {player?.state && <span>{player.state}</span>}
+              {player?.classification && <span>{player.classification}</span>}
               {player?.graduation_year && <span>Class of {player.graduation_year}</span>}
             </div>
           </div>
