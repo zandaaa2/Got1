@@ -79,7 +79,13 @@ function generateEvaluationPDF(
 ): Promise<NextResponse> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 50, size: 'LETTER' })
+      // Use 'Courier' font which doesn't require external .afm files in serverless environments
+      const doc = new PDFDocument({ 
+        margin: 50, 
+        size: 'LETTER',
+        // Use Courier font which is built-in and doesn't need external font files
+        font: 'Courier'
+      })
       const chunks: Buffer[] = []
 
       doc.on('data', (chunk) => chunks.push(chunk))
