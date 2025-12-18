@@ -248,10 +248,14 @@ async function generateEvaluationPDF(
 
     // Evaluation notes in a highlighted box
     if (evaluation.notes) {
+      const evalTextX = margin + 20
+      const evalTextY = yPosition + 25
+      const evalTextWidth = contentWidth - 40
+      
       // Calculate approximate height needed for evaluation text
-      doc.setFontSize(12)
-      const evalLines = doc.splitTextToSize(evaluation.notes, contentWidth - 40)
-      const estimatedHeight = Math.max(evalLines.length * (12 * 1.6) + 50, 200)
+      doc.setFontSize(13)
+      const evalLines = doc.splitTextToSize(evaluation.notes, evalTextWidth)
+      const estimatedHeight = Math.max(evalLines.length * 18 + 50, 200)
       const boxHeight = Math.min(estimatedHeight, pageHeight - yPosition - 120)
       
       doc.setFillColor(255, 255, 255)
@@ -259,15 +263,10 @@ async function generateEvaluationPDF(
       doc.setLineWidth(1.5)
       doc.roundedRect(margin, yPosition, contentWidth, boxHeight, 8, 8, 'FD')
       
-      const evalTextX = margin + 20
-      const evalTextY = yPosition + 25
-      const evalTextWidth = contentWidth - 40
-      
       doc.setFontSize(13)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(30, 30, 30)
       // Use better line spacing for readability
-      const evalLines = doc.splitTextToSize(evaluation.notes, evalTextWidth)
       let currentY = evalTextY
       evalLines.forEach((line: string) => {
         doc.text(line, evalTextX, currentY, { maxWidth: evalTextWidth })
