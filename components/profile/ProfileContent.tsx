@@ -1150,12 +1150,12 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
   const handleStartStripe = async () => {
     try {
       // Check if account exists first
-      const response = await fetch('/api/stripe/connect/account-link', {
+      const checkResponse = await fetch('/api/stripe/connect/account-link', {
         method: 'GET',
       })
-      const data = await response.json()
+      const checkData = await checkResponse.json()
 
-      if (!data.hasAccount) {
+      if (!checkData.hasAccount) {
         // Create account first
         const createResponse = await fetch('/api/stripe/connect/create-account', {
           method: 'POST',
@@ -1169,14 +1169,20 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
         }
       }
 
-      // Get account link
+      // Get account link using POST to get the actual URLs
       const linkResponse = await fetch('/api/stripe/connect/account-link', {
-        method: 'GET',
+        method: 'POST',
       })
       const linkData = await linkResponse.json()
 
-      if (linkData.url) {
-        window.location.href = linkData.url
+      if (!linkResponse.ok) {
+        throw new Error(linkData.error || 'Failed to get account link')
+      }
+
+      // Use onboardingUrl if available, otherwise dashboardUrl
+      const url = linkData.onboardingUrl || linkData.dashboardUrl
+      if (url) {
+        window.location.href = url
       } else {
         throw new Error('No account link available')
       }
@@ -1189,12 +1195,18 @@ function ScoutSetupProgress({ profile }: { profile: any }) {
   const handleCompleteStripe = async () => {
     try {
       const response = await fetch('/api/stripe/connect/account-link', {
-        method: 'GET',
+        method: 'POST',
       })
       const data = await response.json()
 
-      if (data.url) {
-        window.location.href = data.url
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get account link')
+      }
+
+      // Use onboardingUrl if available, otherwise dashboardUrl
+      const url = data.onboardingUrl || data.dashboardUrl
+      if (url) {
+        window.location.href = url
       } else {
         throw new Error('No account link available')
       }
