@@ -609,14 +609,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
           setLoading(false)
           return
         }
-        for (const link of validHudlLinks) {
-          const validSports = ['football', 'mens-basketball']
-          if (!link.sport || !validSports.includes(link.sport)) {
-            setError('Please select a sport (football or men\'s basketball) for each film link.')
-            setLoading(false)
-            return
-          }
-        }
         if (!formData.position || formData.position.trim() === '') {
           setError('Position is required for players.')
           setLoading(false)
