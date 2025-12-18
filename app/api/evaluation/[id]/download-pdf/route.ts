@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     const authResult = await requireAuth(request)
@@ -17,7 +17,9 @@ export async function GET(
     }
     const { session, supabase } = authResult
 
-    const evaluationId = params.id
+    // Handle both Promise and direct params (Next.js 14+ uses Promise)
+    const resolvedParams = params instanceof Promise ? await params : params
+    const evaluationId = resolvedParams.id
 
     // Get evaluation
     const { data: evaluation } = await supabase
@@ -60,6 +62,12 @@ export async function GET(
     // Generate PDF
     return await generateEvaluationPDF(evaluation, scoutProfile, playerProfile)
   } catch (error: any) {
+    console.error('PDF download error:', error)
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    })
     return handleApiError(error, 'Failed to download PDF')
   }
 }
@@ -90,15 +98,20 @@ function generateEvaluationPDF(
       doc.on('error', reject)
 
       // Logo at top (if available)
+      // Note: In production (Vercel), file system access may be limited
+      // We'll skip the logo if it can't be loaded
       try {
         const logoPath = path.join(process.cwd(), 'public', 'got1-logos', 'black.png')
         if (fs.existsSync(logoPath)) {
           doc.image(logoPath, 50, 50, { width: 100, height: 30 })
           doc.moveDown(2)
+        } else {
+          console.warn('Logo file not found at:', logoPath)
         }
       } catch (logoError) {
         // If logo fails, just continue without it
         console.warn('Could not load logo:', logoError)
+        // Continue without logo - not critical
       }
 
       // Title
