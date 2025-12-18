@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -31,8 +31,28 @@ export default function EvaluationDetail({
   const [denying, setDenying] = useState(false)
   const [deniedReason, setDeniedReason] = useState('')
   const [cancelling, setCancelling] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
+  
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [menuOpen])
   
   // Minimum character requirement: 250 for free evals, 1000 for paid evals
   const isFreeEval = evaluation.price === 0
@@ -680,6 +700,62 @@ export default function EvaluationDetail({
         {/* Header - back button removed */}
         <div className="mb-4 md:mb-6 flex items-center justify-between">
           <div></div>
+          {/* More options menu for completed evaluations */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="More options"
+            >
+              <svg
+                className="w-5 h-5 text-black"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                />
+              </svg>
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <button
+                  onClick={async () => {
+                    setDownloading(true)
+                    try {
+                      const response = await fetch(`/api/evaluation/${evaluation.id}/download-pdf`)
+                      if (!response.ok) {
+                        throw new Error('Failed to download PDF')
+                      }
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `evaluation-${evaluation.id}-${new Date().toISOString().split('T')[0]}.pdf`
+                      document.body.appendChild(a)
+                      a.click()
+                      window.URL.revokeObjectURL(url)
+                      document.body.removeChild(a)
+                      setMenuOpen(false)
+                    } catch (error) {
+                      console.error('Error downloading PDF:', error)
+                      alert('Failed to download PDF. Please try again.')
+                    } finally {
+                      setDownloading(false)
+                    }
+                  }}
+                  disabled={downloading}
+                  className="w-full text-left px-4 py-3 text-sm text-black hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  {downloading ? 'Downloading...' : 'Download PDF'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Scout Profile Section - matches ProfileView exactly */}
