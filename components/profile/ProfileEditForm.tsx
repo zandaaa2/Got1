@@ -1298,21 +1298,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
                       <option value="8A">8A</option>
                     </select>
                   </div>
-
-                  <div>
-                    <label htmlFor="college_offers" className="block text-sm font-medium text-black mb-2">
-                      College Offers
-                    </label>
-                    <textarea
-                      id="college_offers"
-                      name="college_offers"
-                      value={formData.college_offers}
-                      onChange={handleChange}
-                      placeholder="List any college offers you've received"
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    />
-                  </div>
                 </div>
               </div>
 
