@@ -7,7 +7,6 @@ import Modal from '@/components/shared/Modal'
 import HudlLinkSelector from '@/components/shared/HudlLinkSelector'
 import CollegeSelector from '@/components/profile/CollegeSelector'
 import PositionMultiSelect from '@/components/profile/PositionMultiSelect'
-import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
 import Cropper, { type Area } from 'react-easy-crop'
@@ -197,7 +196,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
     clean_max: profile.clean_max?.toString() || '',
     state: profile.state || '',
     classification: profile.classification || '',
-    college_offers: profile.college_offers || '',
     // Scout fields
     sports: (Array.isArray(profile.sports) ? profile.sports : []) as string[],
     // Parent fields
@@ -249,7 +247,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
       clean_max: profile.clean_max?.toString() || prev.clean_max,
       state: profile.state || prev.state,
       classification: profile.classification || prev.classification,
-      college_offers: profile.college_offers || prev.college_offers,
       sports: Array.isArray(profile.sports) ? profile.sports : prev.sports,
       email: profile.email || prev.email,
       phone: profile.phone || prev.phone,
@@ -311,7 +308,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
     profile.clean_max,
     profile.state,
     profile.classification,
-    profile.college_offers,
     profile.avatar_url
   ])
 
@@ -730,7 +726,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
         updateData.clean_max = null
         updateData.state = null
         updateData.classification = null
-        updateData.college_offers = null
       } else if (profile.role === 'scout') {
         updateData.organization = formData.organization || null
         updateData.price_per_eval = formData.price_per_eval ? parseFloat(formData.price_per_eval.toString()) : null
@@ -792,7 +787,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
         updateData.clean_max = formData.clean_max ? parseInt(formData.clean_max.toString()) : null
         updateData.state = formData.state || null
         updateData.classification = formData.classification || null
-        updateData.college_offers = formData.college_offers || null
         // Clear scout-specific fields
         updateData.organization = null
         updateData.price_per_eval = null
@@ -1316,17 +1310,6 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
                 />
               </div>
             </div>
-          </div>
-        )}
-
-        {/* College Offers Section - Only for players */}
-        {shouldShowPlayerFields && (
-          <div className="mt-8 pt-8 border-t border-gray-200">
-            <PlayerOffersSection
-              profileId={profile.id}
-              userId={profile.user_id}
-              isOwnProfile={true}
-            />
           </div>
         )}
 
