@@ -10,6 +10,7 @@ import HeaderMenu from '@/components/shared/HeaderMenu'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
+import { getProfilePath } from '@/lib/profile-url'
 
 interface MyEvalsContentProps {
   role: 'player' | 'scout' | 'parent'
@@ -27,12 +28,16 @@ interface Evaluation {
   created_at: string
   share_token?: string | null
   scout?: {
+    id: string
+    username: string | null
     full_name: string | null
     avatar_url: string | null
     organization: string | null
     position: string | null
   } | null
   player?: {
+    id: string
+    username: string | null
     full_name: string | null
     avatar_url: string | null
     school: string | null
@@ -186,7 +191,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
       // Fetch profiles for those user IDs
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url, organization, school, graduation_year, position')
+        .select('id, user_id, username, full_name, avatar_url, organization, school, graduation_year, position')
         .in('user_id', Array.from(userIds))
 
       if (profilesError) throw profilesError
@@ -207,12 +212,16 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           notes: evaluation.notes,
           created_at: evaluation.created_at,
           scout: scoutProfile ? {
+            id: scoutProfile.id,
+            username: scoutProfile.username,
             full_name: scoutProfile.full_name,
             avatar_url: scoutProfile.avatar_url,
             organization: scoutProfile.organization,
             position: scoutProfile.position,
           } : null,
           player: playerProfile ? {
+            id: playerProfile.id,
+            username: playerProfile.username,
             full_name: playerProfile.full_name,
             avatar_url: playerProfile.avatar_url,
             school: playerProfile.school,
@@ -338,13 +347,25 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                 ? new Date(evaluation.completed_at)
                 : null
 
+            // Determine the link destination based on status and role
+            const isCompleted = evaluation.status === 'completed'
+            const linkHref = isCompleted
+              ? role === 'scout'
+                ? evaluation.player
+                  ? getProfilePath(evaluation.player.id, evaluation.player.username)
+                  : `/profile/${evaluation.player_id}`
+                : evaluation.scout
+                ? getProfilePath(evaluation.scout.id, evaluation.scout.username)
+                : `/profile/${evaluation.scout_id}`
+              : `/evaluations/${evaluation.id}`
+
             return (
               <div
                 key={evaluation.id}
                 className="flex items-center gap-3 md:gap-4 p-3 md:p-4 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <Link
-                  href={`/evaluations/${evaluation.id}`}
+                  href={linkHref}
                   className="interactive-press flex items-center gap-3 md:gap-4 flex-1 min-w-0"
                 >
                   {role === 'scout' ? (
@@ -509,20 +530,22 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   </>
                   )}
                 </Link>
-                {/* Share button - visible for all evaluations */}
-                <div className="flex-shrink-0">
-                  <ShareButton 
-                    evaluationId={evaluation.id} 
-                    userId={userId}
-                    evaluation={{
-                      id: evaluation.id,
-                      share_token: evaluation.share_token || null,
-                      status: evaluation.status,
-                      player_id: evaluation.player_id,
-                      scout: evaluation.scout,
-                    }}
-                  />
-                </div>
+                {/* Share button - only visible for completed evaluations */}
+                {evaluation.status === 'completed' && (
+                  <div className="flex-shrink-0">
+                    <ShareButton 
+                      evaluationId={evaluation.id} 
+                      userId={userId}
+                      evaluation={{
+                        id: evaluation.id,
+                        share_token: evaluation.share_token || null,
+                        status: evaluation.status,
+                        player_id: evaluation.player_id,
+                        scout: evaluation.scout,
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )})}
             </div>
