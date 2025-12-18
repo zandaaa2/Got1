@@ -807,74 +807,95 @@ export default function EvaluationDetail({
   // Pending/In Progress - show evaluation form
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Player Profile Section */}
-      <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0 mx-auto md:mx-0">
-          {isMeaningfulAvatar(player?.avatar_url) ? (
-            <Image
-              src={player.avatar_url}
-              alt={player.full_name || 'Player'}
-              width={96}
-              height={96}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div
-              className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(
-                player?.user_id || evaluation.player_id || player?.id || evaluation.id
-              )}`}
-            >
-              {player?.full_name?.charAt(0).toUpperCase() || '?'}
+      {/* Compact Player Info Section */}
+      <div className="mb-4 md:mb-6">
+        <div className="flex items-center gap-3 md:gap-4 mb-3">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0">
+            {isMeaningfulAvatar(player?.avatar_url) ? (
+              <Image
+                src={player.avatar_url}
+                alt={player.full_name || 'Player'}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div
+                className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white ${getGradientForId(
+                  player?.user_id || evaluation.player_id || player?.id || evaluation.id
+                )}`}
+              >
+                {player?.full_name?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-black truncate">
+              {player?.full_name || 'Unknown Player'}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs md:text-sm text-gray-600">
+              {player?.position && <span>{player.position}</span>}
+              {player?.school && <span>{player.school}</span>}
+              {player?.graduation_year && <span>Class of {player.graduation_year}</span>}
             </div>
-          )}
+          </div>
         </div>
-        <div className="flex-1 w-full text-center md:text-left">
-          <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
-            {player?.full_name || 'Unknown Player'}
-          </h1>
-          {(player?.position || player?.school) && (
-            <p className="text-black mb-2">
-              {player?.position && player?.school
-                ? `${player.position} at ${player.school}`
-                : player?.position
-                ? player.position
-                : player?.school
-                ? player.school
-                : ''}
-              {player?.school && player?.graduation_year && ` (${player.graduation_year})`}
-            </p>
-          )}
-          {player?.hudl_link && (
-            <a
-              href={player.hudl_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline mb-2 block"
-            >
-              {player.hudl_link.replace(/^https?:\/\//, '')}
-            </a>
-          )}
-          {player?.social_link && (
-            <a
-              href={player.social_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline mb-2 block"
-            >
-              {player.social_link.replace(/^https?:\/\//, '')}
-            </a>
-          )}
-          {player?.bio && (
-            <p className="text-black mt-4 leading-relaxed whitespace-pre-wrap">
-              {player.bio}
-            </p>
-          )}
-          {player?.parent_name && (
-            <p className="text-black text-sm mt-2">
-              Run by parent - {player.parent_name}
-            </p>
-          )}
-        </div>
+        
+        {/* Compact Athletic Info Grid */}
+        {(player?.height || player?.weight || player?.forty_yd_dash || player?.bench_max || player?.squat_max || player?.clean_max || player?.hudl_link) && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-xs md:text-sm">
+              {player?.height && (
+                <div>
+                  <span className="text-gray-500">Height:</span>{' '}
+                  <span className="text-black font-medium">{player.height}</span>
+                </div>
+              )}
+              {player?.weight && (
+                <div>
+                  <span className="text-gray-500">Weight:</span>{' '}
+                  <span className="text-black font-medium">{player.weight} lbs</span>
+                </div>
+              )}
+              {player?.forty_yd_dash && (
+                <div>
+                  <span className="text-gray-500">40yd:</span>{' '}
+                  <span className="text-black font-medium">{player.forty_yd_dash}s</span>
+                </div>
+              )}
+              {player?.bench_max && (
+                <div>
+                  <span className="text-gray-500">Bench:</span>{' '}
+                  <span className="text-black font-medium">{player.bench_max} lbs</span>
+                </div>
+              )}
+              {player?.squat_max && (
+                <div>
+                  <span className="text-gray-500">Squat:</span>{' '}
+                  <span className="text-black font-medium">{player.squat_max} lbs</span>
+                </div>
+              )}
+              {player?.clean_max && (
+                <div>
+                  <span className="text-gray-500">Clean:</span>{' '}
+                  <span className="text-black font-medium">{player.clean_max} lbs</span>
+                </div>
+              )}
+              {player?.hudl_link && (
+                <div className="col-span-2 md:col-span-1">
+                  <a
+                    href={player.hudl_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline font-medium truncate block"
+                  >
+                    View Hudl →
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Evaluate Section */}
