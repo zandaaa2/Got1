@@ -88,22 +88,6 @@ function AuthCallbackContent() {
             .eq('user_id', session.user.id)
             .maybeSingle()
 
-          // CRITICAL FIX: If profile exists with role='player', fix it immediately
-          if (profile && profile.role === 'player') {
-            console.log('⚠️ Auth callback (email) - Found profile with role=player, fixing to user')
-            await supabase
-              .from('profiles')
-              .update({ role: 'user' })
-              .eq('user_id', session.user.id)
-            // Re-fetch profile after fix
-            const { data: fixedProfile } = await supabase
-              .from('profiles')
-              .select('full_name, username, birthday, role')
-              .eq('user_id', session.user.id)
-              .maybeSingle()
-            profile = fixedProfile
-          }
-
         // Determine redirect destination with priority:
         // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)
         // 2. postSignUpRedirect (from protected footer links like "Make a claim")
@@ -447,22 +431,6 @@ function AuthCallbackContent() {
           .select('full_name, username, birthday, role')
           .eq('user_id', data.session.user.id)
           .maybeSingle()
-
-        // CRITICAL FIX: If profile exists with role='player', fix it immediately
-        if (profile && profile.role === 'player') {
-          console.log('⚠️ Auth callback (OAuth) - Found profile with role=player, fixing to user')
-          await supabase
-            .from('profiles')
-            .update({ role: 'user' })
-            .eq('user_id', data.session.user.id)
-          // Re-fetch profile after fix
-          const { data: fixedProfile } = await supabase
-            .from('profiles')
-            .select('full_name, username, birthday, role')
-            .eq('user_id', data.session.user.id)
-            .maybeSingle()
-          profile = fixedProfile
-        }
 
         // Determine redirect destination with priority:
         // 1. redirect query parameter from URL (highest priority - from OAuth redirectTo)

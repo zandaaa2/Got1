@@ -210,24 +210,6 @@ export async function middleware(request: NextRequest) {
                   .eq('user_id', user.id)
                   .maybeSingle()
 
-                // CRITICAL FIX: If profile exists with role='player', fix it immediately
-                if (profile && profile.role === 'player') {
-                  console.log('⚠️ Middleware - Found profile with role=player, fixing to user')
-                  // Try to fix, but don't block if it fails
-                  Promise.resolve(
-                    supabase
-                      .from('profiles')
-                      .update({ role: 'user' })
-                      .eq('user_id', user.id)
-                  )
-                    .then(() => {
-                      console.log('✅ Middleware - Profile role fixed')
-                    })
-                    .catch((fixError) => {
-                      console.error('Middleware: Profile fix error:', fixError)
-                    })
-                }
-
                 const hasRequiredFields = profile && 
                   profile.full_name && 
                   profile.username && 
