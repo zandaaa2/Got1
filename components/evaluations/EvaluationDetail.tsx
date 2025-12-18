@@ -842,60 +842,76 @@ export default function EvaluationDetail({
         </div>
         
         {/* Compact Athletic Info Grid */}
-        {(player?.height || player?.weight || player?.forty_yd_dash || player?.bench_max || player?.squat_max || player?.clean_max || player?.hudl_link) && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-xs md:text-sm">
-              {player?.height && (
-                <div>
-                  <span className="text-gray-500">Height:</span>{' '}
-                  <span className="text-black font-medium">{player.height}</span>
-                </div>
-              )}
-              {player?.weight && (
-                <div>
-                  <span className="text-gray-500">Weight:</span>{' '}
-                  <span className="text-black font-medium">{player.weight} lbs</span>
-                </div>
-              )}
-              {player?.forty_yd_dash && (
-                <div>
-                  <span className="text-gray-500">40yd:</span>{' '}
-                  <span className="text-black font-medium">{player.forty_yd_dash}s</span>
-                </div>
-              )}
-              {player?.bench_max && (
-                <div>
-                  <span className="text-gray-500">Bench:</span>{' '}
-                  <span className="text-black font-medium">{player.bench_max} lbs</span>
-                </div>
-              )}
-              {player?.squat_max && (
-                <div>
-                  <span className="text-gray-500">Squat:</span>{' '}
-                  <span className="text-black font-medium">{player.squat_max} lbs</span>
-                </div>
-              )}
-              {player?.clean_max && (
-                <div>
-                  <span className="text-gray-500">Clean:</span>{' '}
-                  <span className="text-black font-medium">{player.clean_max} lbs</span>
-                </div>
-              )}
-              {player?.hudl_link && (
-                <div className="col-span-2 md:col-span-1">
-                  <a
-                    href={player.hudl_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline font-medium truncate block"
-                  >
-                    View Hudl →
-                  </a>
-                </div>
-              )}
+        {(() => {
+          const fortyTime = player?.forty_yard_dash || player?.forty_yd_dash
+          const hasAnyData = player?.height || player?.weight || fortyTime || player?.gpa || player?.bench_max || player?.squat_max || player?.clean_max || player?.hudl_link || player?.college_offers
+          return hasAnyData ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-xs md:text-sm">
+                {player?.height && (
+                  <div>
+                    <span className="text-gray-500">Height:</span>{' '}
+                    <span className="text-black font-medium">{player.height}</span>
+                  </div>
+                )}
+                {player?.weight && (
+                  <div>
+                    <span className="text-gray-500">Weight:</span>{' '}
+                    <span className="text-black font-medium">{player.weight} lbs</span>
+                  </div>
+                )}
+                {fortyTime && (
+                  <div>
+                    <span className="text-gray-500">40yd:</span>{' '}
+                    <span className="text-black font-medium">{typeof fortyTime === 'number' ? fortyTime.toFixed(2) : fortyTime}s</span>
+                  </div>
+                )}
+                {player?.gpa && (
+                  <div>
+                    <span className="text-gray-500">GPA:</span>{' '}
+                    <span className="text-black font-medium">{player.gpa}</span>
+                  </div>
+                )}
+                {player?.bench_max && (
+                  <div>
+                    <span className="text-gray-500">Bench:</span>{' '}
+                    <span className="text-black font-medium">{player.bench_max} lbs</span>
+                  </div>
+                )}
+                {player?.squat_max && (
+                  <div>
+                    <span className="text-gray-500">Squat:</span>{' '}
+                    <span className="text-black font-medium">{player.squat_max} lbs</span>
+                  </div>
+                )}
+                {player?.clean_max && (
+                  <div>
+                    <span className="text-gray-500">Clean:</span>{' '}
+                    <span className="text-black font-medium">{player.clean_max} lbs</span>
+                  </div>
+                )}
+                {player?.hudl_link && (
+                  <div className="col-span-2 md:col-span-1">
+                    <a
+                      href={player.hudl_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline font-medium truncate block"
+                    >
+                      View Hudl →
+                    </a>
+                  </div>
+                )}
+                {player?.college_offers && (
+                  <div className="col-span-2 md:col-span-4 mt-2 pt-2 border-t border-gray-300">
+                    <span className="text-gray-500">College Offers:</span>{' '}
+                    <span className="text-black font-medium">{player.college_offers}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : null
+        })()}
       </div>
 
       {/* Evaluate Section */}
