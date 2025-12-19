@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
 import SettingsContent from '@/components/settings/SettingsContent'
+import { isAdmin } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -28,12 +29,15 @@ export default async function SettingsPage() {
     redirect('/profile/user-setup')
   }
 
+  // Check if user is admin
+  const userIsAdmin = await isAdmin(session.user.id)
+
   return (
     <div className="min-h-screen bg-white flex">
       <AuthRefreshHandler />
       <Sidebar activePage="settings" />
       <DynamicLayout header={null}>
-        <SettingsContent profile={profile} />
+        <SettingsContent profile={profile} isAdmin={userIsAdmin} />
       </DynamicLayout>
     </div>
   )
