@@ -1499,7 +1499,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 const hasFreeEval = profile.free_eval_enabled && profile.free_eval_description
                 const offerCount = hasFreeEval ? 2 : 1
                 return (
-                  <div className={offerCount === 1 ? 'space-y-6 flex flex-col items-start' : 'flex flex-col md:flex-row md:gap-6 space-y-6 md:space-y-0'}>
+                  <div className={offerCount === 1 ? 'space-y-6 flex flex-col items-start' : 'w-full flex flex-col md:flex-row md:gap-6 space-y-6 md:space-y-0'}>
                     {/* Free Evaluation Offer */}
                     {profile.free_eval_enabled && profile.free_eval_description && (
                       <div className="flex-1 border border-gray-200 rounded-lg p-6">
@@ -1705,7 +1705,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                           <div className="flex items-start justify-between mb-3 md:mb-4">
                             <Link
                               href={playerProfilePath || evaluationPath}
-                              className="flex items-start gap-3 md:gap-4 flex-1 hover:opacity-90 transition-opacity"
+                              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0 hover:opacity-90 transition-opacity"
                             >
                               <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
                                 {showPlayerAvatar ? (
@@ -1728,23 +1728,23 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                   </div>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                              <div className="flex-1 min-w-0 h-12 md:h-16 flex flex-col justify-between">
+                                <h3 className="font-bold text-black text-base md:text-lg truncate">
                                   {evaluation.player?.full_name || 'Unknown Player'}
                                 </h3>
-                                <p className="text-black text-xs md:text-sm mb-1 truncate">
+                                <p className="text-black text-xs md:text-sm truncate">
                                   {evaluation.player?.school || 'Unknown School'}
                                   {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
                                   {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
                                 </p>
-                                <p className="text-black text-xs md:text-sm text-gray-600">
+                                <p className="text-black text-xs md:text-sm text-gray-600 truncate">
                                   {new Date(evaluation.created_at).toLocaleDateString()}
                                 </p>
                               </div>
                             </Link>
-                            <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                               {/* Price */}
-                              <span className="text-base md:text-lg font-bold text-black">
+                              <span className="text-base md:text-lg font-bold text-black whitespace-nowrap">
                                 ${evaluationPrice.toFixed(2)}
                               </span>
                               {/* Minimize/Expand Button */}
@@ -1753,7 +1753,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                   e.stopPropagation()
                                   toggleEvalMinimize(evaluation.id)
                                 }}
-                                className="interactive-press p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="interactive-press p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
                                 aria-label={isMinimized ? 'Expand' : 'Minimize'}
                                 title={isMinimized ? 'Expand' : 'Minimize'}
                               >

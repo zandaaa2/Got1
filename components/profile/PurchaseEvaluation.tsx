@@ -546,7 +546,7 @@ export default function PurchaseEvaluation({
   const offerCount = hasFreeEval ? 2 : 1
 
   return (
-    <div className={offerCount === 1 ? 'max-w-2xl' : 'max-w-2xl mx-auto'}>
+    <div className={offerCount === 1 ? 'max-w-2xl' : 'w-full'}>
       {/* Evaluation Offers */}
       {scout.free_eval_enabled && scout.free_eval_description ? (
         <div className="flex flex-col md:flex-row md:gap-6 space-y-6 md:space-y-0">

@@ -533,9 +533,9 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   </>
                   )}
                 </Link>
-                {/* Share button and View Count - only visible for completed evaluations */}
+                {/* Share button - only visible for completed evaluations */}
                 {evaluation.status === 'completed' && (
-                <div className="flex-shrink-0 flex items-center gap-4">
+                <div className="flex-shrink-0">
                   <ShareButton 
                     evaluationId={evaluation.id} 
                     userId={userId}
@@ -547,12 +547,6 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                       scout: evaluation.scout,
                     }}
                   />
-                  {/* View Count */}
-                  {evaluation.view_count !== undefined && evaluation.view_count !== null && (
-                    <div className="text-sm text-gray-600">
-                      {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
-                    </div>
-                  )}
                 </div>
                 )}
               </div>
