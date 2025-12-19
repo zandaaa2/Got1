@@ -218,6 +218,22 @@ function MoneyDashboard({ profile }: { profile: any }) {
     setIsBioExpanded(false) // Reset bio expansion when profile updates
   }, [profile.price_per_eval, profile.turnaround_time, profile.bio])
 
+  // Track profile view for own profile
+  useEffect(() => {
+    if (profile.id) {
+      const today = new Date().toDateString()
+      const viewKey = `profile_view_${profile.id}_${today}`
+      
+      if (typeof window !== 'undefined' && !localStorage.getItem(viewKey)) {
+        fetch(`/api/profile/${profile.id}/track-view`, {
+          method: 'POST',
+        }).catch(console.error)
+        
+        localStorage.setItem(viewKey, 'true')
+      }
+    }
+  }, [profile.id])
+
   const checkAccountStatus = async (options: { suppressSkeleton?: boolean } = {}) => {
     if (!options.suppressSkeleton) {
       setStatusLoading(true)
@@ -2719,6 +2735,11 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         >
           Edit
         </Link>
+      </div>
+
+      {/* View Count */}
+      <div className="mb-4 text-sm text-gray-600">
+        {(profile.view_count ?? 0).toLocaleString()} {(profile.view_count ?? 0) === 1 ? 'view' : 'views'}
       </div>
 
       {/* Tabs - Only show for scouts */}

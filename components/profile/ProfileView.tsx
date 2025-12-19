@@ -270,21 +270,23 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     }
   }, [profile.intro_video_url, profile.id])
 
-  // Auto-play video when modal opens (after user interaction)
-  useEffect(() => {
-    if (showVideoModal && videoRef.current) {
-      // Small delay to ensure video element is ready
-      const timer = setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.play().catch((error) => {
-            // Autoplay may fail on some browsers, user can still click play
-            console.log('Autoplay prevented:', error)
-          })
-        }
-      }, 100)
-      return () => clearTimeout(timer)
+  // Handle video play on modal open - must be called directly from user interaction for iOS
+  const handleOpenVideoModal = async () => {
+    setShowVideoModal(true)
+    // For iOS, we need to trigger play directly in the click handler
+    // Wait for next tick to ensure modal is rendered
+    await new Promise(resolve => setTimeout(resolve, 50))
+    if (videoRef.current) {
+      // Try to play - iOS requires this to be in the user interaction chain
+      const playPromise = videoRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // Autoplay may fail, user can still click play button
+          console.log('Autoplay prevented:', error)
+        })
+      }
     }
-  }, [showVideoModal])
+  }
 
   // Handle video end to mark as watched
   const handleVideoEnd = () => {
@@ -335,6 +337,26 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   useEffect(() => {
     loadEvaluations()
   }, [profile.id, profile.role])
+
+  // Track profile view (only for external views, not own profile)
+  useEffect(() => {
+    if (!isOwnProfile && profile.id) {
+      // Use localStorage to track unique views per day
+      const today = new Date().toDateString()
+      const viewKey = `profile_view_${profile.id}_${today}`
+      
+      // Check if we've already tracked a view today
+      if (typeof window !== 'undefined' && !localStorage.getItem(viewKey)) {
+        // Track the view
+        fetch(`/api/profile/${profile.id}/track-view`, {
+          method: 'POST',
+        }).catch(console.error)
+        
+        // Mark as viewed today
+        localStorage.setItem(viewKey, 'true')
+      }
+    }
+  }, [profile.id, isOwnProfile])
 
   /**
    * Loads evaluations for the current profile and manually joins profile data.
@@ -1217,105 +1239,132 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               </div>
             )}
 
-            {/* Scout Profile Picture - Large with video indicator ring */}
-            <div className="flex justify-center">
-              {profile.intro_video_url ? (
-                <button
-                  onClick={() => setShowVideoModal(true)}
-                  className="relative group cursor-pointer"
-                  aria-label="View intro video"
-                >
-                  <div className={`w-32 h-32 rounded-full p-1 transition-colors ${
-                    videoWatched ? 'ring-4 ring-gray-400' : 'ring-4 ring-blue-600'
-                  }`}>
-                    <div className="w-full h-full rounded-full overflow-hidden">
-                      {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
-                        <Image
-                          src={profileAvatarUrl}
-                          alt={profile.full_name || 'Scout'}
-                          width={128}
-                          height={128}
-                          className="w-full h-full object-cover"
-                          onError={() => {
-                            setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
-                          }}
-                          priority
-                        />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-5xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
-                          {profile.full_name?.charAt(0).toUpperCase() || '?'}
+            {/* Profile Picture and Name/Role - Horizontal Layout */}
+            <div className="flex items-start gap-4">
+              {/* Scout Profile Picture - Large with video indicator ring */}
+              <div className="flex-shrink-0">
+                {profile.intro_video_url ? (
+                  <button
+                    onClick={handleOpenVideoModal}
+                    className="relative group cursor-pointer"
+                    aria-label="View intro video"
+                  >
+                    <div className={`w-20 h-20 rounded-full p-1 transition-colors ${
+                      videoWatched ? 'ring-2 ring-gray-400' : 'ring-2 ring-blue-600'
+                    }`}>
+                      <div className="w-full h-full rounded-full overflow-hidden">
+                        {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
+                          <Image
+                            src={profileAvatarUrl}
+                            alt={profile.full_name || 'Scout'}
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover"
+                            onError={() => {
+                              setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                            }}
+                            priority
+                          />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
+                            {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Play icon overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="w-20 h-20 rounded-full overflow-hidden">
+                    {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
+                      <Image
+                        src={profileAvatarUrl}
+                        alt={profile.full_name || 'Scout'}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                          setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                        }}
+                        priority
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center text-3xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
+                        {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Role + Team */}
+              <div className="flex-1 text-left h-20 flex flex-col justify-between">
+                <div className="flex items-center justify-start gap-2">
+                  <h1 className="text-xl font-bold text-black leading-tight">
+                    {profile.full_name || 'Unknown Scout'}
+                  </h1>
+                  <VerificationBadge className="w-5 h-5" />
+                </div>
+                <p className="text-sm text-gray-600 leading-tight">{jobTitle}</p>
+                
+                {/* Third row: Organization + Role Tag */}
+                <div className="flex items-center justify-start gap-2 flex-wrap leading-tight">
+                  {collegeMatch && (
+                    <div className="flex items-center gap-2">
+                      {collegeMatch.logo && (
+                        <div className="w-4 h-4 rounded-full bg-white border border-gray-200 overflow-hidden flex items-center justify-center">
+                          <Image
+                            src={collegeMatch.logo}
+                            alt={collegeMatch.name}
+                            width={16}
+                            height={16}
+                            className="object-contain w-full h-full"
+                            unoptimized
+                          />
                         </div>
                       )}
-                    </div>
-                  </div>
-                  {/* Play icon overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </div>
-                </button>
-              ) : (
-                <div className="w-32 h-32 rounded-full overflow-hidden">
-                  {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
-                    <Image
-                      src={profileAvatarUrl}
-                      alt={profile.full_name || 'Scout'}
-                      width={128}
-                      height={128}
-                      className="w-full h-full object-cover"
-                      onError={() => {
-                        setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
-                      }}
-                      priority
-                    />
-                  ) : (
-                    <div className={`w-full h-full flex items-center justify-center text-5xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
-                      {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                      <p className="text-sm text-gray-500">{collegeMatch.name}</p>
                     </div>
                   )}
+                  {!isOwnProfile && (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      profile.role === 'scout' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : profile.role === 'player'
+                        ? 'bg-green-100 text-green-800'
+                        : profile.role === 'parent'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {profile.role === 'scout' 
+                        ? 'Scout' 
+                        : profile.role === 'player'
+                        ? 'Player'
+                        : profile.role === 'parent'
+                        ? 'Parent'
+                        : 'Basic User'}
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Role + Team */}
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <h1 className="text-xl font-bold text-black">
-                  {profile.full_name || 'Unknown Scout'}
-                </h1>
-                <VerificationBadge className="w-5 h-5" />
-              </div>
-              <p className="text-sm text-gray-600">{jobTitle}</p>
-              {collegeMatch && (
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  {collegeMatch.logo && (
-                    <div className="w-6 h-6 rounded-full bg-white border border-gray-200 overflow-hidden flex items-center justify-center">
-                      <Image
-                        src={collegeMatch.logo}
-                        alt={collegeMatch.name}
-                        width={24}
-                        height={24}
-                        className="object-contain w-full h-full"
-                        unoptimized
-                      />
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-500">{collegeMatch.name}</p>
-                </div>
-              )}
-              
-              {/* Edit Profile Button - Only for own profile */}
+            {/* View Count Row with Edit Profile Button */}
+            <div className="text-sm text-gray-600 flex items-center gap-3">
               {isOwnProfile && (
-                <div className="mt-3">
-                  <a
-                    href="/profile/edit"
-                    className="interactive-press inline-block px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 text-center font-medium text-sm"
-                  >
-                    Edit Profile
-                  </a>
-                </div>
+                <a
+                  href="/profile/edit"
+                  className="interactive-press inline-flex items-center px-3 py-1.5 bg-gray-200 text-black rounded-lg hover:bg-gray-300 font-medium text-sm"
+                >
+                  Edit Profile
+                </a>
               )}
+              <span>{(profile.view_count ?? 0).toLocaleString()} {(profile.view_count ?? 0) === 1 ? 'view' : 'views'}</span>
             </div>
 
             {/* Divider Line */}
@@ -1390,16 +1439,6 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               Eval Offers
             </button>
             <button
-              onClick={() => setActiveTab('posts')}
-              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
-                activeTab === 'posts'
-                  ? 'bg-gray-100 border-b-2 border-black text-black'
-                  : 'text-black hover:bg-gray-50'
-              }`}
-            >
-              Posts
-            </button>
-            <button
               onClick={() => setActiveTab('evaluations')}
               className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
                 activeTab === 'evaluations'
@@ -1408,6 +1447,16 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               }`}
             >
               Evaluations
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'posts'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Posts
             </button>
           </div>
         </div>
@@ -2055,11 +2104,25 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 poster={profile.intro_video_poster_url || undefined}
                 controls
                 playsInline
+                // @ts-ignore - webkit-playsinline for older iOS
+                webkit-playsinline="true"
                 preload="auto"
-                onLoadedMetadata={handleVideoLoaded}
+                onLoadedMetadata={(e) => {
+                  handleVideoLoaded(e)
+                  // Try to play after metadata loads (iOS compatibility)
+                  if (videoRef.current) {
+                    videoRef.current.play().catch((error) => {
+                      console.log('Autoplay after load prevented:', error)
+                    })
+                  }
+                }}
                 onEnded={handleVideoEnd}
                 onPlay={() => {
-                  // Ensure video plays when user clicks play button
+                  // Video is playing
+                }}
+                onClick={(e) => {
+                  // Ensure video plays when user clicks on video element (iOS)
+                  e.stopPropagation()
                   if (videoRef.current && videoRef.current.paused) {
                     videoRef.current.play().catch((error) => {
                       console.log('Play failed:', error)
