@@ -1676,7 +1676,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                 id: evaluation.id,
                                 share_token: evaluation.share_token || null,
                                 status: 'completed',
-                                player_id: evaluation.player_id,
+                                player_id: evaluation.player_id || undefined,
                                 scout: profile.role === 'scout' ? {
                                   full_name: profile.full_name,
                                   organization: profile.organization,
