@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import BackButton from '@/components/shared/BackButton'
@@ -144,6 +144,12 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
   const [bioExpanded, setBioExpanded] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'offers' | 'posts' | 'evaluations'>('offers')
+  const [videoSize, setVideoSize] = useState<{ width: number; height: number } | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [showVideoModal, setShowVideoModal] = useState(false)
+  const [videoWatched, setVideoWatched] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
@@ -200,6 +206,79 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     return testAccountNames.includes(fullName.toLowerCase())
   }
 
+  // Calculate video size to fit viewport
+  const calculateVideoSize = (videoWidth: number, videoHeight: number) => {
+    if (!containerRef.current) return null
+
+    const containerRect = containerRef.current.getBoundingClientRect()
+    const availableWidth = containerRect.width || window.innerWidth * 0.9
+    const availableHeight = window.innerHeight * 0.7
+
+    const videoAspectRatio = videoWidth / videoHeight
+    const containerAspectRatio = availableWidth / availableHeight
+
+    let width: number
+    let height: number
+
+    if (videoAspectRatio > containerAspectRatio) {
+      width = availableWidth
+      height = width / videoAspectRatio
+    } else {
+      height = availableHeight
+      width = height * videoAspectRatio
+    }
+
+    return { width, height }
+  }
+
+  // Handle video loaded to calculate size that fits viewport
+  const handleVideoLoaded = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget
+    if (video.videoWidth && video.videoHeight) {
+      const size = calculateVideoSize(video.videoWidth, video.videoHeight)
+      if (size) {
+        setVideoSize(size)
+        video.style.width = `${size.width}px`
+        video.style.height = `${size.height}px`
+      }
+    }
+  }
+
+  // Recalculate on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (videoRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
+        const size = calculateVideoSize(videoRef.current.videoWidth, videoRef.current.videoHeight)
+        if (size && videoRef.current) {
+          setVideoSize(size)
+          videoRef.current.style.width = `${size.width}px`
+          videoRef.current.style.height = `${size.height}px`
+        }
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [profile.intro_video_url])
+
+  // Check if video has been watched (from localStorage)
+  useEffect(() => {
+    if (profile.intro_video_url && profile.id) {
+      const watchedKey = `intro-video-watched-${profile.id}`
+      const watched = localStorage.getItem(watchedKey) === 'true'
+      setVideoWatched(watched)
+    }
+  }, [profile.intro_video_url, profile.id])
+
+  // Handle video end to mark as watched
+  const handleVideoEnd = () => {
+    if (profile.intro_video_url && profile.id) {
+      const watchedKey = `intro-video-watched-${profile.id}`
+      localStorage.setItem(watchedKey, 'true')
+      setVideoWatched(true)
+    }
+  }
+
   // Get current user ID and profile
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -223,6 +302,14 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     }
     getCurrentUser()
   }, [])
+
+  // Load evaluations when Evaluations tab is active
+  useEffect(() => {
+    if (profile.role === 'scout' && activeTab === 'evaluations') {
+      loadEvaluations()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, profile.role, profile.user_id])
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setIsHydrated(true))
@@ -1033,9 +1120,9 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
       )}
 
       {/* Main Layout: Left Sidebar + Right Purchase */}
-      <div className="flex flex-col md:flex-row gap-6 md:gap-8 mb-8">
+      <div className={`flex flex-col ${profile.role === 'scout' ? '' : 'md:flex-row'} gap-6 md:gap-8 mb-8`}>
         {/* Left Sidebar - Profile Info */}
-        <div className="md:w-80 flex-shrink-0">
+        <div className={profile.role === 'scout' ? 'w-full' : 'md:w-80 flex-shrink-0'}>
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6 relative">
             {/* Share Menu Button - Top Right inside profile card */}
             {!isOwnProfile && (
@@ -1114,27 +1201,65 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               </div>
             )}
 
-            {/* Scout Profile Picture - Large */}
+            {/* Scout Profile Picture - Large with video indicator ring */}
             <div className="flex justify-center">
-              <div className="w-32 h-32 rounded-full overflow-hidden">
-                {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
-                  <Image
-                    src={profileAvatarUrl}
-                    alt={profile.full_name || 'Scout'}
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                    onError={() => {
-                      setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
-                    }}
-                    priority
-                  />
-                ) : (
-                  <div className={`w-full h-full flex items-center justify-center text-5xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
-                    {profile.full_name?.charAt(0).toUpperCase() || '?'}
+              {profile.intro_video_url ? (
+                <button
+                  onClick={() => setShowVideoModal(true)}
+                  className="relative group cursor-pointer"
+                  aria-label="View intro video"
+                >
+                  <div className={`w-32 h-32 rounded-full p-1 transition-colors ${
+                    videoWatched ? 'ring-4 ring-gray-400' : 'ring-4 ring-blue-600'
+                  }`}>
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
+                        <Image
+                          src={profileAvatarUrl}
+                          alt={profile.full_name || 'Scout'}
+                          width={128}
+                          height={128}
+                          className="w-full h-full object-cover"
+                          onError={() => {
+                            setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                          }}
+                          priority
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center text-5xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
+                          {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                  {/* Play icon overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                </button>
+              ) : (
+                <div className="w-32 h-32 rounded-full overflow-hidden">
+                  {profileAvatarUrl && !imageErrors.has(`profile-${profile.id}`) ? (
+                    <Image
+                      src={profileAvatarUrl}
+                      alt={profile.full_name || 'Scout'}
+                      width={128}
+                      height={128}
+                      className="w-full h-full object-cover"
+                      onError={() => {
+                        setImageErrors((prev) => new Set(prev).add(`profile-${profile.id}`))
+                      }}
+                      priority
+                    />
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center text-5xl font-semibold text-white ${getGradientForId(profileGradientKey)}`}>
+                      {profile.full_name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Role + Team */}
@@ -1161,6 +1286,18 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                     </div>
                   )}
                   <p className="text-sm text-gray-500">{collegeMatch.name}</p>
+                </div>
+              )}
+              
+              {/* Edit Profile Button - Only for own profile */}
+              {isOwnProfile && (
+                <div className="mt-3">
+                  <a
+                    href="/profile/edit"
+                    className="interactive-press inline-block px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 text-center font-medium text-sm"
+                  >
+                    Edit Profile
+                  </a>
                 </div>
               )}
             </div>
@@ -1205,53 +1342,359 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           </div>
         </div>
 
-        {/* Right Side - Purchase/JoinWaitlist */}
-        <div className="flex-1">
-          {isOwnProfile ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-              <p className="text-gray-600">This is your profile.</p>
-            </div>
-          ) : isUnclaimed ? (
-            <JoinWaitlist 
-              scoutId={profile.id} 
-              scoutName={profile.full_name || 'This scout'} 
-            />
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <PurchaseEvaluation 
-                scout={profile} 
-                player={currentUserProfile?.role === 'player' ? currentUserProfile : null}
-                isSignedIn={isSignedIn}
-                onSignInClick={() => {
-                  setShowSignUpModal(true)
-                  setAuthMode('signin')
-                }}
-                onSignUpClick={() => {
-                  setShowSignUpModal(true)
-                  setAuthMode('signup')
-                }}
+        {/* Right Side - Only show for non-scouts or own profile */}
+        {profile.role !== 'scout' && (
+          <div className="flex-1">
+            {isOwnProfile ? (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                <p className="text-gray-600">This is your profile.</p>
+              </div>
+            ) : isUnclaimed ? (
+              <JoinWaitlist 
+                scoutId={profile.id} 
+                scoutName={profile.full_name || 'This scout'} 
               />
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {/* Tabs - Only show for scouts */}
+      {profile.role === 'scout' && (
+        <div className="mb-6 md:mb-8">
+          <div className="flex gap-2 md:gap-4 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('offers')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'offers'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Eval Offers
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'posts'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Posts
+            </button>
+            <button
+              onClick={() => setActiveTab('evaluations')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'evaluations'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Evaluations
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Content - Only show for scouts */}
+      {profile.role === 'scout' && (
+        <div className="mb-6 md:mb-8">
+          {activeTab === 'offers' && (
+            <div className="space-y-6">
+              {/* Purchase Evaluation Card - Show for others */}
+              {!isOwnProfile && (
+                <PurchaseEvaluation 
+                  scout={profile} 
+                  player={currentUserProfile?.role === 'player' ? currentUserProfile : null}
+                  isSignedIn={isSignedIn}
+                  onSignInClick={() => {
+                    setShowSignUpModal(true)
+                    setAuthMode('signin')
+                  }}
+                  onSignUpClick={() => {
+                    setShowSignUpModal(true)
+                    setAuthMode('signup')
+                  }}
+                />
+              )}
+              
+              {/* Own Profile - Show Eval Offers Preview */}
+              {isOwnProfile && profile.role === 'scout' && (
+                <div className="space-y-6">
+                  {/* Free Evaluation Offer */}
+                  {profile.free_eval_enabled && profile.free_eval_description && (
+                    <div className="border border-gray-200 rounded-lg p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-black">Free Evaluation</h2>
+                        <a
+                          href="/profile"
+                          className="interactive-press px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 text-center font-medium text-sm"
+                        >
+                          Edit
+                        </a>
+                      </div>
+                      <div className="mb-6">
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          {profile.free_eval_description}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-6">
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-black">Evaluation Service</span>
+                              <span className="font-bold text-black">$0.00</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Standard Evaluation Offer */}
+                  <div className="border border-gray-200 rounded-lg p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <h2 className="text-lg font-semibold text-black">
+                        {profile.offer_title || 'Standard Evaluation'}
+                      </h2>
+                      <a
+                        href="/profile"
+                        className="interactive-press px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 text-center font-medium text-sm"
+                      >
+                        Edit
+                      </a>
+                    </div>
+                    
+                    {profile.bio && (
+                      <div className="mb-6">
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          {profile.bio}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                      <div className="space-y-4">
+                        {/* Price and Turnaround Time */}
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-black">Evaluation Service</span>
+                            <span className="font-bold text-black">
+                              ${(profile.price_per_eval || 99).toFixed(2)}
+                            </span>
+                          </div>
+                          {profile.turnaround_time && (
+                            <p className="text-sm text-gray-600">
+                              {profile.turnaround_time.includes('after scout confirmation') || profile.turnaround_time.includes('from scout confirmation')
+                                ? profile.turnaround_time.replace('from scout confirmation', 'after scout confirmation')
+                                : `${profile.turnaround_time} after scout confirmation`}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Positions */}
+                        {(() => {
+                          let positions: string[] = []
+                          if (profile.positions && typeof profile.positions === 'string') {
+                            try {
+                              positions = JSON.parse(profile.positions)
+                            } catch {
+                              positions = [profile.positions]
+                            }
+                          } else if (Array.isArray(profile.positions)) {
+                            positions = profile.positions
+                          } else if (profile.position) {
+                            positions = [profile.position]
+                          }
+                          return positions.length > 0 ? (
+                            <div>
+                              <span className="text-sm font-medium text-black block mb-2">Positions: </span>
+                              <div className="flex flex-wrap gap-2">
+                                {positions.map((pos: string, idx: number) => (
+                                  <span 
+                                    key={idx}
+                                    className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
+                                  >
+                                    {pos}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null
+                        })()}
+
+                        {/* College Connections */}
+                        {(() => {
+                          let connections: string[] = []
+                          if (profile.college_connections) {
+                            try {
+                              if (typeof profile.college_connections === 'string') {
+                                const parsed = JSON.parse(profile.college_connections)
+                                connections = Array.isArray(parsed) ? parsed : Object.values(parsed)
+                              } else if (Array.isArray(profile.college_connections)) {
+                                connections = profile.college_connections
+                              }
+                            } catch {
+                              // If parsing fails, skip
+                            }
+                          }
+                          
+                          if (connections.length > 0) {
+                            const connectionColleges = connections
+                              .map(slug => collegeEntries.find(c => c.slug === slug))
+                              .filter(Boolean)
+                            
+                            return connectionColleges.length > 0 ? (
+                              <div>
+                                <span className="text-sm font-medium text-black block mb-2">Connections: </span>
+                                <div className="flex flex-wrap gap-2">
+                                  {connectionColleges.map((college) => (
+                                    <div key={college!.slug} className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
+                                      {college!.logo && (
+                                        <Image
+                                          src={college!.logo}
+                                          alt={college!.name}
+                                          width={16}
+                                          height={16}
+                                          className="object-contain"
+                                          unoptimized
+                                        />
+                                      )}
+                                      <span className="text-xs text-gray-700">{college!.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null
+                          }
+                          return null
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Why Valuable, What to Expect, FAQ */}
+              <ScoutProfileSections scoutName={profile.full_name || 'This scout'} isSignedIn={isOwnProfile ? false : isSignedIn} />
+            </div>
+          )}
+          {activeTab === 'posts' && (
+            <div className="text-center py-12 text-gray-500">
+              Posts coming soon
+            </div>
+          )}
+          {activeTab === 'evaluations' && (
+            <div>
+              {loading ? (
+                <div className="text-center py-12 text-gray-500">Loading evaluations...</div>
+              ) : evaluations.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  No evaluations available yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {evaluations.map((evaluation) => {
+                    const playerAvatarUrl = isMeaningfulAvatar(evaluation.player?.avatar_url)
+                      ? evaluation.player?.avatar_url ?? undefined
+                      : undefined
+                    const playerGradientKey =
+                      evaluation.player?.user_id ||
+                      evaluation.player_id ||
+                      evaluation.player?.id ||
+                      evaluation.player?.username ||
+                      evaluation.id
+                    const showPlayerAvatar =
+                      Boolean(playerAvatarUrl) && !imageErrors.has(`player-eval-${evaluation.id}`)
+
+                    const playerProfilePath = evaluation.player?.id 
+                      ? getProfilePath(evaluation.player.id, evaluation.player.username)
+                      : null
+                    // Add 'from' parameter based on profile role
+                    const fromParam = profile.role === 'scout' ? 'scout' : 'player'
+                    const evaluationPath = `/evaluations/${evaluation.id}?from=${fromParam}`
+
+                    return (
+                      <div key={evaluation.id} className="bg-white border border-gray-200 rounded-lg p-6">
+                        <div className="border-b border-gray-200 pb-4 md:pb-6 mb-4 md:mb-6">
+                          <Link
+                            href={playerProfilePath || evaluationPath}
+                            className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity"
+                          >
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                              {showPlayerAvatar ? (
+                                <Image
+                                  src={playerAvatarUrl!}
+                                  alt={evaluation.player?.full_name || 'Player'}
+                                  width={64}
+                                  height={64}
+                                  className="w-full h-full object-cover"
+                                  onError={() => {
+                                    setImageErrors((prev) => new Set(prev).add(`player-eval-${evaluation.id}`))
+                                  }}
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className={`w-full h-full flex items-center justify-center ${getGradientForId(playerGradientKey)}`}>
+                                  <span className="text-white text-xl font-semibold">
+                                    {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                                {evaluation.player?.full_name || 'Unknown Player'}
+                              </h3>
+                              <p className="text-black text-xs md:text-sm mb-1 truncate">
+                                {evaluation.player?.school || 'Unknown School'}
+                                {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
+                                {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
+                              </p>
+                              <p className="text-black text-xs md:text-sm text-gray-600">
+                                {new Date(evaluation.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </Link>
+                          {evaluation.notes && (
+                            <Link
+                              href={evaluationPath}
+                              className="block pl-0 md:pl-20 mt-4 md:mt-0 hover:opacity-90 transition-opacity"
+                            >
+                              <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                                {evaluation.notes}
+                              </p>
+                            </Link>
+                          )}
+                          {/* Share button */}
+                          <div className="pl-0 md:pl-20 mt-6 flex items-start">
+                            <ShareButton 
+                              evaluationId={evaluation.id} 
+                              userId={currentUserId || undefined}
+                              evaluation={{
+                                id: evaluation.id,
+                                share_token: evaluation.share_token || null,
+                                status: 'completed',
+                                player_id: evaluation.player_id,
+                                scout: profile.role === 'scout' ? {
+                                  full_name: profile.full_name,
+                                  organization: profile.organization,
+                                } : null,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
-
-      {/* Bottom Sections - Why Valuable, What to Expect, FAQ */}
-      {!isOwnProfile && (
-        <ScoutProfileSections scoutName={profile.full_name || 'This scout'} isSignedIn={isSignedIn} />
       )}
 
-      {/* Edit Profile Button - Only for own profile */}
-      {isOwnProfile && (
-        <div className="mb-6 md:mb-8">
-          <a
-            href="/profile/edit"
-            className="interactive-press block w-full px-4 md:px-6 py-2.5 md:py-3 border border-black text-black rounded-lg hover:bg-gray-50 text-center font-medium text-sm md:text-base"
-          >
-            Edit Profile
-          </a>
-        </div>
-      )}
 
       {/* More Info Modal */}
       {showMoreInfo && (
@@ -1442,202 +1885,6 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
         </div>
       )}
 
-      {/* Evaluations Contributed Section */}
-      <div className="mt-8 md:mt-12 mb-12 md:mb-16 relative">
-        <h2 className="text-xl md:text-2xl font-bold text-black mb-6 md:mb-8">
-          Evaluations Contributed ({evaluations.length})
-        </h2>
-        {loading ? (
-          <EvaluationListSkeleton />
-        ) : evaluations.length === 0 && isSignedIn ? (
-          <EmptyState
-            icon={emptyEvaluationIcon}
-            title="No evaluations contributed yet"
-            description={
-              isOwnProfile
-                ? 'Complete your first evaluation to see it listed here and start building trust.'
-                : 'This scout has not contributed any public evaluations yet.'
-            }
-            action={
-              isOwnProfile ? (
-                <Link
-                  href="/discover"
-                  className="interactive-press inline-flex items-center gap-2 rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                >
-                  Find players to evaluate
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7M4 12h12" />
-                  </svg>
-                </Link>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className="relative animate-fade-in-up">
-            <div className={`space-y-6 ${!isSignedIn ? 'filter blur-md' : ''}`}>
-              {isSignedIn ? (
-                evaluations.map((evaluation) => {
-                  const playerAvatarUrl = isMeaningfulAvatar(evaluation.player?.avatar_url)
-                    ? evaluation.player?.avatar_url ?? undefined
-                    : undefined
-                  const playerGradientKey =
-                    evaluation.player?.user_id ||
-                    evaluation.player_id ||
-                    evaluation.player?.id ||
-                    evaluation.player?.username ||
-                    evaluation.id
-                  const showPlayerAvatar =
-                    Boolean(playerAvatarUrl) && !imageErrors.has(`player-${evaluation.id}`)
-
-                  return (
-                    <div key={evaluation.id} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                      <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
-                        <Link
-                          href={evaluation.player?.id ? getProfilePath(evaluation.player.id, evaluation.player.username) : '#'}
-                          className="interactive-press flex items-start gap-3 md:gap-4 hover:opacity-90 transition-opacity cursor-pointer flex-1"
-                        >
-                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                            {showPlayerAvatar ? (
-                              <Image
-                                src={playerAvatarUrl!}
-                                alt={evaluation.player?.full_name || 'Player'}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
-                                onError={() => {
-                                  setImageErrors((prev) => new Set(prev).add(`player-${evaluation.id}`))
-                                }}
-                                unoptimized
-                              />
-                            ) : (
-                              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(playerGradientKey)}`}>
-                                <span className="text-white text-xl font-semibold">
-                                  {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                              {evaluation.player?.full_name || 'Unknown Player'}
-                            </h3>
-                            <p className="text-black text-xs md:text-sm mb-1 truncate">
-                              {evaluation.player?.school || 'Unknown School'}
-                              {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
-                              {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
-                            </p>
-                            <p className="text-black text-xs md:text-sm text-gray-600">
-                              {formatDate(evaluation.created_at)}
-                            </p>
-                          </div>
-                        </Link>
-                        {evaluation.notes && (
-                          <button
-                            onClick={() => toggleEvalMinimize(evaluation.id)}
-                            className="interactive-press flex-shrink-0 text-gray-500 hover:text-black transition-colors p-1"
-                            title={minimizedEvals.has(evaluation.id) ? 'Expand' : 'Minimize'}
-                          >
-                            <svg
-                              className={`w-5 h-5 transition-transform ${minimizedEvals.has(evaluation.id) ? '' : 'rotate-180'}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 9l-7 7-7-7"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                        {evaluation.notes && !minimizedEvals.has(evaluation.id) && (
-                        <div className="pl-0 md:pl-20 mt-4 md:mt-0">
-                          <p className="text-black leading-relaxed whitespace-pre-wrap text-sm md:text-base">
-                            {evaluation.notes}
-                          </p>
-                        </div>
-                      )}
-                      {/* Share button - bottom left underneath evaluation (always visible) */}
-                      <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
-                        <ShareButton 
-                          evaluationId={evaluation.id} 
-                          {...(currentUserId && { userId: currentUserId })}
-                          evaluation={{
-                            id: evaluation.id,
-                            share_token: evaluation.share_token || null,
-                            status: 'completed',
-                            ...(evaluation.player_id && { player_id: evaluation.player_id }),
-                            scout: profile.role === 'scout' ? {
-                              full_name: profile.full_name,
-                              organization: profile.organization,
-                            } : null,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                // Placeholder evaluations for non-signed-in users
-                [...Array(3)].map((_, index) => (
-                  <div key={index} className="border-b border-gray-200 pb-4 md:pb-6 last:border-0">
-                    <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-300 flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">
-                        <div className="h-5 bg-gray-300 rounded mb-2 w-3/4"></div>
-                        <div className="h-4 bg-gray-300 rounded mb-1 w-1/2"></div>
-                        <div className="h-4 bg-gray-300 rounded w-1/3"></div>
-                      </div>
-                    </div>
-                    <div className="pl-0 md:pl-20 mt-4 md:mt-0">
-                      <div className="h-4 bg-gray-300 rounded mb-2 w-full"></div>
-                      <div className="h-4 bg-gray-300 rounded mb-2 w-full"></div>
-                      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Sign in/Sign up overlay for non-signed-in users */}
-            {!isSignedIn && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-40 backdrop-blur-[2px]">
-                <div className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 md:p-8 max-w-md mx-4 text-center">
-                  <h3 className="text-xl md:text-2xl font-bold text-black mb-3">
-                    Sign in to view evaluations
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Create an account or sign in to see detailed evaluations
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Link
-                      href="/auth/signup"
-                      className="interactive-press flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
-                    >
-                      Sign Up
-                    </Link>
-                    <Link
-                      href="/auth/signin"
-                      className="interactive-press flex-1 px-6 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 font-medium transition-colors"
-                    >
-                      Sign In
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Report Profile Modal */}
       <Modal 
@@ -1726,6 +1973,50 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           setAuthMode(newMode)
         }}
       />
+
+      {/* Video Modal */}
+      {showVideoModal && profile.intro_video_url && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in p-4" 
+          onClick={() => setShowVideoModal(false)}
+        >
+          <div 
+            className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowVideoModal(false)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl font-bold transition-colors"
+              aria-label="Close video"
+            >
+              ×
+            </button>
+            <div ref={containerRef} className="w-full flex justify-center">
+              <video
+                ref={videoRef}
+                src={profile.intro_video_url}
+                poster={profile.intro_video_poster_url || undefined}
+                controls
+                preload="metadata"
+                onLoadedMetadata={handleVideoLoaded}
+                onEnded={handleVideoEnd}
+                className="rounded-lg"
+                style={{ 
+                  display: 'block',
+                  ...(videoSize ? {
+                    width: `${videoSize.width}px`,
+                    height: `${videoSize.height}px`
+                  } : {
+                    maxWidth: '100%'
+                  })
+                }}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

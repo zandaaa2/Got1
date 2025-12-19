@@ -1369,20 +1369,20 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
 
               {/* Social link field - show only for users with pending applications (not approved scouts) */}
               {pendingScoutApplication && profile.role !== 'scout' && (
-                <div>
-                  <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
-                    Social Media Link
-                  </label>
-                  <input
-                    type="url"
-                    id="social_link"
-                    name="social_link"
-                    value={formData.social_link}
-                    onChange={handleChange}
-                    placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
+              <div>
+                <label htmlFor="social_link" className="block text-sm font-medium text-black mb-2">
+                  Social Media Link
+                </label>
+                <input
+                  type="url"
+                  id="social_link"
+                  name="social_link"
+                  value={formData.social_link}
+                  onChange={handleChange}
+                  placeholder="https://x.com/yourhandle or https://instagram.com/yourhandle"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
               )}
 
               <div>

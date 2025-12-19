@@ -20,7 +20,7 @@ export default async function MakeAClaimPage() {
       <DynamicLayout header={null}>
         <main className="pt-6 md:pt-10 pb-12">
           <div className="max-w-4xl mx-auto">
-            <BackButton fallbackUrl="/profile" className="mb-4 text-sm font-medium text-gray-600 hover:text-black transition-colors" />
+            <BackButton fallbackUrl="/settings" className="mb-4 text-sm font-medium text-gray-600 hover:text-black transition-colors" />
             <h1 className="text-2xl md:text-3xl font-normal text-black mb-8">
               Make a Claim
             </h1>
@@ -65,3 +65,13 @@ export default async function MakeAClaimPage() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+

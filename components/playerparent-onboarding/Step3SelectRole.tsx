@@ -100,12 +100,12 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
         .select()
         .single()
 
-      if (updateError) {
-        console.error('❌ Error updating role on submit:', updateError)
-        setError(`Failed to update role: ${updateError.message || 'Unknown error'}`)
-        setLoading(false)
-        return
-      }
+        if (updateError) {
+          console.error('❌ Error updating role on submit:', updateError)
+          setError(`Failed to update role: ${updateError.message || 'Unknown error'}`)
+          setLoading(false)
+          return
+        }
 
       if (!updatedProfile) {
         console.error('❌ Step3SelectRole - No profile returned after update on submit')

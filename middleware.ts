@@ -101,8 +101,8 @@ export async function middleware(request: NextRequest) {
           supabase.auth.getSession(),
           5000
         ).catch((err) => {
-          return { data: { session: null }, error: err }
-        })
+        return { data: { session: null }, error: err }
+      })
         session = sessionResult.data?.session || null
       } catch (error) {
         // If session check times out, treat as no session for public routes
@@ -154,8 +154,8 @@ export async function middleware(request: NextRequest) {
               supabase.auth.getUser(),
               3000
             ).catch((err) => {
-              return { data: { user: null }, error: err }
-            })
+          return { data: { user: null }, error: err }
+        })
             user = userResult.data?.user || null
 
             // If getUser fails, try to refresh the session (with timeout)
@@ -165,8 +165,8 @@ export async function middleware(request: NextRequest) {
                   supabase.auth.refreshSession(session),
                   3000
                 ).catch((err) => {
-                  return { data: { session: null }, error: err }
-                })
+            return { data: { session: null }, error: err }
+          })
 
                 if (refreshResult?.data?.session && process.env.NODE_ENV === 'development') {
                   console.log('Middleware: Session refreshed (getUser failed), user ID:', refreshResult.data.session.user.id)
@@ -176,76 +176,76 @@ export async function middleware(request: NextRequest) {
                 // Use refreshed session user if available
                 if (refreshResult?.data?.session?.user) {
                   user = refreshResult.data.session.user
-                }
+          }
               } catch (refreshError) {
                 // If refresh fails, continue without user - let the page handle it
                 console.error('Middleware: Session refresh timeout/error')
               }
             } else if (user && process.env.NODE_ENV === 'development') {
-              console.log('Middleware: Session valid, user ID:', user.id)
+          console.log('Middleware: Session valid, user ID:', user.id)
             }
           } catch (error) {
             // If getUser times out, continue without user check
             console.error('Middleware: getUser timeout, continuing without user verification')
-          }
+        }
 
-          // For authenticated users on protected routes, check profile completion
+        // For authenticated users on protected routes, check profile completion
           if (user) {
-            // Profile setup routes should be allowed without completion check
-            const profileSetupRoutes = [
-              '/profile/user-setup',
-              '/profile/parent-setup',
-              '/profile/parent/create-player',
-            ]
-            const isProfileSetupRoute = profileSetupRoutes.some(route => pathname.startsWith(route))
+          // Profile setup routes should be allowed without completion check
+          const profileSetupRoutes = [
+            '/profile/user-setup',
+            '/profile/parent-setup',
+            '/profile/parent/create-player',
+          ]
+          const isProfileSetupRoute = profileSetupRoutes.some(route => pathname.startsWith(route))
 
-            if (!isProfileSetupRoute) {
-              // Check if profile has required fields
+          if (!isProfileSetupRoute) {
+            // Check if profile has required fields
               // Note: We don't use timeout here - if this query is slow, we let it continue
               // The page will handle profile validation if needed
               try {
                 const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('full_name, username, birthday, role')
-                  .eq('user_id', user.id)
-                  .maybeSingle()
+              .from('profiles')
+              .select('full_name, username, birthday, role')
+              .eq('user_id', user.id)
+              .maybeSingle()
 
-                const hasRequiredFields = profile && 
-                  profile.full_name && 
-                  profile.username && 
-                  profile.birthday
+            const hasRequiredFields = profile && 
+              profile.full_name && 
+              profile.username && 
+              profile.birthday
 
-                if (!hasRequiredFields) {
-                  // Don't redirect if user is in onboarding flows (scout or player/parent)
-                  // These flows handle profile setup themselves
-                  const isOnboardingRoute = pathname.startsWith('/scout') || pathname.startsWith('/playerparent')
-                  
-                  // If already on onboarding route, don't redirect - let the flow handle it
-                  if (isOnboardingRoute) {
-                    // Allow the request to continue to the onboarding page
-                    return response
-                  }
-                  
-                  // Check for onboarding cookies (set when user clicks "Get Started" or "Become a Scout")
-                  const playerparentOnboarding = request.cookies.get('playerparent_onboarding')?.value === 'true'
-                  const scoutOnboarding = request.cookies.get('scout_onboarding')?.value === 'true'
-                  
-                  // If user has playerparent_onboarding cookie and not already on playerparent route, redirect
-                  if (playerparentOnboarding && !pathname.startsWith('/playerparent')) {
-                    const redirectUrl = new URL('/playerparent?step=2', request.url)
-                    return NextResponse.redirect(redirectUrl)
-                  }
-                  
-                  // If user has scout_onboarding cookie and not already on scout route, redirect
-                  if (scoutOnboarding && !pathname.startsWith('/scout')) {
-                    const redirectUrl = new URL('/scout?step=3', request.url)
-                    return NextResponse.redirect(redirectUrl)
-                  }
-                  
-                  // Default: redirect to user-setup if not on onboarding routes and no onboarding cookies
-                  if (pathname !== '/profile/user-setup') {
-                    const redirectUrl = new URL('/profile/user-setup', request.url)
-                    return NextResponse.redirect(redirectUrl)
+            if (!hasRequiredFields) {
+              // Don't redirect if user is in onboarding flows (scout or player/parent)
+              // These flows handle profile setup themselves
+              const isOnboardingRoute = pathname.startsWith('/scout') || pathname.startsWith('/playerparent')
+              
+              // If already on onboarding route, don't redirect - let the flow handle it
+              if (isOnboardingRoute) {
+                // Allow the request to continue to the onboarding page
+                return response
+              }
+              
+              // Check for onboarding cookies (set when user clicks "Get Started" or "Become a Scout")
+              const playerparentOnboarding = request.cookies.get('playerparent_onboarding')?.value === 'true'
+              const scoutOnboarding = request.cookies.get('scout_onboarding')?.value === 'true'
+              
+              // If user has playerparent_onboarding cookie and not already on playerparent route, redirect
+              if (playerparentOnboarding && !pathname.startsWith('/playerparent')) {
+                const redirectUrl = new URL('/playerparent?step=2', request.url)
+                return NextResponse.redirect(redirectUrl)
+              }
+              
+              // If user has scout_onboarding cookie and not already on scout route, redirect
+              if (scoutOnboarding && !pathname.startsWith('/scout')) {
+                const redirectUrl = new URL('/scout?step=3', request.url)
+                return NextResponse.redirect(redirectUrl)
+              }
+              
+              // Default: redirect to user-setup if not on onboarding routes and no onboarding cookies
+              if (pathname !== '/profile/user-setup') {
+                const redirectUrl = new URL('/profile/user-setup', request.url)
+                return NextResponse.redirect(redirectUrl)
                   }
                 }
               } catch (profileError) {

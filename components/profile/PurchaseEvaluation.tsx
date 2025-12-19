@@ -102,7 +102,7 @@ function EvalCard({
         </div>
       )}
 
-      <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-gray-50 rounded-lg p-6 mb-6">
         <div className="space-y-4">
           {/* Price and Turnaround Time */}
           <div>
@@ -563,7 +563,7 @@ export default function PurchaseEvaluation({
             router={router}
             processing={processing}
           />
-          
+
           {/* Standard Eval Card - Separate */}
           <EvalCard
             title={scout.offer_title || 'Standard Evaluation'}
@@ -581,8 +581,8 @@ export default function PurchaseEvaluation({
             router={router}
             processing={processing}
           />
-        </>
-      ) : (
+          </>
+        ) : (
         /* Standard Eval Card - when free eval not enabled */
         <EvalCard
           title={scout.offer_title || 'Standard Evaluation'}
@@ -600,7 +600,7 @@ export default function PurchaseEvaluation({
           router={router}
           processing={processing}
         />
-      )}
+        )}
 
       {/* Children Selection Modal for Parents */}
       {isParent && parentId && (

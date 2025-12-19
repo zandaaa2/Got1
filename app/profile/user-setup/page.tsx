@@ -1,9 +1,7 @@
 import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/layout/Sidebar'
-import UserSetupForm from '@/components/profile/UserSetupForm'
-import DynamicLayout from '@/components/layout/DynamicLayout'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import UserSetupPageClient from './UserSetupPageClient'
 
 export default async function UserSetupPage({
   searchParams,
@@ -60,17 +58,11 @@ export default async function UserSetupPage({
   const sanitizedAvatar = isMeaningfulAvatar(rawAvatarUrl) ? rawAvatarUrl : null
 
   return (
-    <div className="min-h-screen bg-white flex">
-      <Sidebar activePage="browse" />
-      <DynamicLayout header={null}>
-        {/* REFERRAL PROCESS TEMPORARILY DISABLED - referrerId prop removed */}
-        <UserSetupForm
-          userEmail={user?.email || ''}
-          userName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
-          userAvatar={sanitizedAvatar || ''}
-        />
-      </DynamicLayout>
-    </div>
+    <UserSetupPageClient
+      userEmail={user?.email || ''}
+      userName={profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''}
+      userAvatar={sanitizedAvatar || ''}
+    />
   )
 }
 

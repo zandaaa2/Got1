@@ -74,17 +74,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Scout profile not found' }, { status: 404 })
     }
 
-    // Verify payment was completed (status should be 'confirmed' or 'in_progress')
-    if (evaluation.payment_status !== 'paid') {
+    // Check if this is a free evaluation (price = 0)
+    const isFreeEval = evaluation.price === 0
+
+    // For paid evals, verify payment was completed
+    if (!isFreeEval && evaluation.payment_status !== 'paid') {
       return NextResponse.json(
         { error: 'Payment not completed. Cannot process payout.' },
         { status: 400 }
       )
     }
 
-    // Process payout if not already done
+    // Process payout if not already done (skip for free evals)
     let transferId = evaluation.transfer_id
-    if (!transferId && scoutProfile.stripe_account_id) {
+    if (!isFreeEval && !transferId && scoutProfile.stripe_account_id) {
       try {
         // Calculate amounts (already calculated in webhook, but recalculate for safety)
         const platformFee = Math.round(evaluation.price * 0.1 * 100) / 100

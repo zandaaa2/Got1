@@ -235,8 +235,10 @@ export default function UserSetupForm({
         }
       }
 
-      // Sanitize avatar URL
-      const sanitizedAvatar = isMeaningfulAvatar(avatarUrl) ? avatarUrl : null
+      // Sanitize avatar URL - check both state and prop (Google avatar)
+      // Use avatarUrl if available (user uploaded new image), otherwise fall back to userAvatar (Google avatar)
+      const avatarToUse = avatarUrl || userAvatar
+      const sanitizedAvatar = isMeaningfulAvatar(avatarToUse) ? avatarToUse : null
 
       // CRITICAL: Always create profile with role='user' initially
       // The role will only change if user explicitly selected one on their profile page

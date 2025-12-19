@@ -165,7 +165,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           // Exclude suspended scouts
           const suspendedUntil = p.suspended_until
           if (suspendedUntil && typeof suspendedUntil === 'string') {
-            return new Date(suspendedUntil) <= now
+          return new Date(suspendedUntil) <= now
           }
           return true
         }
@@ -472,9 +472,9 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             {viewMode === 'free-evals' && profile.free_eval_enabled ? (
               <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">Free</span>
             ) : (
-              <p className="text-sm md:text-base font-semibold text-blue-600">
-                ${profile.price_per_eval ?? 99}
-              </p>
+            <p className="text-sm md:text-base font-semibold text-blue-600">
+              ${profile.price_per_eval ?? 99}
+            </p>
             )}
             <p className="text-xs text-gray-500">
               {profile.turnaround_time || '72 hrs'}
@@ -685,7 +685,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             {isFreeEval ? (
               <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded">Free</span>
             ) : (
-              <span className="font-semibold text-black">${price}</span>
+            <span className="font-semibold text-black">${price}</span>
             )}
             <span>•</span>
             <span>{turnaround}</span>

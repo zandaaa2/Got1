@@ -26,9 +26,9 @@ export default async function ProfilePage() {
   // Parallelize all initial queries
   const [profileResult, scoutApplicationsResult] = await Promise.all([
     supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
+    .from('profiles')
+    .select('*')
+    .eq('user_id', session.user.id)
       .maybeSingle(),
     // Fetch all scout applications in one query instead of 3 separate queries
     supabase
@@ -56,7 +56,7 @@ export default async function ProfilePage() {
 
   // Note: Role is set correctly in ProfileSetupForm (step 3) when user selects player or parent
   // No auto-fix needed based on data fields - role should match what user selected
-
+  
   // Only auto-fix if there's an approved application AND no recent denial
   // This prevents restoring scout status after admin revocation
   if (profile.role !== 'scout' && approvedApplication && !recentlyDeniedApplication) {
@@ -117,12 +117,12 @@ export default async function ProfilePage() {
       <Sidebar />
       <DynamicLayout header={null}>
         <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading profile...</div>}>
-          <ProfileContent 
-            profile={profile} 
-            hasPendingApplication={!!scoutApplication}
-            pendingScoutApplication={scoutApplication || null}
-            needsReferrerSelection={needsReferrerSelection}
-          />
+        <ProfileContent 
+          profile={profile} 
+          hasPendingApplication={!!scoutApplication}
+          pendingScoutApplication={scoutApplication || null}
+          needsReferrerSelection={needsReferrerSelection}
+        />
         </Suspense>
       </DynamicLayout>
     </div>

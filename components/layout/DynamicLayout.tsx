@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import PWAInstallButton from '@/components/shared/PWAInstallButton'
 import BottomNav from '@/components/layout/BottomNav'
@@ -16,7 +18,9 @@ interface DynamicLayoutProps {
  */
 export default function DynamicLayout({ children, header }: DynamicLayoutProps) {
   const sidebarWidth = useSidebarWidth()
+  const pathname = usePathname()
   const [isMobile, setIsMobile] = useState(false)
+  const isProfilePage = pathname === '/profile'
 
   useEffect(() => {
     const checkMobile = () => {
@@ -58,6 +62,15 @@ export default function DynamicLayout({ children, header }: DynamicLayoutProps) 
             isMobile ? 'py-4' : 'py-6'
           }`}>
             <PWAInstallButton />
+            {/* Mobile Settings Button - Only show on profile page */}
+            {isMobile && isProfilePage && (
+              <Link
+                href="/settings"
+                className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Settings
+              </Link>
+            )}
           </div>
         </div>
       )}

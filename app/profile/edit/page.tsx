@@ -28,6 +28,33 @@ export default async function ProfileEditPage() {
     redirect('/profile/user-setup')
   }
 
+  // Debug: Log profile role to help diagnose why player fields aren't showing
+  console.log('🔍 ProfileEditPage - Profile role:', profile.role)
+  console.log('🔍 ProfileEditPage - Profile has player data?', {
+    hasHudlLink: !!profile.hudl_link,
+    hasPosition: !!profile.position,
+    hasSchool: !!profile.school,
+    hasGraduationYear: !!profile.graduation_year
+  })
+
+  // Auto-fix: If role is 'user' but profile has player data, update role to 'player'
+  if (profile.role === 'user' && (profile.hudl_link || profile.position || profile.school)) {
+    console.log('⚠️ ProfileEditPage - Auto-fixing role from "user" to "player"')
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('profiles')
+      .update({ role: 'player' })
+      .eq('user_id', session.user.id)
+      .select()
+      .single()
+    
+    if (updateError) {
+      console.error('❌ ProfileEditPage - Error auto-fixing role:', updateError)
+    } else if (updatedProfile) {
+      console.log('✅ ProfileEditPage - Role auto-fixed to:', updatedProfile.role)
+      profile = updatedProfile
+    }
+  }
+
   // Check if profile has been saved for the first time
   // If updated_at is very close to created_at (within 5 seconds), it hasn't been saved yet
   const profileCreatedAt = new Date(profile.created_at)

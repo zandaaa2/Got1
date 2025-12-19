@@ -20,8 +20,10 @@ export const revalidate = 0 // Disable caching completely
  */
 export default async function EvaluationPage({
   params,
+  searchParams,
 }: {
   params: { id: string }
+  searchParams: { from?: string }
 }) {
   const supabase = createServerClient()
   const {
@@ -117,6 +119,7 @@ export default async function EvaluationPage({
             isScout={isScout}
             userId={session.user.id}
             scoutProfile={isScout ? profile : undefined}
+            fromProfile={searchParams.from === 'scout' ? 'scout' : searchParams.from === 'player' ? 'player' : undefined}
           />
         </Suspense>
       </DynamicLayout>

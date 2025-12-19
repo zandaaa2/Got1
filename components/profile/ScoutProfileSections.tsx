@@ -73,11 +73,8 @@ export default function ScoutProfileSections({ scoutName, isSignedIn = false }: 
     return null
   }
 
-  // Dynamic grid columns based on visible sections
-  const gridCols = visibleSections === 1 ? 'md:grid-cols-1' : visibleSections === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'
-
   return (
-    <div className={`grid grid-cols-1 ${gridCols} gap-6 md:gap-8 mt-12`}>
+    <div className="space-y-6 md:space-y-8 mt-12">
       {/* Why it's valuable */}
       {shouldShowSection('why-valuable') && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
