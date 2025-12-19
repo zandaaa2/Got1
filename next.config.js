@@ -47,6 +47,7 @@ const nextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co https://vercel.live wss://*.supabase.co https://*.stripe.com https://m.stripe.network https://va.vercel-scripts.com https://api.calendly.com",
               "frame-src 'self' https://*.supabase.co https://*.stripe.com https://calendly.com",
+              "media-src 'self' https: blob: data:",
             ].join('; '),
           },
         ],

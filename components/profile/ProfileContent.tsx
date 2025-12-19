@@ -14,6 +14,7 @@ import CollegeMultiSelect from '@/components/profile/CollegeMultiSelect'
 import { collegeEntries } from '@/lib/college-data'
 import ParentDashboard from '@/components/profile/ParentDashboard'
 import PendingScoutApplication from '@/components/profile/PendingScoutApplication'
+import IntroVideo from '@/components/profile/IntroVideo'
 
 interface ProfileContentProps {
   profile: any
@@ -2059,7 +2060,7 @@ function StripeConnectSection({ profile }: { profile: any }) {
 
 export default function ProfileContent({ profile, hasPendingApplication, pendingScoutApplication, needsReferrerSelection = false }: ProfileContentProps) {
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
-  const [activeTab, setActiveTab] = useState<'offers' | 'posts'>('offers')
+  const [activeTab, setActiveTab] = useState<'offers' | 'intro-video' | 'posts'>('offers')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallButton, setShowInstallButton] = useState(false)
   const router = useRouter()
@@ -2725,6 +2726,16 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         <div className="mb-6 md:mb-8">
           <div className="flex gap-2 md:gap-4 border-b border-gray-200">
             <button
+              onClick={() => setActiveTab('intro-video')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'intro-video'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Intro Video
+            </button>
+            <button
               onClick={() => setActiveTab('offers')}
               className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
                 activeTab === 'offers'
@@ -2748,16 +2759,26 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
         </div>
       )}
 
-      {/* Scout Setup Progress - Only show for scouts */}
-      {profile.role === 'scout' && <ScoutSetupProgress key={`setup-${refreshKey}`} profile={profile} />}
-
       {/* Tab Content - Only show for scouts */}
       {profile.role === 'scout' && (
         <div className="mb-6 md:mb-8">
           {activeTab === 'offers' && (
             <div>
+              {/* Scout Setup Progress - Only show under Eval Offers tab */}
+              <ScoutSetupProgress key={`setup-${refreshKey}`} profile={profile} />
               {/* Money Dashboard - Only show for scouts with completed Stripe Connect account */}
               <MoneyDashboard key={`money-${refreshKey}`} profile={profile} />
+            </div>
+          )}
+          {activeTab === 'intro-video' && (
+            <div>
+              <IntroVideo 
+                profile={profile} 
+                onUpdate={() => {
+                  setRefreshKey(prev => prev + 1)
+                  router.refresh()
+                }}
+              />
             </div>
           )}
           {activeTab === 'posts' && (
