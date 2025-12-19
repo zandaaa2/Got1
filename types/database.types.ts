@@ -37,6 +37,7 @@ export interface ScoutProfile extends Profile {
   scout_category?: 'pro' | 'd1-college' | 'smaller-college' | null
   offer_title?: string | null
   intro_video_url?: string | null
+  intro_video_poster_url?: string | null
 }
 
 export interface ParentProfile extends Profile {

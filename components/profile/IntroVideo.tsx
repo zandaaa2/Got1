@@ -280,6 +280,57 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
     }
   }
 
+  // Extract a frame from video to use as poster image
+  const extractVideoFrame = async (file: File): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video')
+      video.preload = 'metadata'
+      video.muted = true
+      
+      const videoUrl = URL.createObjectURL(file)
+      video.src = videoUrl
+      
+      video.onloadedmetadata = () => {
+        // Seek to 1 second or 10% of video, whichever is smaller
+        const seekTime = Math.min(1, video.duration * 0.1)
+        video.currentTime = seekTime
+      }
+      
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          // Limit poster size to max 800px width for faster loading
+          const maxWidth = 800
+          const aspectRatio = video.videoHeight / video.videoWidth
+          canvas.width = Math.min(video.videoWidth, maxWidth)
+          canvas.height = canvas.width * aspectRatio
+          
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            // Use lower quality (0.7) for smaller file size - poster loads quickly
+            canvas.toBlob((blob) => {
+              URL.revokeObjectURL(videoUrl)
+              resolve(blob)
+            }, 'image/jpeg', 0.7) // 70% quality for smaller file size
+          } else {
+            URL.revokeObjectURL(videoUrl)
+            resolve(null)
+          }
+        } catch (err) {
+          console.warn('Could not extract video frame:', err)
+          URL.revokeObjectURL(videoUrl)
+          resolve(null)
+        }
+      }
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(videoUrl)
+        resolve(null)
+      }
+    })
+  }
+
   const uploadVideo = async (file: File) => {
     setUploading(true)
     setError(null)
@@ -296,7 +347,37 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
         throw new Error('You must be logged in to upload a video')
       }
 
-      // Delete old video if it exists
+      // Extract poster image from video
+      console.log('Extracting video frame for poster...')
+      const posterBlob = await extractVideoFrame(file)
+      let posterUrl: string | null = null
+      
+      if (posterBlob) {
+        try {
+          const posterFileName = `${session.user.id}/${Date.now()}_poster.jpg`
+          const { error: posterUploadError } = await supabase.storage
+            .from('intro-videos')
+            .upload(posterFileName, posterBlob, {
+              cacheControl: '3600',
+              upsert: true,
+              contentType: 'image/jpeg'
+            })
+          
+          if (!posterUploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('intro-videos')
+              .getPublicUrl(posterFileName)
+            posterUrl = publicUrl
+            console.log('Poster image uploaded:', posterUrl)
+          } else {
+            console.warn('Could not upload poster image:', posterUploadError)
+          }
+        } catch (err) {
+          console.warn('Error uploading poster image:', err)
+        }
+      }
+
+      // Delete old video and poster if they exist
       if (profile?.intro_video_url) {
         try {
           const oldFileName = profile.intro_video_url.split('/').pop()?.split('?')[0]
@@ -307,6 +388,20 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
           }
         } catch (err) {
           console.warn('Could not delete old video:', err)
+        }
+      }
+      
+      // Delete old poster image if it exists
+      if (profile?.intro_video_poster_url) {
+        try {
+          const oldPosterFileName = profile.intro_video_poster_url.split('/').pop()?.split('?')[0]
+          if (oldPosterFileName) {
+            await supabase.storage
+              .from('intro-videos')
+              .remove([`${session.user.id}/${oldPosterFileName}`])
+          }
+        } catch (err) {
+          console.warn('Could not delete old poster image:', err)
         }
       }
 
@@ -367,7 +462,10 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
       // Update profile in database
       const { error: updateError, data: updateData } = await supabase
         .from('profiles')
-        .update({ intro_video_url: publicUrl })
+        .update({ 
+          intro_video_url: publicUrl,
+          intro_video_poster_url: posterUrl
+        })
         .eq('user_id', session.user.id)
         .select()
 
@@ -387,6 +485,11 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
       setIsSaved(true)
       setIsEditing(false)
       setPendingVideoFile(null)
+      
+      // Update profile state to include poster URL
+      if (onUpdate) {
+        onUpdate()
+      }
       
       // Call onUpdate callback if provided
       if (onUpdate) {
@@ -430,10 +533,23 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
         }
       }
 
+      // Delete poster image from storage
+      if (profile?.intro_video_poster_url) {
+        const posterFileName = profile.intro_video_poster_url.split('/').pop()?.split('?')[0]
+        if (posterFileName) {
+          await supabase.storage
+            .from('intro-videos')
+            .remove([`${session.user.id}/${posterFileName}`])
+        }
+      }
+
       // Update profile in database
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ intro_video_url: null })
+        .update({ 
+          intro_video_url: null,
+          intro_video_poster_url: null
+        })
         .eq('user_id', session.user.id)
 
       if (updateError) {
@@ -472,6 +588,7 @@ export default function IntroVideo({ profile, onUpdate }: IntroVideoProps) {
             <video
               ref={videoRef}
               src={videoPreview}
+              poster={profile?.intro_video_poster_url || undefined}
               controls
               preload="metadata"
               onLoadedMetadata={handleVideoLoaded}
