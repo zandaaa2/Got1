@@ -218,21 +218,7 @@ function MoneyDashboard({ profile }: { profile: any }) {
     setIsBioExpanded(false) // Reset bio expansion when profile updates
   }, [profile.price_per_eval, profile.turnaround_time, profile.bio])
 
-  // Track profile view for own profile
-  useEffect(() => {
-    if (profile.id) {
-      const today = new Date().toDateString()
-      const viewKey = `profile_view_${profile.id}_${today}`
-      
-      if (typeof window !== 'undefined' && !localStorage.getItem(viewKey)) {
-        fetch(`/api/profile/${profile.id}/track-view`, {
-          method: 'POST',
-        }).catch(console.error)
-        
-        localStorage.setItem(viewKey, 'true')
-      }
-    }
-  }, [profile.id])
+  // Note: We don't track views for your own profile - only external views count
 
   const checkAccountStatus = async (options: { suppressSkeleton?: boolean } = {}) => {
     if (!options.suppressSkeleton) {

@@ -58,28 +58,36 @@ export default function EvaluationDetail({
   }, [menuOpen])
   
   // Track evaluation view (increments both evaluation view count and scout's profile view count)
+  // Only counts scout profile view if viewer is NOT the scout themselves
   useEffect(() => {
     if (evaluation?.id) {
       const today = new Date().toDateString()
       const viewKey = `eval_view_${evaluation.id}_${today}`
       
       if (typeof window !== 'undefined' && !localStorage.getItem(viewKey)) {
-        // Track view on the evaluation itself
+        // Track view on the evaluation itself (always track, even if scout views their own)
         fetch(`/api/evaluation/${evaluation.id}/track-view`, {
           method: 'POST',
         }).catch(console.error)
         
-        // Also track view on scout's profile
-        if (evaluation?.scout_id) {
-          fetch(`/api/profile/${evaluation.scout_id}/track-view`, {
-            method: 'POST',
-          }).catch(console.error)
+        // Track view on scout's profile ONLY if viewer is NOT the scout themselves
+        // isScout is true when the current user is the scout who wrote the evaluation
+        const scoutProfileId = evaluation.scout?.id
+        if (scoutProfileId && !isScout) {
+          const scoutViewKey = `scout_profile_view_from_eval_${scoutProfileId}_${today}`
+          if (!localStorage.getItem(scoutViewKey)) {
+            fetch(`/api/profile/${scoutProfileId}/track-view`, {
+              method: 'POST',
+            }).catch(console.error)
+            
+            localStorage.setItem(scoutViewKey, 'true')
+          }
         }
         
         localStorage.setItem(viewKey, 'true')
       }
     }
-  }, [evaluation?.id, evaluation?.scout_id])
+  }, [evaluation?.id, evaluation?.scout?.id, isScout])
   
   // Minimum character requirement: 250 for free evals, 1000 for paid evals
   const isFreeEval = evaluation.price === 0
