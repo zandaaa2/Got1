@@ -549,43 +549,47 @@ export default function PurchaseEvaluation({
     <div className={offerCount === 1 ? 'max-w-2xl' : 'max-w-2xl mx-auto'}>
       {/* Evaluation Offers */}
       {scout.free_eval_enabled && scout.free_eval_description ? (
-        <>
+        <div className="flex flex-col md:flex-row md:gap-6 space-y-6 md:space-y-0">
           {/* Free Eval Card - Separate */}
-          <EvalCard
-            title="Free Evaluation"
-            price={0}
-            description={scout.free_eval_description}
-            onButtonClick={handleRequestFreeEval}
-            buttonText="Request Free Evaluation"
-            isFree={true}
-            scout={scout}
-            error={error}
-            isParent={isParent}
-            player={player}
-            isSignedIn={isSignedIn}
-            onSignUpClick={onSignUpClick}
-            router={router}
-            processing={processing}
-          />
+          <div className="flex-1">
+            <EvalCard
+              title="Free Evaluation"
+              price={0}
+              description={scout.free_eval_description}
+              onButtonClick={handleRequestFreeEval}
+              buttonText="Request Free Evaluation"
+              isFree={true}
+              scout={scout}
+              error={error}
+              isParent={isParent}
+              player={player}
+              isSignedIn={isSignedIn}
+              onSignUpClick={onSignUpClick}
+              router={router}
+              processing={processing}
+            />
+          </div>
 
           {/* Standard Eval Card - Separate */}
-          <EvalCard
-            title={scout.offer_title || 'Standard Evaluation'}
-            price={scout.price_per_eval || 99}
-            description={null}
-            onButtonClick={handlePurchase}
-            buttonText={`Request Evaluation - $${scout.price_per_eval || 99}`}
-            isFree={false}
-            scout={scout}
-            error={error}
-            isParent={isParent}
-            player={player}
-            isSignedIn={isSignedIn}
-            onSignUpClick={onSignUpClick}
-            router={router}
-            processing={processing}
-          />
-          </>
+          <div className="flex-1">
+            <EvalCard
+              title={scout.offer_title || 'Standard Evaluation'}
+              price={scout.price_per_eval || 99}
+              description={null}
+              onButtonClick={handlePurchase}
+              buttonText={`Request Evaluation - $${scout.price_per_eval || 99}`}
+              isFree={false}
+              scout={scout}
+              error={error}
+              isParent={isParent}
+              player={player}
+              isSignedIn={isSignedIn}
+              onSignUpClick={onSignUpClick}
+              router={router}
+              processing={processing}
+            />
+          </div>
+        </div>
         ) : (
         /* Standard Eval Card - when free eval not enabled */
         <EvalCard

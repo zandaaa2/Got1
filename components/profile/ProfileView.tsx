@@ -1499,10 +1499,10 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 const hasFreeEval = profile.free_eval_enabled && profile.free_eval_description
                 const offerCount = hasFreeEval ? 2 : 1
                 return (
-                  <div className={offerCount === 1 ? 'space-y-6 flex flex-col items-start' : 'space-y-6'}>
+                  <div className={offerCount === 1 ? 'space-y-6 flex flex-col items-start' : 'flex flex-col md:flex-row md:gap-6 space-y-6 md:space-y-0'}>
                     {/* Free Evaluation Offer */}
                     {profile.free_eval_enabled && profile.free_eval_description && (
-                      <div className="border border-gray-200 rounded-lg p-6">
+                      <div className="flex-1 border border-gray-200 rounded-lg p-6">
                       <div className="flex items-start justify-between mb-4">
                         <h2 className="text-lg font-semibold text-black">Free Evaluation</h2>
                         <a
@@ -1531,7 +1531,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                   )}
                   
                   {/* Standard Evaluation Offer */}
-                  <div className="border border-gray-200 rounded-lg p-6">
+                  <div className="flex-1 border border-gray-200 rounded-lg p-6">
                     <div className="flex items-start justify-between mb-4">
                       <h2 className="text-lg font-semibold text-black">
                         {profile.offer_title || 'Standard Evaluation'}
