@@ -26,7 +26,9 @@ interface Evaluation {
   scout_payout?: number | null
   completed_at?: string | null
   created_at: string
+  notes?: string | null
   share_token?: string | null
+  view_count?: number | null
   scout?: {
     id: string
     username: string | null
