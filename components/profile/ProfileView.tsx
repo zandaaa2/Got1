@@ -270,6 +270,22 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     }
   }, [profile.intro_video_url, profile.id])
 
+  // Auto-play video when modal opens (after user interaction)
+  useEffect(() => {
+    if (showVideoModal && videoRef.current) {
+      // Small delay to ensure video element is ready
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play().catch((error) => {
+            // Autoplay may fail on some browsers, user can still click play
+            console.log('Autoplay prevented:', error)
+          })
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [showVideoModal])
+
   // Handle video end to mark as watched
   const handleVideoEnd = () => {
     if (profile.intro_video_url && profile.id) {
@@ -1420,11 +1436,15 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               )}
               
               {/* Own Profile - Show Eval Offers Preview */}
-              {isOwnProfile && profile.role === 'scout' && (
-                <div className="space-y-6">
-                  {/* Free Evaluation Offer */}
-                  {profile.free_eval_enabled && profile.free_eval_description && (
-                    <div className="border border-gray-200 rounded-lg p-6">
+              {isOwnProfile && profile.role === 'scout' && (() => {
+                // Count number of offers: 1 if only standard, 2 if both free and standard
+                const hasFreeEval = profile.free_eval_enabled && profile.free_eval_description
+                const offerCount = hasFreeEval ? 2 : 1
+                return (
+                  <div className={offerCount === 1 ? 'space-y-6 flex flex-col items-start' : 'space-y-6'}>
+                    {/* Free Evaluation Offer */}
+                    {profile.free_eval_enabled && profile.free_eval_description && (
+                      <div className="border border-gray-200 rounded-lg p-6">
                       <div className="flex items-start justify-between mb-4">
                         <h2 className="text-lg font-semibold text-black">Free Evaluation</h2>
                         <a
@@ -1574,10 +1594,13 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                     </div>
                   </div>
                 </div>
-              )}
+                  )
+                })()}
               
-              {/* Why Valuable, What to Expect, FAQ */}
-              <ScoutProfileSections scoutName={profile.full_name || 'This scout'} isSignedIn={isOwnProfile ? false : isSignedIn} />
+              {/* Why Valuable, What to Expect, FAQ - Show only for external scout profile views */}
+              {!isOwnProfile && (
+                <ScoutProfileSections scoutName={profile.full_name || 'This scout'} isSignedIn={isSignedIn} />
+              )}
             </div>
           )}
           {activeTab === 'posts' && (
@@ -1615,49 +1638,81 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                     const fromParam = profile.role === 'scout' ? 'scout' : 'player'
                     const evaluationPath = `/evaluations/${evaluation.id}?from=${fromParam}`
 
+                    const isMinimized = minimizedEvals.has(evaluation.id)
+                    const evaluationPrice = evaluation.price || 0
+
                     return (
                       <div key={evaluation.id} className="bg-white border border-gray-200 rounded-lg p-6">
                         <div className="border-b border-gray-200 pb-4 md:pb-6 mb-4 md:mb-6">
-                          <Link
-                            href={playerProfilePath || evaluationPath}
-                            className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4 hover:opacity-90 transition-opacity"
-                          >
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                              {showPlayerAvatar ? (
-                                <Image
-                                  src={playerAvatarUrl!}
-                                  alt={evaluation.player?.full_name || 'Player'}
-                                  width={64}
-                                  height={64}
-                                  className="w-full h-full object-cover"
-                                  onError={() => {
-                                    setImageErrors((prev) => new Set(prev).add(`player-eval-${evaluation.id}`))
-                                  }}
-                                  unoptimized
-                                />
-                              ) : (
-                                <div className={`w-full h-full flex items-center justify-center ${getGradientForId(playerGradientKey)}`}>
-                                  <span className="text-white text-xl font-semibold">
-                                    {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
-                                  </span>
-                                </div>
-                              )}
+                          <div className="flex items-start justify-between mb-3 md:mb-4">
+                            <Link
+                              href={playerProfilePath || evaluationPath}
+                              className="flex items-start gap-3 md:gap-4 flex-1 hover:opacity-90 transition-opacity"
+                            >
+                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                                {showPlayerAvatar ? (
+                                  <Image
+                                    src={playerAvatarUrl!}
+                                    alt={evaluation.player?.full_name || 'Player'}
+                                    width={64}
+                                    height={64}
+                                    className="w-full h-full object-cover"
+                                    onError={() => {
+                                      setImageErrors((prev) => new Set(prev).add(`player-eval-${evaluation.id}`))
+                                    }}
+                                    unoptimized
+                                  />
+                                ) : (
+                                  <div className={`w-full h-full flex items-center justify-center ${getGradientForId(playerGradientKey)}`}>
+                                    <span className="text-white text-xl font-semibold">
+                                      {evaluation.player?.full_name?.charAt(0).toUpperCase() || '?'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
+                                  {evaluation.player?.full_name || 'Unknown Player'}
+                                </h3>
+                                <p className="text-black text-xs md:text-sm mb-1 truncate">
+                                  {evaluation.player?.school || 'Unknown School'}
+                                  {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
+                                  {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
+                                </p>
+                                <p className="text-black text-xs md:text-sm text-gray-600">
+                                  {new Date(evaluation.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </Link>
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              {/* Price */}
+                              <span className="text-base md:text-lg font-bold text-black">
+                                ${evaluationPrice.toFixed(2)}
+                              </span>
+                              {/* Minimize/Expand Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleEvalMinimize(evaluation.id)
+                                }}
+                                className="interactive-press p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                aria-label={isMinimized ? 'Expand' : 'Minimize'}
+                                title={isMinimized ? 'Expand' : 'Minimize'}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={2}
+                                  stroke="currentColor"
+                                  className={`w-5 h-5 transition-transform ${isMinimized ? '' : 'rotate-180'}`}
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                                {evaluation.player?.full_name || 'Unknown Player'}
-                              </h3>
-                              <p className="text-black text-xs md:text-sm mb-1 truncate">
-                                {evaluation.player?.school || 'Unknown School'}
-                                {evaluation.player?.school && evaluation.player?.graduation_year && ', '}
-                                {evaluation.player?.graduation_year && `${evaluation.player.graduation_year}`}
-                              </p>
-                              <p className="text-black text-xs md:text-sm text-gray-600">
-                                {new Date(evaluation.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </Link>
-                          {evaluation.notes && (
+                          </div>
+                          {evaluation.notes && !isMinimized && (
                             <Link
                               href={evaluationPath}
                               className="block pl-0 md:pl-20 mt-4 md:mt-0 hover:opacity-90 transition-opacity"
@@ -1668,22 +1723,24 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                             </Link>
                           )}
                           {/* Share button */}
-                          <div className="pl-0 md:pl-20 mt-6 flex items-start">
-                            <ShareButton 
-                              evaluationId={evaluation.id} 
-                              userId={currentUserId || undefined}
-                              evaluation={{
-                                id: evaluation.id,
-                                share_token: evaluation.share_token || null,
-                                status: 'completed',
-                                player_id: evaluation.player_id || undefined,
-                                scout: profile.role === 'scout' ? {
-                                  full_name: profile.full_name,
-                                  organization: profile.organization,
-                                } : null,
-                              }}
-                            />
-                          </div>
+                          {!isMinimized && (
+                            <div className="pl-0 md:pl-20 mt-6 flex items-start">
+                              <ShareButton 
+                                evaluationId={evaluation.id} 
+                                userId={currentUserId || undefined}
+                                evaluation={{
+                                  id: evaluation.id,
+                                  share_token: evaluation.share_token || null,
+                                  status: 'completed',
+                                  player_id: evaluation.player_id || undefined,
+                                  scout: profile.role === 'scout' ? {
+                                    full_name: profile.full_name,
+                                    organization: profile.organization,
+                                  } : null,
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
@@ -1997,9 +2054,18 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 src={profile.intro_video_url}
                 poster={profile.intro_video_poster_url || undefined}
                 controls
-                preload="metadata"
+                playsInline
+                preload="auto"
                 onLoadedMetadata={handleVideoLoaded}
                 onEnded={handleVideoEnd}
+                onPlay={() => {
+                  // Ensure video plays when user clicks play button
+                  if (videoRef.current && videoRef.current.paused) {
+                    videoRef.current.play().catch((error) => {
+                      console.log('Play failed:', error)
+                    })
+                  }
+                }}
                 className="rounded-lg"
                 style={{ 
                   display: 'block',

@@ -541,8 +541,12 @@ export default function PurchaseEvaluation({
     }
   }
 
+  // Count number of offers
+  const hasFreeEval = scout.free_eval_enabled && scout.free_eval_description
+  const offerCount = hasFreeEval ? 2 : 1
+
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className={offerCount === 1 ? 'max-w-2xl' : 'max-w-2xl mx-auto'}>
       {/* Evaluation Offers */}
       {scout.free_eval_enabled && scout.free_eval_description ? (
         <>
