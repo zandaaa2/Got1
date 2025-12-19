@@ -79,7 +79,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
         // Try with share_token first
         let query = supabase
           .from('evaluations')
-          .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id, share_token, purchased_by')
+          .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id, share_token, purchased_by, view_count')
 
         if (role === 'scout') {
           query = query.eq('scout_id', userId)
@@ -129,7 +129,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           console.warn('share_token column not found, fetching without it')
           let queryWithoutToken = supabase
             .from('evaluations')
-            .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id')
+            .select('id, status, price, scout_payout, completed_at, notes, created_at, scout_id, player_id, view_count')
 
           if (role === 'scout') {
             queryWithoutToken = queryWithoutToken.eq('scout_id', userId)
@@ -211,6 +211,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           completed_at: evaluation.completed_at,
           notes: evaluation.notes,
           created_at: evaluation.created_at,
+          view_count: evaluation.view_count,
           scout: scoutProfile ? {
             id: scoutProfile.id,
             username: scoutProfile.username,
@@ -530,9 +531,9 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                   </>
                   )}
                 </Link>
-                {/* Share button - only visible for completed evaluations */}
+                {/* Share button and View Count - only visible for completed evaluations */}
                 {evaluation.status === 'completed' && (
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex items-center gap-4">
                   <ShareButton 
                     evaluationId={evaluation.id} 
                     userId={userId}
@@ -544,6 +545,12 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
                       scout: evaluation.scout,
                     }}
                   />
+                  {/* View Count */}
+                  {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                    <div className="text-sm text-gray-600">
+                      {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
+                    </div>
+                  )}
                 </div>
                 )}
               </div>

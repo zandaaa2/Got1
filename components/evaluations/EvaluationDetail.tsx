@@ -57,17 +57,24 @@ export default function EvaluationDetail({
     }
   }, [menuOpen])
   
-  // Track evaluation view (increments scout's profile view count)
+  // Track evaluation view (increments both evaluation view count and scout's profile view count)
   useEffect(() => {
-    if (evaluation?.scout_id) {
+    if (evaluation?.id) {
       const today = new Date().toDateString()
       const viewKey = `eval_view_${evaluation.id}_${today}`
       
       if (typeof window !== 'undefined' && !localStorage.getItem(viewKey)) {
-        // Track view on scout's profile
-        fetch(`/api/profile/${evaluation.scout_id}/track-view`, {
+        // Track view on the evaluation itself
+        fetch(`/api/evaluation/${evaluation.id}/track-view`, {
           method: 'POST',
         }).catch(console.error)
+        
+        // Also track view on scout's profile
+        if (evaluation?.scout_id) {
+          fetch(`/api/profile/${evaluation.scout_id}/track-view`, {
+            method: 'POST',
+          }).catch(console.error)
+        }
         
         localStorage.setItem(viewKey, 'true')
       }
@@ -745,8 +752,8 @@ export default function EvaluationDetail({
                     {evaluation.notes}
                   </p>
                 </div>
-                {/* Share button - bottom left underneath evaluation (available for all evaluations) */}
-                <div className="mt-6 flex items-start">
+                {/* Share button and View Count - bottom left underneath evaluation (available for all evaluations) */}
+                <div className="mt-6 flex items-center gap-4">
                   <ShareButton 
                     evaluationId={evaluation.id} 
                     userId={userId}
@@ -758,6 +765,12 @@ export default function EvaluationDetail({
                       scout: evaluation.scout,
                     }}
                   />
+                  {/* View Count */}
+                  {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                    <div className="text-sm text-gray-600">
+                      {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1276,8 +1289,8 @@ export default function EvaluationDetail({
                 {evaluation.notes}
               </p>
             </div>
-            {/* Share button - bottom left underneath evaluation (available for all evaluations) */}
-            <div className="mt-6 flex items-start">
+            {/* Share button and View Count - bottom left underneath evaluation (available for all evaluations) */}
+            <div className="mt-6 flex items-center gap-4">
               <ShareButton 
                 evaluationId={evaluation.id} 
                 userId={userId}
@@ -1289,6 +1302,12 @@ export default function EvaluationDetail({
                   scout: scout || evaluation.scout,
                 }}
               />
+              {/* View Count */}
+              {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                <div className="text-sm text-gray-600">
+                  {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
+                </div>
+              )}
             </div>
           </div>
         )}

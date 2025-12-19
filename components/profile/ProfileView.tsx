@@ -102,6 +102,7 @@ interface Evaluation {
   created_at: string
   price?: number | null
   share_token?: string | null
+  view_count?: number | null
   scout_id?: string | null
   player_id?: string | null
   scout?: {
@@ -374,7 +375,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
         // Try with share_token first
         let query = supabase
           .from('evaluations')
-          .select('id, notes, created_at, scout_id, player_id, share_token, price')
+          .select('id, notes, created_at, scout_id, player_id, share_token, price, view_count')
 
         if (profile.role === 'player') {
           // Get evaluations received by this player
@@ -395,7 +396,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           console.warn('share_token column not found, fetching without it')
           let queryWithoutToken = supabase
             .from('evaluations')
-            .select('id, notes, created_at, scout_id, player_id, price')
+            .select('id, notes, created_at, scout_id, player_id, price, view_count')
 
           if (profile.role === 'player') {
             queryWithoutToken = queryWithoutToken.eq('player_id', profile.user_id).eq('status', 'completed')
@@ -453,6 +454,8 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           scout_id: evaluation.scout_id,
           player_id: evaluation.player_id,
           price: evaluation.price || 0,
+          view_count: evaluation.view_count,
+          share_token: evaluation.share_token,
           scout: scoutProfile ? {
             id: scoutProfile.id,
             user_id: scoutProfile.user_id,
@@ -1002,8 +1005,8 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                 </div>
                               )}
                             </Link>
-                            {/* Share button - bottom left underneath evaluation (always visible) */}
-                            <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-start">
+                            {/* Share button and View Count - bottom left underneath evaluation (always visible) */}
+                            <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-center gap-4">
                               <ShareButton 
                                 evaluationId={evaluation.id} 
                                 {...(currentUserId && { userId: currentUserId })}
@@ -1018,6 +1021,12 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                   } : null,
                                 }}
                               />
+                              {/* View Count */}
+                              {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                                <div className="text-sm text-gray-600">
+                                  {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
+                                </div>
+                              )}
                             </div>
                           </div>
                         )
@@ -1771,9 +1780,9 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                               </p>
                             </Link>
                           )}
-                          {/* Share button */}
+                          {/* Share button and View Count */}
                           {!isMinimized && (
-                            <div className="pl-0 md:pl-20 mt-6 flex items-start">
+                            <div className="pl-0 md:pl-20 mt-6 flex items-center gap-4">
                               <ShareButton 
                                 evaluationId={evaluation.id} 
                                 userId={currentUserId || undefined}
@@ -1788,6 +1797,12 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                   } : null,
                                 }}
                               />
+                              {/* View Count */}
+                              {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                                <div className="text-sm text-gray-600">
+                                  {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
