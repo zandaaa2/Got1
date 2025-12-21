@@ -2724,9 +2724,10 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
       </div>
 
       {/* View Count */}
-      <div className="mb-4 text-sm text-gray-600">
+      {/* TODO: Re-enable view count display when ready */}
+      {/* <div className="mb-4 text-sm text-gray-600">
         {(profile.view_count ?? 0).toLocaleString()} {(profile.view_count ?? 0) === 1 ? 'view' : 'views'}
-      </div>
+      </div> */}
 
       {/* Tabs - Only show for scouts */}
       {profile.role === 'scout' && (

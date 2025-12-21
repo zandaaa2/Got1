@@ -1022,11 +1022,12 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                 }}
                               />
                               {/* View Count */}
-                              {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                              {/* TODO: Re-enable view count display when ready */}
+                              {/* {evaluation.view_count !== undefined && evaluation.view_count !== null && (
                                 <div className="text-sm text-gray-600">
                                   {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
                                 </div>
-                              )}
+                              )} */}
                             </div>
                           </div>
                         )
@@ -1364,7 +1365,8 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             </div>
 
             {/* View Count Row with Edit Profile Button */}
-            <div className="text-sm text-gray-600 flex items-center gap-3">
+            {/* TODO: Re-enable view count display when ready */}
+            {/* <div className="text-sm text-gray-600 flex items-center gap-3">
               {isOwnProfile && (
                 <a
                   href="/profile/edit"
@@ -1374,7 +1376,17 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                 </a>
               )}
               <span>{(profile.view_count ?? 0).toLocaleString()} {(profile.view_count ?? 0) === 1 ? 'view' : 'views'}</span>
-            </div>
+            </div> */}
+            {isOwnProfile && (
+              <div className="text-sm text-gray-600 flex items-center gap-3">
+                <a
+                  href="/profile/edit"
+                  className="interactive-press inline-flex items-center px-3 py-1.5 bg-gray-200 text-black rounded-lg hover:bg-gray-300 font-medium text-sm"
+                >
+                  Edit Profile
+                </a>
+              </div>
+            )}
 
             {/* Divider Line */}
             <div className="border-t border-gray-200"></div>
@@ -1798,11 +1810,12 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                 }}
                               />
                               {/* View Count */}
-                              {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+                              {/* TODO: Re-enable view count display when ready */}
+                              {/* {evaluation.view_count !== undefined && evaluation.view_count !== null && (
                                 <div className="text-sm text-gray-600">
                                   {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
                                 </div>
-                              )}
+                              )} */}
                             </div>
                           )}
                         </div>
