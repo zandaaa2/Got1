@@ -209,10 +209,15 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         // Determine what step we should be on based on profile
         // Use determinedAccountType (not state) to ensure we have the correct value
         // If no profile exists, user should be on step 2 (basic info)
+        // IMPORTANT: If user is on step 3, always keep them on step 3 - they must select a role
         let targetStep = 1
         if (!profileData || !profileData?.full_name || !profileData?.username || !profileData?.birthday) {
           targetStep = 2
-        } else if (!profileData?.role || profileData.role === 'user') {
+        } else if (urlStepNum === 3) {
+          // User is explicitly on step 3 - keep them there so they can select their role
+          targetStep = 3
+        } else if (!profileData?.role || profileData.role === 'user' || !determinedAccountType) {
+          // No role selected yet - must go to step 3
           targetStep = 3
         } else if (determinedAccountType === 'parent') {
           // For parents, always start at step 4 (tag/create player)
@@ -235,6 +240,7 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
         // BUT: Don't auto-navigate forward if user is actively on a form step (steps 2-7)
         // This prevents jumping ahead when user is still filling out forms
         // Only allow auto-navigation if user is behind where they should be (targetStep > urlStepNum)
+        // IMPORTANT: Never auto-advance from step 3 - user must explicitly select their role
         if (isMounted) {
           setLoading(false)
           
@@ -243,10 +249,11 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
             // Don't auto-navigate forward if user is on a form step (steps 2-7) and target is ahead
             const isOnFormStep = urlStepNum !== null && urlStepNum >= 2 && urlStepNum <= 7
             const targetIsAhead = urlStepNum !== null && targetStep > urlStepNum
-            // Special case: For parents on step 3, always allow navigation to step 4 (tag/create player)
-            const isParentOnStep3 = determinedAccountType === 'parent' && urlStepNum === 3 && targetStep === 4
-            // Allow navigation if: not on form step, OR target is ahead (user needs to catch up), OR on step 1, OR parent on step 3 going to step 4
-            const shouldAutoNavigate = !isOnFormStep || targetIsAhead || urlStepNum === 1 || isParentOnStep3
+            // CRITICAL: Never auto-advance from step 3 - user must explicitly select their role
+            const isOnStep3 = urlStepNum === 3
+            // Allow navigation if: not on form step, OR target is ahead (user needs to catch up), OR on step 1
+            // BUT: Never auto-advance from step 3
+            const shouldAutoNavigate = (!isOnFormStep || targetIsAhead || urlStepNum === 1) && !isOnStep3
             
             if (shouldAutoNavigate) {
               // Only update state and redirect if auto-navigation is allowed
