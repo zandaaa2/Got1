@@ -15,14 +15,14 @@ export default function AccountOwnershipContent() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const handleDownloadData = async (format: 'json' | 'pdf' = 'json') => {
+  const handleDownloadData = async () => {
     setDownloading(true)
     setError(null)
     setSuccess(null)
 
     try {
       // API route handles authentication server-side using cookies
-      const response = await fetch(`/api/user/export-data?format=${format}`, {
+      const response = await fetch('/api/user/export-data', {
         method: 'GET',
         credentials: 'include', // Ensure cookies are sent
       })
@@ -39,14 +39,13 @@ export default function AccountOwnershipContent() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const extension = format === 'pdf' ? 'pdf' : 'json'
-      a.download = `got1-data-export-${new Date().toISOString().split('T')[0]}.${extension}`
+      a.download = `got1-data-export-${new Date().toISOString().split('T')[0]}.json`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      setSuccess(`Your data has been downloaded as ${format.toUpperCase()}!`)
+      setSuccess('Your data has been downloaded as JSON!')
     } catch (err: any) {
       console.error('Error downloading data:', err)
       setError(err.message || 'Failed to download data. Please try again.')
@@ -124,24 +123,15 @@ export default function AccountOwnershipContent() {
         <h2 className="text-xl font-bold text-black mb-2">Download Your Data</h2>
         <p className="text-gray-600 mb-4">
           Download a copy of all your personal data stored on Got1. This includes your profile information, 
-          evaluation history, and account settings. Available in both JSON and PDF formats.
+          evaluation history, and account settings. Available in JSON format.
         </p>
-        <div className="flex gap-4">
-          <button
-            onClick={() => handleDownloadData('json')}
-            disabled={downloading}
-            className="px-6 py-3 bg-black text-white rounded hover:bg-gray-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {downloading ? 'Preparing...' : 'Download JSON'}
-          </button>
-          <button
-            onClick={() => handleDownloadData('pdf')}
-            disabled={downloading}
-            className="px-6 py-3 bg-red-600 text-white rounded hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {downloading ? 'Preparing...' : 'Download PDF'}
-          </button>
-        </div>
+        <button
+          onClick={handleDownloadData}
+          disabled={downloading}
+          className="px-6 py-3 bg-black text-white rounded hover:bg-gray-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {downloading ? 'Preparing...' : 'Download JSON'}
+        </button>
       </div>
 
       {/* Delete Account Section */}
