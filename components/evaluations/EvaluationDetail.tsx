@@ -1312,11 +1312,12 @@ export default function EvaluationDetail({
                 }}
               />
               {/* View Count */}
-              {evaluation.view_count !== undefined && evaluation.view_count !== null && (
+              {/* TODO: Re-enable view count display when ready */}
+              {/* {evaluation.view_count !== undefined && evaluation.view_count !== null && (
                 <div className="text-sm text-gray-600">
                   {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         )}
