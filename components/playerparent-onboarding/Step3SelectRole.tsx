@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
+import { useRouter } from 'next/navigation'
 
 interface Step3SelectRoleProps {
   profile: any
@@ -15,6 +16,7 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
+  const router = useRouter()
 
   // Update role immediately when user selects a role button
   const handleRoleSelect = async (selectedRole: 'player' | 'parent') => {
@@ -143,7 +145,7 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
       <div>
         <h3 className="text-lg font-bold text-black mb-2">Select Account Type</h3>
         <p className="text-gray-600 text-sm mb-4">
-          Choose whether this account is for a player or a parent managing their child's profile.
+          Choose whether this account is for a player, a parent managing their child's profile, or a scout.
         </p>
       </div>
 
@@ -188,6 +190,19 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
           {saving && accountType === 'parent' && (
             <div className="mt-2 text-xs text-gray-500">Saving...</div>
           )}
+        </button>
+
+        <button
+          onClick={() => {
+            // Redirect to scout onboarding step 4
+            router.push('/scout?step=4')
+          }}
+          className="p-6 rounded-lg border-2 text-left transition-all border-gray-200 hover:border-gray-300"
+        >
+          <div className="font-bold text-black mb-2">Scout</div>
+          <div className="text-sm text-gray-600">
+            This account is for a scout who will write evaluations for players.
+          </div>
         </button>
       </div>
 
