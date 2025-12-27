@@ -55,18 +55,17 @@ export default function Step4HudlLink({ profile, playerProfile, onComplete, onBa
     setError(null)
 
     try {
-      const { data: updatedProfile, error: updateError } = await supabase
+      // Update the profile without selecting to avoid JSON coercion issues
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ hudl_link: hudlLink.trim() })
         .eq('user_id', targetProfile.user_id)
-        .select()
-        .single()
 
       if (updateError) throw updateError
       
       console.log('✅ Step 4 data saved:', {
-        role: updatedProfile?.role,
-        hudl_link: updatedProfile?.hudl_link
+        user_id: targetProfile.user_id,
+        hudl_link: hudlLink.trim()
       })
 
       onComplete()
