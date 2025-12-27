@@ -65,67 +65,38 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       type MatchType = { index: number; length: number; content: string; type: 'bold' | 'italic' | 'underline' }
       let earliestMatch: MatchType | null = null
       
-      if (boldMatch && boldMatch.index !== undefined) {
-        const boldIndex = boldMatch.index
-        if (earliestMatch === null) {
-          earliestMatch = {
-            index: boldIndex,
-            length: boldMatch[0].length,
-            content: boldMatch[1],
-            type: 'bold',
-          }
-        } else {
-          if (boldIndex < earliestMatch.index) {
-            earliestMatch = {
-              index: boldIndex,
-              length: boldMatch[0].length,
-              content: boldMatch[1],
-              type: 'bold',
-            }
-          }
+      // Helper function to update earliest match
+      const updateEarliestMatch = (index: number, length: number, content: string, type: MatchType['type']) => {
+        if (earliestMatch === null || index < earliestMatch.index) {
+          earliestMatch = { index, length, content, type }
         }
+      }
+      
+      if (boldMatch && boldMatch.index !== undefined) {
+        updateEarliestMatch(
+          boldMatch.index,
+          boldMatch[0].length,
+          boldMatch[1],
+          'bold'
+        )
       }
       
       if (italicMatch && italicMatch.index !== undefined) {
-        const italicIndex = italicMatch.index
-        if (earliestMatch === null) {
-          earliestMatch = {
-            index: italicIndex,
-            length: italicMatch[0].length,
-            content: italicMatch[1],
-            type: 'italic',
-          }
-        } else {
-          if (italicIndex < earliestMatch.index) {
-            earliestMatch = {
-              index: italicIndex,
-              length: italicMatch[0].length,
-              content: italicMatch[1],
-              type: 'italic',
-            }
-          }
-        }
+        updateEarliestMatch(
+          italicMatch.index,
+          italicMatch[0].length,
+          italicMatch[1],
+          'italic'
+        )
       }
       
       if (underlineMatch && underlineMatch.index !== undefined) {
-        const underlineIndex = underlineMatch.index
-        if (earliestMatch === null) {
-          earliestMatch = {
-            index: underlineIndex,
-            length: underlineMatch[0].length,
-            content: underlineMatch[1],
-            type: 'underline',
-          }
-        } else {
-          if (underlineIndex < earliestMatch.index) {
-            earliestMatch = {
-              index: underlineIndex,
-              length: underlineMatch[0].length,
-              content: underlineMatch[1],
-              type: 'underline',
-            }
-          }
-        }
+        updateEarliestMatch(
+          underlineMatch.index,
+          underlineMatch[0].length,
+          underlineMatch[1],
+          'underline'
+        )
       }
 
       if (earliestMatch) {
