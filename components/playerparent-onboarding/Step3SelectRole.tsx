@@ -159,12 +159,19 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
         <button
           onClick={() => handleRoleSelect('player')}
           disabled={saving}
-          className={`p-6 rounded-lg border-2 text-left transition-all ${
+          className={`p-6 rounded-lg border-2 text-left transition-all relative ${
             accountType === 'player'
               ? 'border-black bg-gray-50'
               : 'border-gray-200 hover:border-gray-300'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
+          {accountType === 'player' && (
+            <div className="absolute top-3 right-3">
+              <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
           <div className="font-bold text-black mb-2">Player</div>
           <div className="text-sm text-gray-600">
             This account is for a high school football player who will receive evaluations.
@@ -177,12 +184,19 @@ export default function Step3SelectRole({ profile, onComplete, onBack }: Step3Se
         <button
           onClick={() => handleRoleSelect('parent')}
           disabled={saving}
-          className={`p-6 rounded-lg border-2 text-left transition-all ${
+          className={`p-6 rounded-lg border-2 text-left transition-all relative ${
             accountType === 'parent'
               ? 'border-black bg-gray-50'
               : 'border-gray-200 hover:border-gray-300'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
+          {accountType === 'parent' && (
+            <div className="absolute top-3 right-3">
+              <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
           <div className="font-bold text-black mb-2">Parent</div>
           <div className="text-sm text-gray-600">
             This account is for a parent managing their child's football profile and evaluations.
