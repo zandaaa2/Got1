@@ -304,6 +304,7 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
                   width={40}
                   height={40}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               ) : (
               <div className={`w-full h-full flex items-center justify-center ${getGradientForId(post.user_id)}`}>
@@ -446,6 +447,7 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
             width={800}
             height={600}
             className="w-full h-auto object-contain max-h-96"
+            loading="lazy"
           />
         </div>
       )}

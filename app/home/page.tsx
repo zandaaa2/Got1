@@ -6,6 +6,9 @@ import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import HomeFeed from '@/components/home/HomeFeed'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 30 // Revalidate every 30 seconds
+
 export default async function HomePage() {
   const supabase = createRouteHandlerClient(() => cookies())
   const { data: { session } } = await supabase.auth.getSession()
