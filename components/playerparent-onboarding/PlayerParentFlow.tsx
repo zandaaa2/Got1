@@ -519,8 +519,9 @@ export default function PlayerParentFlow({ initialSession }: PlayerParentFlowPro
                 role: playerProfile.role,
                 username: playerProfile.username
               })
-              setPlayerProfile(playerProfile)
-              handleStepComplete(5)
+              // Redirect to profile page - parent can edit player info there
+              router.push('/profile')
+              router.refresh()
             }}
             onCreateNew={(playerProfile) => {
               console.log('🎯 Step 4 - Creating new player:', {
