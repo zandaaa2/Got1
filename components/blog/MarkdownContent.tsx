@@ -67,7 +67,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       
       if (boldMatch && boldMatch.index !== undefined) {
         const boldIndex = boldMatch.index
-        if (earliestMatch === null || boldIndex < earliestMatch.index) {
+        if (earliestMatch === null) {
+          earliestMatch = {
+            index: boldIndex,
+            length: boldMatch[0].length,
+            content: boldMatch[1],
+            type: 'bold',
+          }
+        } else if (boldIndex < earliestMatch.index) {
           earliestMatch = {
             index: boldIndex,
             length: boldMatch[0].length,
@@ -79,7 +86,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       
       if (italicMatch && italicMatch.index !== undefined) {
         const italicIndex = italicMatch.index
-        if (earliestMatch === null || italicIndex < earliestMatch.index) {
+        if (earliestMatch === null) {
+          earliestMatch = {
+            index: italicIndex,
+            length: italicMatch[0].length,
+            content: italicMatch[1],
+            type: 'italic',
+          }
+        } else if (italicIndex < earliestMatch.index) {
           earliestMatch = {
             index: italicIndex,
             length: italicMatch[0].length,
@@ -91,7 +105,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       
       if (underlineMatch && underlineMatch.index !== undefined) {
         const underlineIndex = underlineMatch.index
-        if (earliestMatch === null || underlineIndex < earliestMatch.index) {
+        if (earliestMatch === null) {
+          earliestMatch = {
+            index: underlineIndex,
+            length: underlineMatch[0].length,
+            content: underlineMatch[1],
+            type: 'underline',
+          }
+        } else if (underlineIndex < earliestMatch.index) {
           earliestMatch = {
             index: underlineIndex,
             length: underlineMatch[0].length,
