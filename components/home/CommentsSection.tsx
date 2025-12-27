@@ -189,10 +189,10 @@ export default function CommentsSection({ postId, onCommentAdded }: CommentsSect
               <div key={comment.id} className="flex gap-3">
                 <Link href={profilePath} className="flex-shrink-0">
                   <div className="w-8 h-8 rounded-full overflow-hidden">
-                    {isMeaningfulAvatar(profile?.avatar_url) ? (
+                    {profile && isMeaningfulAvatar(profile.avatar_url) ? (
                       <Image
-                        src={profile.avatar_url!}
-                        alt={profile?.full_name || 'User'}
+                        src={profile.avatar_url}
+                        alt={profile.full_name || 'User'}
                         width={32}
                         height={32}
                         className="w-full h-full object-cover"
