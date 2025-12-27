@@ -84,9 +84,10 @@ export async function GET(
     }
 
     // Join posts with profile
+    // Note: pinned column may not exist, so we default it to false
     const postsWithProfile = (posts || []).map(post => ({
       ...post,
-      pinned: post.pinned ?? false,
+      pinned: false, // Default to false if column doesn't exist
       profiles: profile || null,
     }))
 
