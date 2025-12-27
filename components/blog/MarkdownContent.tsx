@@ -74,12 +74,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
             content: boldMatch[1],
             type: 'bold',
           }
-        } else if (boldIndex < earliestMatch.index) {
-          earliestMatch = {
-            index: boldIndex,
-            length: boldMatch[0].length,
-            content: boldMatch[1],
-            type: 'bold',
+        } else {
+          if (boldIndex < earliestMatch.index) {
+            earliestMatch = {
+              index: boldIndex,
+              length: boldMatch[0].length,
+              content: boldMatch[1],
+              type: 'bold',
+            }
           }
         }
       }
@@ -93,12 +95,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
             content: italicMatch[1],
             type: 'italic',
           }
-        } else if (italicIndex < earliestMatch.index) {
-          earliestMatch = {
-            index: italicIndex,
-            length: italicMatch[0].length,
-            content: italicMatch[1],
-            type: 'italic',
+        } else {
+          if (italicIndex < earliestMatch.index) {
+            earliestMatch = {
+              index: italicIndex,
+              length: italicMatch[0].length,
+              content: italicMatch[1],
+              type: 'italic',
+            }
           }
         }
       }
@@ -112,12 +116,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
             content: underlineMatch[1],
             type: 'underline',
           }
-        } else if (underlineIndex < earliestMatch.index) {
-          earliestMatch = {
-            index: underlineIndex,
-            length: underlineMatch[0].length,
-            content: underlineMatch[1],
-            type: 'underline',
+        } else {
+          if (underlineIndex < earliestMatch.index) {
+            earliestMatch = {
+              index: underlineIndex,
+              length: underlineMatch[0].length,
+              content: underlineMatch[1],
+              type: 'underline',
+            }
           }
         }
       }
