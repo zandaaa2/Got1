@@ -65,59 +65,60 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       type MatchType = { index: number; length: number; content: string; type: 'bold' | 'italic' | 'underline' }
       let earliestMatch: MatchType | null = null
       
-      // Helper function to update earliest match
-      const updateEarliestMatch = (index: number, length: number, content: string, type: MatchType['type']) => {
-        if (earliestMatch === null || index < earliestMatch.index) {
-          earliestMatch = { index, length, content, type }
-        }
-      }
-      
       if (boldMatch && boldMatch.index !== undefined) {
-        updateEarliestMatch(
-          boldMatch.index,
-          boldMatch[0].length,
-          boldMatch[1],
-          'bold'
-        )
+        const boldIndex = boldMatch.index
+        if (earliestMatch === null || boldIndex < earliestMatch.index) {
+          earliestMatch = {
+            index: boldIndex,
+            length: boldMatch[0].length,
+            content: boldMatch[1],
+            type: 'bold',
+          }
+        }
       }
       
       if (italicMatch && italicMatch.index !== undefined) {
-        updateEarliestMatch(
-          italicMatch.index,
-          italicMatch[0].length,
-          italicMatch[1],
-          'italic'
-        )
+        const italicIndex = italicMatch.index
+        if (earliestMatch === null || italicIndex < earliestMatch.index) {
+          earliestMatch = {
+            index: italicIndex,
+            length: italicMatch[0].length,
+            content: italicMatch[1],
+            type: 'italic',
+          }
+        }
       }
       
       if (underlineMatch && underlineMatch.index !== undefined) {
-        updateEarliestMatch(
-          underlineMatch.index,
-          underlineMatch[0].length,
-          underlineMatch[1],
-          'underline'
-        )
+        const underlineIndex = underlineMatch.index
+        if (earliestMatch === null || underlineIndex < earliestMatch.index) {
+          earliestMatch = {
+            index: underlineIndex,
+            length: underlineMatch[0].length,
+            content: underlineMatch[1],
+            type: 'underline',
+          }
+        }
       }
 
       if (earliestMatch !== null) {
-        const match = earliestMatch // Type narrowing helper
         // Add text before match
-        if (match.index > 0) {
-          parts.push(remaining.substring(0, match.index))
+        if (earliestMatch.index > 0) {
+          parts.push(remaining.substring(0, earliestMatch.index))
         }
         
         // Add formatted content (recursively parse nested formatting)
-        const nestedContent = parseInlineFormatting(match.content)
-        if (match.type === 'bold') {
+        const nestedContent = parseInlineFormatting(earliestMatch.content)
+        if (earliestMatch.type === 'bold') {
           parts.push(<strong key={partKey++}>{nestedContent}</strong>)
-        } else if (match.type === 'italic') {
+        } else if (earliestMatch.type === 'italic') {
           parts.push(<em key={partKey++}>{nestedContent}</em>)
-        } else if (match.type === 'underline') {
+        } else if (earliestMatch.type === 'underline') {
           parts.push(<u key={partKey++}>{nestedContent}</u>)
         }
         
         // Continue with remaining text
-        remaining = remaining.substring(match.index + match.length)
+        remaining = remaining.substring(earliestMatch.index + earliestMatch.length)
       } else {
         // No more matches, add remaining text
         parts.push(remaining)
