@@ -179,7 +179,7 @@ export default function BottomNav() {
               }`}
             >
               {/* Icon with enhanced styling */}
-              <div className={`transition-all duration-300 ${
+              <div className={`transition-all duration-300 -mt-2 ${
                 active 
                   ? 'text-black drop-shadow-sm' 
                   : 'text-gray-500 hover:text-gray-700'
