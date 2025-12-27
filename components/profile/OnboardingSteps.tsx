@@ -7,6 +7,19 @@ import Image from 'next/image'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 
+// US States list
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+  'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina',
+  'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+]
+
+// Classification options
+const CLASSIFICATIONS = ['1A', '2A', '3A', '4A', '5A', '6A', '7A', '8A']
+
 interface OnboardingStepsProps {
   profile: any
 }
@@ -913,24 +926,34 @@ export default function OnboardingSteps({ profile }: OnboardingStepsProps) {
 
             <div>
               <label className="block text-sm font-medium text-black mb-2">State</label>
-              <input
-                type="text"
+              <select
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                placeholder="e.g., California"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
+              >
+                <option value="">Select State</option>
+                {US_STATES.map((stateName) => (
+                  <option key={stateName} value={stateName}>
+                    {stateName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-black mb-2">Classification</label>
-              <input
-                type="text"
+              <select
                 value={classification}
                 onChange={(e) => setClassification(e.target.value)}
-                placeholder="e.g., Class of 2025"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              />
+              >
+                <option value="">Select Classification</option>
+                {CLASSIFICATIONS.map((classOption) => (
+                  <option key={classOption} value={classOption}>
+                    {classOption}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="md:col-span-2">

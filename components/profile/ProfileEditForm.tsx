@@ -11,6 +11,16 @@ import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getGradientForId } from '@/lib/gradients'
 import Cropper, { type Area } from 'react-easy-crop'
 
+// US States list
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+  'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina',
+  'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+]
+
 interface HudlLink {
   link: string
   sport: string
@@ -1259,15 +1269,20 @@ export default function ProfileEditForm({ profile, isNewProfile = false, pending
                     <label htmlFor="state" className="block text-sm font-medium text-black mb-2">
                       State
                     </label>
-                    <input
-                      type="text"
+                    <select
                       id="state"
                       name="state"
                       value={formData.state}
                       onChange={handleChange}
-                      placeholder="Florida"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    />
+                    >
+                      <option value="">Select State</option>
+                      {US_STATES.map((stateName) => (
+                        <option key={stateName} value={stateName}>
+                          {stateName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
