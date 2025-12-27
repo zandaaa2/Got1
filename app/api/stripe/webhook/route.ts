@@ -70,8 +70,22 @@ export async function POST(request: NextRequest) {
             player_id: playerId,
             price: priceStr,
             metadata: session.metadata,
+            session_id: session.id,
+            payment_intent_id: session.payment_intent,
+            customer_email: session.customer_email,
+            amount_total: session.amount_total ? (session.amount_total / 100) : null,
           })
-          return NextResponse.json({ error: 'Missing required metadata' }, { status: 400 })
+          
+          // Cannot recover without metadata - log for manual intervention
+          // Return success to Stripe (payment already succeeded) but log error
+          return NextResponse.json({ 
+            received: true, 
+            warning: 'Missing metadata - evaluation not created. Manual intervention required.',
+            payment_intent_id: session.payment_intent,
+            amount: session.amount_total ? (session.amount_total / 100) : null,
+            customer_email: session.customer_email,
+            session_id: session.id,
+          })
         }
 
         const price = parseFloat(priceStr)

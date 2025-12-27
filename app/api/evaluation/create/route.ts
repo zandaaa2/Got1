@@ -340,6 +340,34 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // CRITICAL: Verify metadata was actually saved by Stripe
+    const verifiedSession = await stripe.checkout.sessions.retrieve(checkoutSession.id)
+    if (!verifiedSession.metadata || 
+        !verifiedSession.metadata.scout_id || 
+        !verifiedSession.metadata.player_id ||
+        !verifiedSession.metadata.action) {
+      console.error('❌ CRITICAL: Checkout session created without required metadata!', {
+        sessionId: checkoutSession.id,
+        metadata: verifiedSession.metadata,
+        expected: {
+          scout_id: scout.user_id,
+          player_id: player.user_id,
+          action: 'upfront_payment',
+          purchased_by: purchasedBy || player.user_id,
+          purchased_by_type: purchasedByType || 'player',
+        },
+      })
+      // Fail the request - don't let user proceed without metadata
+      return NextResponse.json({ 
+        error: 'Failed to create checkout session with required metadata. Please try again.',
+      }, { status: 500 })
+    }
+
+    console.log('✅ Checkout session created with metadata:', {
+      sessionId: checkoutSession.id,
+      metadata: verifiedSession.metadata,
+    })
+
     return successResponse({ 
       success: true, 
       sessionId: checkoutSession.id

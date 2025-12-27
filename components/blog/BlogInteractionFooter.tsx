@@ -145,6 +145,51 @@ export default function BlogInteractionFooter({ blogId, userId, slug }: BlogInte
 
       setComments(prev => [newCommentWithProfile, ...prev])
       setNewComment('')
+
+      // Create notification for blog post author
+      try {
+        // Get the blog post to find the author
+        const { data: blogPost } = await supabase
+          .from('blog_posts')
+          .select('scout_id, author_email, slug')
+          .eq('id', blogId)
+          .maybeSingle()
+
+        if (blogPost) {
+          // Get the author's user_id (from scout_id or by email)
+          let authorUserId: string | null = blogPost.scout_id
+          
+          if (!authorUserId && blogPost.author_email) {
+            const { data: authorProfile } = await supabase
+              .from('profiles')
+              .select('user_id')
+              .eq('email', blogPost.author_email)
+              .maybeSingle()
+            authorUserId = authorProfile?.user_id || null
+          }
+
+          // Only notify if not commenting on own post
+          if (authorUserId && authorUserId !== userId) {
+            const commenterName = profile?.full_name || profile?.username || 'Someone'
+            
+            await fetch('/api/notifications/create-for-user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                targetUserId: authorUserId,
+                type: 'blog_post_commented',
+                title: 'New Comment',
+                message: `${commenterName} commented on your blog post`,
+                link: blogPost.slug ? `/blog/${blogPost.slug}` : `/blog`,
+                metadata: { blog_post_id: blogId, commenter_id: userId, comment_id: data.id },
+              }),
+            })
+          }
+        }
+      } catch (notifError) {
+        // Don't fail the comment if notification creation fails
+        console.error('Error creating comment notification:', notifError)
+      }
     } catch (error) {
       console.error('Error submitting comment:', error)
       alert('Failed to post comment')

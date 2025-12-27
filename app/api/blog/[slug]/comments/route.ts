@@ -4,12 +4,12 @@ import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { createNotification } from '@/lib/notifications'
 
 /**
- * GET: Get all comments for a post
- * POST: Create a new comment on a post
+ * GET: Get all comments for a blog post
+ * POST: Create a new comment on a blog post
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { slug: string } }
 ) {
   try {
     const authResult = await requireAuth(request)
@@ -18,14 +18,27 @@ export async function GET(
     }
     const { supabase } = authResult
 
-    const postId = params.id
+    const { slug } = await params
 
-    // Get comments for the post (non-deleted only)
+    // Get the blog post ID from slug
+    const { data: blogPost } = await supabase
+      .from('blog_posts')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (!blogPost) {
+      return NextResponse.json(
+        { error: 'Blog post not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get comments for the blog post
     const { data: comments, error: commentsError } = await supabase
-      .from('post_comments')
+      .from('blog_comments')
       .select('id, user_id, content, created_at, updated_at')
-      .eq('post_id', postId)
-      .is('deleted_at', null)
+      .eq('blog_post_id', blogPost.id)
       .order('created_at', { ascending: true })
 
     if (commentsError) {
@@ -61,14 +74,14 @@ export async function GET(
 
     return successResponse({ comments: commentsWithProfiles })
   } catch (error: any) {
-    console.error('Error in GET /api/posts/[id]/comments:', error)
+    console.error('Error in GET /api/blog/[slug]/comments:', error)
     return handleApiError(error, 'Internal server error')
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { slug: string } }
 ) {
   try {
     const authResult = await requireAuth(request)
@@ -77,7 +90,7 @@ export async function POST(
     }
     const { session, supabase } = authResult
 
-    const postId = params.id
+    const { slug } = await params
     const body = await request.json()
     const { content } = body
 
@@ -88,26 +101,25 @@ export async function POST(
       )
     }
 
-    // Verify the post exists and get the owner's user_id
-    const { data: post, error: postError } = await supabase
-      .from('posts')
-      .select('id, user_id')
-      .eq('id', postId)
-      .is('deleted_at', null)
+    // Get the blog post and verify it exists
+    const { data: blogPost, error: blogPostError } = await supabase
+      .from('blog_posts')
+      .select('id, scout_id, author_email')
+      .eq('slug', slug)
       .maybeSingle()
 
-    if (postError || !post) {
+    if (blogPostError || !blogPost) {
       return NextResponse.json(
-        { error: 'Post not found' },
+        { error: 'Blog post not found' },
         { status: 404 }
       )
     }
 
     // Create the comment
     const { data: comment, error: commentError } = await supabase
-      .from('post_comments')
+      .from('blog_comments')
       .insert({
-        post_id: postId,
+        blog_post_id: blogPost.id,
         user_id: session.user.id,
         content: content.trim(),
       })
@@ -131,30 +143,43 @@ export async function POST(
       profile: profile || null,
     }
 
-    // Create notification for post owner (if not commenting on their own post)
-    if (post.user_id !== session.user.id) {
-      try {
+    // Create notification for blog post author (if not commenting on their own post)
+    try {
+      // Get the author's user_id (from scout_id or by email)
+      let authorUserId: string | null = blogPost.scout_id
+      
+      if (!authorUserId && blogPost.author_email) {
+        const { data: authorProfile } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('email', blogPost.author_email)
+          .maybeSingle()
+        authorUserId = authorProfile?.user_id || null
+      }
+
+      if (authorUserId && authorUserId !== session.user.id) {
         const commenterName = profile?.full_name || profile?.username || 'Someone'
         
         await createNotification({
-          userId: post.user_id,
-          type: 'post_commented',
+          userId: authorUserId,
+          type: 'blog_post_commented',
           title: 'New Comment',
-          message: `${commenterName} commented on your post`,
-          link: `/home?post=${postId}`,
-          metadata: { post_id: postId, commenter_id: session.user.id, comment_id: comment.id },
+          message: `${commenterName} commented on your blog post`,
+          link: `/blog/${slug}`,
+          metadata: { blog_post_id: blogPost.id, commenter_id: session.user.id, comment_id: comment.id },
         })
-      } catch (notifError) {
-        // Don't fail the comment if notification creation fails
-        console.error('Error creating comment notification:', notifError)
       }
+    } catch (notifError) {
+      // Don't fail the comment if notification creation fails
+      console.error('Error creating comment notification:', notifError)
     }
 
     return successResponse({ comment: commentWithProfile })
   } catch (error: any) {
-    console.error('Error in POST /api/posts/[id]/comments:', error)
+    console.error('Error in POST /api/blog/[slug]/comments:', error)
     return handleApiError(error, 'Internal server error')
   }
 }
 
 export const dynamic = 'force-dynamic'
+

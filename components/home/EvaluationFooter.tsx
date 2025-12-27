@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import EvaluationCommentsSection from './EvaluationCommentsSection'
 
 interface EvaluationFooterProps {
   evaluationId: string
@@ -21,24 +22,43 @@ const formatTimeAgo = (dateString: string) => {
 export default function EvaluationFooter({ evaluationId }: EvaluationFooterProps) {
   const [likes, setLikes] = useState(0)
   const [isLiked, setIsLiked] = useState(false)
-  const [comments] = useState(0) // Evaluations don't have comments, placeholder for UI consistency
+  const [comments, setComments] = useState(0)
+  const [showComments, setShowComments] = useState(false)
 
-  // Fetch like count and status on mount
+  // Fetch like count, comment count, and status on mount
   useEffect(() => {
-    const fetchLikes = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/likes?likeableType=evaluation&likeableId=${evaluationId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setLikes(data.likeCount || 0)
-          setIsLiked(data.isLiked || false)
+        // Fetch like count and status
+        const likeResponse = await fetch(`/api/likes?likeableType=evaluation&likeableId=${evaluationId}`)
+        if (likeResponse.ok) {
+          const likeData = await likeResponse.json()
+          setLikes(likeData.likeCount || 0)
+          setIsLiked(likeData.isLiked || false)
+        }
+
+        // Fetch comment count
+        const commentResponse = await fetch(`/api/evaluation/${evaluationId}/comments`)
+        if (commentResponse.ok) {
+          const commentData = await commentResponse.json()
+          setComments(commentData.comments?.length || 0)
         }
       } catch (error) {
-        console.error('Error fetching likes:', error)
+        console.error('Error fetching data:', error)
       }
     }
-    fetchLikes()
+    fetchData()
   }, [evaluationId])
+
+  const handleCommentAdded = () => {
+    // Refresh comment count when a new comment is added
+    fetch(`/api/evaluation/${evaluationId}/comments`)
+      .then(res => res.json())
+      .then(data => {
+        setComments(data.comments?.length || 0)
+      })
+      .catch(console.error)
+  }
 
   const handleLike = async () => {
     try {
@@ -141,7 +161,7 @@ export default function EvaluationFooter({ evaluationId }: EvaluationFooterProps
 
         {/* Comment button */}
         <button
-          onClick={() => {}}
+          onClick={() => setShowComments(!showComments)}
           className="flex items-center gap-1.5 text-gray-600 hover:text-blue-600 transition-colors"
         >
           <svg
@@ -205,6 +225,11 @@ export default function EvaluationFooter({ evaluationId }: EvaluationFooterProps
           </svg>
         </button>
       </div>
+
+      {/* Comments Section */}
+      {showComments && (
+        <EvaluationCommentsSection evaluationId={evaluationId} onCommentAdded={handleCommentAdded} />
+      )}
     </div>
   )
 }

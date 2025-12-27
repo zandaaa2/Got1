@@ -275,6 +275,8 @@ export default function PurchaseEvaluation({
   const [showChildrenModal, setShowChildrenModal] = useState(false)
   const [isParent, setIsParent] = useState(false)
   const [parentId, setParentId] = useState<string | null>(null)
+  const [childrenCount, setChildrenCount] = useState<number>(0)
+  const [singleChildId, setSingleChildId] = useState<string | null>(null)
   const [isSignedInState, setIsSignedInState] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -297,6 +299,31 @@ export default function PurchaseEvaluation({
         if (profile?.role === 'parent') {
           setIsParent(true)
           setParentId(profile.user_id)
+          
+          // Load children count to determine if modal is needed
+          const { data: links, error: linksError } = await supabase
+            .from('parent_children')
+            .select('player_id')
+            .eq('parent_id', session.user.id)
+          
+          if (!linksError && links) {
+            const childCount = links.length
+            setChildrenCount(childCount)
+            
+            // If only 1 child, get their profile ID for automatic purchase
+            if (childCount === 1) {
+              const { data: childProfile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('user_id', links[0].player_id)
+                .eq('role', 'player')
+                .maybeSingle()
+              
+              if (childProfile) {
+                setSingleChildId(childProfile.id)
+              }
+            }
+          }
         }
       }
     }
@@ -417,9 +444,83 @@ export default function PurchaseEvaluation({
    * Payment will be charged when scout confirms.
    */
   const handlePurchase = async () => {
-    // If parent, show children selection modal
-    if (isParent && !player) {
+    // If parent with multiple children, show selection modal
+    if (isParent && !player && childrenCount > 1) {
       setShowChildrenModal(true)
+      return
+    }
+
+    // If parent with single child, automatically proceed with that child
+    if (isParent && !player && childrenCount === 1 && singleChildId) {
+      // Treat as if the single child is purchasing
+      try {
+        setProcessing(true)
+        setError(null)
+
+        const publishableKey = getStripeKey()
+        if (!publishableKey || !stripePromise) {
+          throw new Error('Payments are temporarily unavailable. Please contact support.')
+        }
+
+        const stripe = await stripePromise
+        if (!stripe) {
+          throw new Error('Failed to load Stripe.js. Please disable blockers or try again later.')
+        }
+
+        // Get the scout's current price from database
+        const { data: currentScout } = await supabase
+          .from('profiles')
+          .select('price_per_eval')
+          .eq('id', scout.id)
+          .maybeSingle()
+
+        const price = currentScout?.price_per_eval ?? scout.price_per_eval
+        if (!price) {
+          throw new Error('Scout price is not configured. Please ask the scout to set a price.')
+        }
+
+        console.log('Creating evaluation for single child (parent purchase)...')
+        
+        const response = await fetch('/api/evaluation/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            scoutId: scout.id,
+            price,
+            playerId: singleChildId, // Use the single child's profile ID
+          }),
+        })
+
+        const data = await response.json()
+
+        console.log('Evaluation create response:', { ok: response.ok, data })
+
+        if (!response.ok) {
+          if (data.evaluationId) {
+            router.push(`/evaluations/${data.evaluationId}`)
+            return
+          }
+          throw new Error(data.error || 'Failed to create evaluation')
+        }
+
+        if (data.sessionId) {
+          const result = await stripe.redirectToCheckout({
+            sessionId: data.sessionId,
+          })
+
+          if (result.error) {
+            throw new Error(result.error.message)
+          }
+        } else {
+          throw new Error('No checkout session ID returned')
+        }
+      } catch (error: any) {
+        console.error('Error processing purchase:', error)
+        setError(error.message || 'Failed to process purchase. Please try again.')
+        setProcessing(false)
+      }
       return
     }
 

@@ -4,8 +4,8 @@ import { requireAuth, handleApiError, successResponse } from '@/lib/api-helpers'
 import { createNotification } from '@/lib/notifications'
 
 /**
- * GET: Get all comments for a post
- * POST: Create a new comment on a post
+ * GET: Get all comments for an evaluation
+ * POST: Create a new comment on an evaluation
  */
 export async function GET(
   request: NextRequest,
@@ -18,13 +18,27 @@ export async function GET(
     }
     const { supabase } = authResult
 
-    const postId = params.id
+    const evaluationId = (await params).id
 
-    // Get comments for the post (non-deleted only)
+    // Verify the evaluation exists and user has access
+    const { data: evaluation } = await supabase
+      .from('evaluations')
+      .select('id, scout_id, player_id')
+      .eq('id', evaluationId)
+      .maybeSingle()
+
+    if (!evaluation) {
+      return NextResponse.json(
+        { error: 'Evaluation not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get comments for the evaluation (non-deleted only)
     const { data: comments, error: commentsError } = await supabase
-      .from('post_comments')
+      .from('evaluation_comments')
       .select('id, user_id, content, created_at, updated_at')
-      .eq('post_id', postId)
+      .eq('evaluation_id', evaluationId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
 
@@ -61,7 +75,7 @@ export async function GET(
 
     return successResponse({ comments: commentsWithProfiles })
   } catch (error: any) {
-    console.error('Error in GET /api/posts/[id]/comments:', error)
+    console.error('Error in GET /api/evaluation/[id]/comments:', error)
     return handleApiError(error, 'Internal server error')
   }
 }
@@ -77,7 +91,7 @@ export async function POST(
     }
     const { session, supabase } = authResult
 
-    const postId = params.id
+    const evaluationId = (await params).id
     const body = await request.json()
     const { content } = body
 
@@ -88,26 +102,25 @@ export async function POST(
       )
     }
 
-    // Verify the post exists and get the owner's user_id
-    const { data: post, error: postError } = await supabase
-      .from('posts')
-      .select('id, user_id')
-      .eq('id', postId)
-      .is('deleted_at', null)
+    // Verify the evaluation exists and get scout_id and player_id
+    const { data: evaluation, error: evaluationError } = await supabase
+      .from('evaluations')
+      .select('id, scout_id, player_id')
+      .eq('id', evaluationId)
       .maybeSingle()
 
-    if (postError || !post) {
+    if (evaluationError || !evaluation) {
       return NextResponse.json(
-        { error: 'Post not found' },
+        { error: 'Evaluation not found' },
         { status: 404 }
       )
     }
 
     // Create the comment
     const { data: comment, error: commentError } = await supabase
-      .from('post_comments')
+      .from('evaluation_comments')
       .insert({
-        post_id: postId,
+        evaluation_id: evaluationId,
         user_id: session.user.id,
         content: content.trim(),
       })
@@ -131,30 +144,45 @@ export async function POST(
       profile: profile || null,
     }
 
-    // Create notification for post owner (if not commenting on their own post)
-    if (post.user_id !== session.user.id) {
-      try {
+    // Create notification for evaluation owner (scout or player, depending on who commented)
+    try {
+      // Determine who should be notified
+      // If the scout commented, notify the player
+      // If the player (or anyone else) commented, notify the scout
+      let notifyUserId: string | null = null
+      
+      if (session.user.id === evaluation.scout_id) {
+        // Scout commented - notify the player
+        notifyUserId = evaluation.player_id
+      } else {
+        // Player or someone else commented - notify the scout
+        notifyUserId = evaluation.scout_id
+      }
+
+      // Only notify if not commenting on own evaluation
+      if (notifyUserId && notifyUserId !== session.user.id) {
         const commenterName = profile?.full_name || profile?.username || 'Someone'
         
         await createNotification({
-          userId: post.user_id,
-          type: 'post_commented',
+          userId: notifyUserId,
+          type: 'evaluation_commented',
           title: 'New Comment',
-          message: `${commenterName} commented on your post`,
-          link: `/home?post=${postId}`,
-          metadata: { post_id: postId, commenter_id: session.user.id, comment_id: comment.id },
+          message: `${commenterName} commented on your evaluation`,
+          link: `/evaluations/${evaluationId}`,
+          metadata: { evaluation_id: evaluationId, commenter_id: session.user.id, comment_id: comment.id },
         })
-      } catch (notifError) {
-        // Don't fail the comment if notification creation fails
-        console.error('Error creating comment notification:', notifError)
       }
+    } catch (notifError) {
+      // Don't fail the comment if notification creation fails
+      console.error('Error creating comment notification:', notifError)
     }
 
     return successResponse({ comment: commentWithProfile })
   } catch (error: any) {
-    console.error('Error in POST /api/posts/[id]/comments:', error)
+    console.error('Error in POST /api/evaluation/[id]/comments:', error)
     return handleApiError(error, 'Internal server error')
   }
 }
 
 export const dynamic = 'force-dynamic'
+

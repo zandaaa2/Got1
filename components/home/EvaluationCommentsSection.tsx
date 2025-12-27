@@ -36,12 +36,12 @@ interface Comment {
   } | null
 }
 
-interface BlogCommentsSectionProps {
-  blogId: string
+interface EvaluationCommentsSectionProps {
+  evaluationId: string
   onCommentAdded?: () => void
 }
 
-export default function BlogCommentsSection({ blogId, onCommentAdded }: BlogCommentsSectionProps) {
+export default function EvaluationCommentsSection({ evaluationId, onCommentAdded }: EvaluationCommentsSectionProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -50,38 +50,18 @@ export default function BlogCommentsSection({ blogId, onCommentAdded }: BlogComm
   const supabase = createClient()
 
   useEffect(() => {
-    loadComments()
-  }, [blogId])
+    fetchComments()
+  }, [evaluationId])
 
-  const loadComments = async () => {
+  const fetchComments = async () => {
     try {
       setLoading(true)
-      const { data: commentsData, error } = await supabase
-        .from('blog_comments')
-        .select('*')
-        .eq('blog_post_id', blogId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      if (commentsData) {
-        // Fetch profile data for each comment
-        const commentsWithProfiles = await Promise.all(
-          commentsData.map(async (comment) => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id, user_id, username, full_name, avatar_url, organization, school, position')
-              .eq('user_id', comment.user_id)
-              .maybeSingle()
-
-            return {
-              ...comment,
-              profile: profile || null,
-            } as Comment
-          })
-        )
-        setComments(commentsWithProfiles)
+      const response = await fetch(`/api/evaluation/${evaluationId}/comments`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch comments')
       }
+      const data = await response.json()
+      setComments(data.comments || [])
     } catch (error) {
       console.error('Error loading comments:', error)
     } finally {
@@ -100,84 +80,33 @@ export default function BlogCommentsSection({ blogId, onCommentAdded }: BlogComm
 
     setSubmitting(true)
     try {
-      const { data: newComment, error } = await supabase
-        .from('blog_comments')
-        .insert([{
-          blog_post_id: blogId,
-          user_id: session.user.id,
+      const response = await fetch(`/api/evaluation/${evaluationId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           content: commentText.trim(),
-        }])
-        .select('*')
-        .single()
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to post comment')
+      }
 
-      // Fetch profile for the new comment
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, user_id, username, full_name, avatar_url, organization, school, position')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
+      const data = await response.json()
+      const newComment = data.comment
 
-      const commentWithProfile = {
-        ...newComment,
-        profile: profile || null,
-      } as Comment
-
-      setComments(prev => [commentWithProfile, ...prev])
+      setComments(prev => [...prev, newComment])
       setCommentText('')
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
       onCommentAdded?.()
-
-      // Create notification for blog post author
-      try {
-        // Get the blog post to find the author
-        const { data: blogPost } = await supabase
-          .from('blog_posts')
-          .select('scout_id, author_email, slug')
-          .eq('id', blogId)
-          .maybeSingle()
-
-        if (blogPost) {
-          // Get the author's user_id (from scout_id or by email)
-          let authorUserId: string | null = blogPost.scout_id
-          
-          if (!authorUserId && blogPost.author_email) {
-            const { data: authorProfile } = await supabase
-              .from('profiles')
-              .select('user_id')
-              .eq('email', blogPost.author_email)
-              .maybeSingle()
-            authorUserId = authorProfile?.user_id || null
-          }
-
-          // Only notify if not commenting on own post
-          if (authorUserId && authorUserId !== session.user.id) {
-            const commenterName = profile?.full_name || profile?.username || 'Someone'
-            
-            await fetch('/api/notifications/create-for-user', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                targetUserId: authorUserId,
-                type: 'blog_post_commented',
-                title: 'New Comment',
-                message: `${commenterName} commented on your blog post`,
-                link: blogPost.slug ? `/blog/${blogPost.slug}` : `/blog`,
-                metadata: { blog_post_id: blogId, commenter_id: session.user.id, comment_id: newComment.id },
-              }),
-            })
-          }
-        }
-      } catch (notifError) {
-        // Don't fail the comment if notification creation fails
-        console.error('Error creating comment notification:', notifError)
-      }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting comment:', error)
-      alert('Failed to post comment')
+      alert(error.message || 'Failed to post comment')
     } finally {
       setSubmitting(false)
     }
