@@ -47,10 +47,9 @@ export async function GET(
     console.log('📝 Posts for this user_id:', userPostsCount)
 
     // Get posts for the user (non-deleted only)
-    // Note: pinned column may not exist, so we'll query without it and add it as false in the response
     const { data: posts, error: postsError } = await supabase
       .from('posts')
-      .select('id, user_id, content, image_url, video_url, video_thumbnail_url, created_at, updated_at')
+      .select('id, user_id, content, image_url, video_url, video_thumbnail_url, created_at, updated_at, pinned')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -84,10 +83,9 @@ export async function GET(
     }
 
     // Join posts with profile
-    // Add default pinned: false if column doesn't exist
     const postsWithProfile = (posts || []).map(post => ({
       ...post,
-      pinned: post.pinned ?? false, // Default to false if column doesn't exist
+      pinned: post.pinned ?? false,
       profiles: profile || null,
     }))
 
