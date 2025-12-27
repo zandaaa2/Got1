@@ -62,12 +62,14 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/) // Single * not part of **
       const underlineMatch = remaining.match(/<u>(.*?)<\/u>/)
       
-      let earliestMatch: { index: number; length: number; content: string; type: 'bold' | 'italic' | 'underline' } | null = null
+      type MatchType = { index: number; length: number; content: string; type: 'bold' | 'italic' | 'underline' }
+      let earliestMatch: MatchType | null = null
       
       if (boldMatch && boldMatch.index !== undefined) {
-        if (!earliestMatch || boldMatch.index < earliestMatch.index) {
+        const boldIndex = boldMatch.index
+        if (earliestMatch === null || boldIndex < earliestMatch.index) {
           earliestMatch = {
-            index: boldMatch.index,
+            index: boldIndex,
             length: boldMatch[0].length,
             content: boldMatch[1],
             type: 'bold',
@@ -76,9 +78,10 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       }
       
       if (italicMatch && italicMatch.index !== undefined) {
-        if (!earliestMatch || italicMatch.index < earliestMatch.index) {
+        const italicIndex = italicMatch.index
+        if (earliestMatch === null || italicIndex < earliestMatch.index) {
           earliestMatch = {
-            index: italicMatch.index,
+            index: italicIndex,
             length: italicMatch[0].length,
             content: italicMatch[1],
             type: 'italic',
@@ -87,9 +90,10 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
       }
       
       if (underlineMatch && underlineMatch.index !== undefined) {
-        if (!earliestMatch || underlineMatch.index < earliestMatch.index) {
+        const underlineIndex = underlineMatch.index
+        if (earliestMatch === null || underlineIndex < earliestMatch.index) {
           earliestMatch = {
-            index: underlineMatch.index,
+            index: underlineIndex,
             length: underlineMatch[0].length,
             content: underlineMatch[1],
             type: 'underline',
