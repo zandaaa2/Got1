@@ -297,15 +297,15 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
       <div className="flex items-center gap-3 mb-4 relative">
         <Link href={profilePath} className="flex-shrink-0">
           <div className="w-10 h-10 rounded-full overflow-hidden">
-            {isMeaningfulAvatar(profile?.avatar_url) ? (
-              <Image
-                src={profile.avatar_url!}
-                alt={profile?.full_name || 'User'}
-                width={40}
-                height={40}
-                className="w-full h-full object-cover"
-              />
-            ) : (
+              {profile && profile.avatar_url && isMeaningfulAvatar(profile.avatar_url) ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt={profile.full_name || 'User'}
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
               <div className={`w-full h-full flex items-center justify-center ${getGradientForId(post.user_id)}`}>
                 <span className="text-white text-sm font-semibold">
                   {profile?.full_name?.charAt(0).toUpperCase() || '?'}
