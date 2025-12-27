@@ -231,7 +231,7 @@ export default function EvaluationCard({ evaluation }: EvaluationCardProps) {
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-full overflow-hidden flex-shrink-0">
                     {scout.avatar_url && isMeaningfulAvatar(scout.avatar_url) ? (
                       <Image
-                        src={scout.avatar_url}
+                        src={scout.avatar_url!}
                         alt={scout.full_name || 'Scout'}
                         width={48}
                         height={48}
