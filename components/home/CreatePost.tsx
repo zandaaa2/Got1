@@ -286,14 +286,15 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-white md:border md:border-gray-200 md:rounded-lg md:p-4">
       <form onSubmit={handleSubmit} className="space-y-4">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="What's on your mind?"
-          className="w-full min-h-[120px] px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none"
+          className="w-full min-h-[150px] md:min-h-[120px] px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none text-base"
           disabled={uploading}
+          autoFocus
         />
 
         {/* Media Preview */}
@@ -385,7 +386,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
           <button
             type="submit"
             disabled={uploading || (!content.trim() && !imageFile && !videoFile)}
-            className="px-6 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-base"
           >
             {uploading ? 'Posting...' : 'Post'}
           </button>

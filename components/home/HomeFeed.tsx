@@ -92,16 +92,12 @@ export default function HomeFeed() {
         <CreatePost onPostCreated={handlePostCreated} />
       </div>
 
-      {/* Mobile Post Modal */}
+      {/* Mobile Post Modal - Full Screen */}
       {showPostModal && (
         <>
-          <div
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
-            onClick={() => setShowPostModal(false)}
-          />
-          <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-black">Create Post</h2>
+          <div className="fixed inset-0 bg-white z-50 md:hidden flex flex-col">
+            {/* Header - Fixed at top */}
+            <div className="flex-shrink-0 border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-white">
               <button
                 onClick={() => setShowPostModal(false)}
                 className="p-2 text-gray-600 hover:text-black transition-colors"
@@ -121,14 +117,19 @@ export default function HomeFeed() {
                   />
                 </svg>
               </button>
+              <h2 className="text-lg font-semibold text-black">Create Post</h2>
+              <div className="w-10"></div> {/* Spacer for centering */}
             </div>
-            <div className="p-4">
-              <CreatePost 
-                onPostCreated={() => {
-                  handlePostCreated()
-                  setShowPostModal(false)
-                }} 
-              />
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto pb-20">
+              <div className="p-4">
+                <CreatePost 
+                  onPostCreated={() => {
+                    handlePostCreated()
+                    setShowPostModal(false)
+                  }} 
+                />
+              </div>
             </div>
           </div>
         </>
