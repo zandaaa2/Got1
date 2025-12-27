@@ -15,6 +15,7 @@ import { collegeEntries } from '@/lib/college-data'
 import ParentDashboard from '@/components/profile/ParentDashboard'
 import PendingScoutApplication from '@/components/profile/PendingScoutApplication'
 import IntroVideo from '@/components/profile/IntroVideo'
+import PostCard from '@/components/home/PostCard'
 
 interface ProfileContentProps {
   profile: any
@@ -399,20 +400,26 @@ function MoneyDashboard({ profile }: { profile: any }) {
     return <MoneyDashboardSkeleton />
   }
 
-  // Only show if account is complete
+  // Allow pricing edits even if Stripe account isn't fully enabled
+  // Scouts should be able to set their pricing regardless of Stripe status
+  // Only show if we have account status
   if (!accountStatus) {
     console.log('📧 MoneyDashboard - No account status yet, showing nothing')
     return null
   }
   
   const isFullyEnabled = accountStatus.onboardingComplete && accountStatus.chargesEnabled && accountStatus.payoutsEnabled
+  const hasStripeAccount = accountStatus.hasAccount
   
-  if (!isFullyEnabled) {
-    console.log('📧 MoneyDashboard - Account not fully enabled, hiding dashboard. Status:', accountStatus)
+  // Show pricing section if scout has a Stripe account (even if not fully enabled)
+  // This allows scouts to set pricing before payouts are enabled
+  // If they don't have a Stripe account, they need to complete onboarding first
+  if (!hasStripeAccount) {
+    console.log('📧 MoneyDashboard - No Stripe account yet, hiding dashboard. Status:', accountStatus)
     return null
   }
   
-  console.log('📧 MoneyDashboard - Account fully enabled! Showing dashboard. Status:', accountStatus)
+  console.log('📧 MoneyDashboard - Showing dashboard. Fully enabled:', isFullyEnabled, 'Status:', accountStatus)
 
   return (
     <div className="surface-card mb-8 p-4 md:p-6">
@@ -425,19 +432,28 @@ function MoneyDashboard({ profile }: { profile: any }) {
           >
             Edit
           </button>
-          <button
-            onClick={handleGetAccountLink}
-            disabled={loading}
-            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Loading...' : 'View Dashboard'}
-          </button>
+          {isFullyEnabled && (
+            <button
+              onClick={handleGetAccountLink}
+              disabled={loading}
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Loading...' : 'View Dashboard'}
+            </button>
+          )}
         </div>
       </div>
       {showSuccessMessage && (
         <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-sm text-green-800">
             ✅ Your Stripe Connect account has been successfully set up!
+          </p>
+        </div>
+      )}
+      {!isFullyEnabled && hasStripeAccount && (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm text-amber-800">
+            ⚠️ Your Stripe account setup is in progress. You can still set your evaluation pricing, but payouts will be enabled once your account setup is complete.
           </p>
         </div>
       )}
@@ -848,13 +864,15 @@ function MoneyDashboard({ profile }: { profile: any }) {
           >
             Edit
           </button>
-          <button
-            onClick={handleGetAccountLink}
-            disabled={loading}
-            className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed w-full"
-          >
-            {loading ? 'Loading...' : 'View Dashboard'}
-          </button>
+          {isFullyEnabled && (
+            <button
+              onClick={handleGetAccountLink}
+              disabled={loading}
+              className="interactive-press inline-flex items-center justify-center h-9 px-4 rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+            >
+              {loading ? 'Loading...' : 'View Dashboard'}
+            </button>
+          )}
         </div>
         {isEditingPricing && (
           <div className="flex flex-col sm:flex-row gap-2">
@@ -2063,6 +2081,8 @@ function StripeConnectSection({ profile }: { profile: any }) {
 export default function ProfileContent({ profile, hasPendingApplication, pendingScoutApplication, needsReferrerSelection = false }: ProfileContentProps) {
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
   const [activeTab, setActiveTab] = useState<'offers' | 'intro-video' | 'posts'>('offers')
+  const [posts, setPosts] = useState<any[]>([])
+  const [postsLoading, setPostsLoading] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallButton, setShowInstallButton] = useState(false)
   const router = useRouter()
@@ -2071,6 +2091,28 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
   useEffect(() => {
     console.log('ProfileContent mounted', { profileId: profile?.id, role: profile?.role })
   }, [profile])
+
+  // Load posts when Posts tab is active
+  useEffect(() => {
+    if (activeTab === 'posts' && profile.user_id) {
+      const loadPosts = async () => {
+        setPostsLoading(true)
+        try {
+          const response = await fetch(`/api/posts/user/${profile.user_id}`)
+          if (response.ok) {
+            const data = await response.json()
+            setPosts(data.posts || [])
+          }
+        } catch (error) {
+          console.error('Error loading posts:', error)
+          setPosts([])
+        } finally {
+          setPostsLoading(false)
+        }
+      }
+      loadPosts()
+    }
+  }, [activeTab, profile.user_id])
 
   // Handle PWA install prompt
   useEffect(() => {
@@ -2790,8 +2832,20 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
             </div>
           )}
           {activeTab === 'posts' && (
-            <div className="text-center py-12 text-gray-500">
-              Posts coming soon
+            <div>
+              {postsLoading ? (
+                <div className="text-center py-12 text-gray-500">Loading posts...</div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  No posts yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {posts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
