@@ -99,24 +99,25 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
         )
       }
 
-      if (earliestMatch) {
+      if (earliestMatch !== null) {
+        const match = earliestMatch // Type narrowing helper
         // Add text before match
-        if (earliestMatch.index > 0) {
-          parts.push(remaining.substring(0, earliestMatch.index))
+        if (match.index > 0) {
+          parts.push(remaining.substring(0, match.index))
         }
         
         // Add formatted content (recursively parse nested formatting)
-        const nestedContent = parseInlineFormatting(earliestMatch.content)
-        if (earliestMatch.type === 'bold') {
+        const nestedContent = parseInlineFormatting(match.content)
+        if (match.type === 'bold') {
           parts.push(<strong key={partKey++}>{nestedContent}</strong>)
-        } else if (earliestMatch.type === 'italic') {
+        } else if (match.type === 'italic') {
           parts.push(<em key={partKey++}>{nestedContent}</em>)
-        } else if (earliestMatch.type === 'underline') {
+        } else if (match.type === 'underline') {
           parts.push(<u key={partKey++}>{nestedContent}</u>)
         }
         
         // Continue with remaining text
-        remaining = remaining.substring(earliestMatch.index + earliestMatch.length)
+        remaining = remaining.substring(match.index + match.length)
       } else {
         // No more matches, add remaining text
         parts.push(remaining)
