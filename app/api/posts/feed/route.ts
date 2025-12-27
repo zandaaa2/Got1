@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch profiles for posts
-    let postsWithProfiles = []
+    let postsWithProfiles: any[] = []
     if (posts && posts.length > 0) {
       const userIds = Array.from(new Set(posts.map(post => post.user_id)))
       const { data: profiles, error: profilesError } = await supabase
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch profiles for blog posts
-    let blogPostsWithProfiles = []
+    let blogPostsWithProfiles: any[] = []
     if (blogPosts && blogPosts.length > 0) {
       const blogUserIds = Array.from(new Set(blogPosts.map(blog => blog.scout_id).filter(Boolean)))
       const { data: blogProfiles, error: blogProfilesError } = await supabase
