@@ -33,7 +33,7 @@ export async function GET(
     }
 
     // Get unique user IDs from comments
-    const userIds = [...new Set(comments?.map(c => c.user_id) || [])]
+    const userIds = Array.from(new Set(comments?.map(c => c.user_id) || []))
 
     // Fetch profiles for comment authors
     let profilesMap: Record<string, any> = {}

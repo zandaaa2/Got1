@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Fetch profiles for posts
     let postsWithProfiles = []
     if (posts && posts.length > 0) {
-      const userIds = [...new Set(posts.map(post => post.user_id))]
+      const userIds = Array.from(new Set(posts.map(post => post.user_id)))
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, user_id, username, full_name, avatar_url, organization, school, position')
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
     // Fetch profiles for blog posts
     let blogPostsWithProfiles = []
     if (blogPosts && blogPosts.length > 0) {
-      const blogUserIds = [...new Set(blogPosts.map(blog => blog.scout_id).filter(Boolean))]
+      const blogUserIds = Array.from(new Set(blogPosts.map(blog => blog.scout_id).filter(Boolean)))
       const { data: blogProfiles, error: blogProfilesError } = await supabase
         .from('profiles')
         .select('id, user_id, username, full_name, avatar_url, organization, school, position')
