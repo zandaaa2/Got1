@@ -101,12 +101,11 @@ export default function Step6SpecificInfo({ profile, playerProfile, accountType,
         accountType: accountType
       })
 
-      const { data: updatedProfile, error: updateError } = await supabase
+      // Update without selecting to avoid JSON coercion issues
+      const { error: updateError } = await supabase
         .from('profiles')
         .update(updateData)
         .eq('user_id', targetProfile.user_id)
-        .select()
-        .single()
 
       if (updateError) {
         console.error('❌ Step 6 update error:', updateError)
@@ -114,24 +113,8 @@ export default function Step6SpecificInfo({ profile, playerProfile, accountType,
       }
       
       console.log('✅ Step 6 data saved:', {
-        profileId: updatedProfile?.id,
-        userId: updatedProfile?.user_id,
-        role: updatedProfile?.role,
-        hudl_link: updatedProfile?.hudl_link,
-        position: updatedProfile?.position,
-        school: updatedProfile?.school,
-        graduation_year: updatedProfile?.graduation_year,
-        graduation_month: updatedProfile?.graduation_month,
-        gpa: updatedProfile?.gpa,
-        weight: updatedProfile?.weight,
-        height: updatedProfile?.height,
-        forty_yd_dash: updatedProfile?.forty_yd_dash,
-        bench_max: updatedProfile?.bench_max,
-        squat_max: updatedProfile?.squat_max,
-        clean_max: updatedProfile?.clean_max,
-        state: updatedProfile?.state,
-        classification: updatedProfile?.classification,
-        college_offers: updatedProfile?.college_offers
+        userId: targetProfile.user_id,
+        updateData: updateData
       })
 
       // For parents, verify the player profile exists and is linked

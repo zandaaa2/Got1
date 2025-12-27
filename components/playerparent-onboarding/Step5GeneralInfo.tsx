@@ -443,12 +443,11 @@ export default function Step5GeneralInfo({ profile, playerProfile, accountType, 
         hasPlayerProfile: !!playerProfile
       })
 
-      const { data: updatedProfile, error: updateError } = await supabase
+      // Update without selecting to avoid JSON coercion issues
+      const { error: updateError } = await supabase
         .from('profiles')
         .update(updateData)
         .eq('user_id', targetProfile.user_id)
-        .select()
-        .single()
 
       if (updateError) {
         console.error('❌ Step 5 - Update error:', updateError)
@@ -456,16 +455,8 @@ export default function Step5GeneralInfo({ profile, playerProfile, accountType, 
       }
       
       console.log('✅ Step 5 data saved:', {
-        profileId: updatedProfile?.id,
-        userId: updatedProfile?.user_id,
-        role: updatedProfile?.role,
-        username: updatedProfile?.username,
-        full_name: updatedProfile?.full_name,
-        position: updatedProfile?.position,
-        school: updatedProfile?.school,
-        graduation_year: updatedProfile?.graduation_year,
-        graduation_month: updatedProfile?.graduation_month,
-        social_link: updatedProfile?.social_link
+        userId: targetProfile.user_id,
+        updateData: updateData
       })
       
       // If this is a parent updating a player profile, verify the link exists
@@ -476,12 +467,12 @@ export default function Step5GeneralInfo({ profile, playerProfile, accountType, 
             .from('parent_children')
             .select('*')
             .eq('parent_id', session.user.id)
-            .eq('player_id', updatedProfile.user_id)
+            .eq('player_id', targetProfile.user_id)
             .maybeSingle()
           
           console.log('🔗 Parent-Child link check:', {
             parentId: session.user.id,
-            playerId: updatedProfile.user_id,
+            playerId: targetProfile.user_id,
             linkExists: !!parentLink,
             linkData: parentLink
           })
