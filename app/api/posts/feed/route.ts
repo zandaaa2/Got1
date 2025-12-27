@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch profiles for evaluations
-    let evaluationsWithProfiles = []
+    let evaluationsWithProfiles: any[] = []
     if (evaluations && evaluations.length > 0) {
       const userIds = new Set<string>()
       evaluations.forEach(evaluation => {
