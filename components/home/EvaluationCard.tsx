@@ -229,15 +229,15 @@ export default function EvaluationCard({ evaluation }: EvaluationCardProps) {
         {scout && (
           <Link href={scoutPath} className="flex items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity flex-shrink-0 max-w-[40%] md:max-w-none">
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-full overflow-hidden flex-shrink-0">
-              {isMeaningfulAvatar(scout.avatar_url) ? (
-                <Image
-                  src={scout.avatar_url}
-                  alt={scout.full_name || 'Scout'}
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
+                    {scout.avatar_url && isMeaningfulAvatar(scout.avatar_url) ? (
+                      <Image
+                        src={scout.avatar_url}
+                        alt={scout.full_name || 'Scout'}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
                 <div className={`w-full h-full flex items-center justify-center ${getGradientForId(scout.id)}`}>
                   <span className="text-white text-xs md:text-lg font-semibold">
                     {scout.full_name?.charAt(0).toUpperCase() || '?'}
