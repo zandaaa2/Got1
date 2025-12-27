@@ -8,6 +8,11 @@ import { useRouter } from 'next/navigation'
 import Logo from '@/components/shared/Logo'
 import { createClient } from '@/lib/supabase-client'
 
+interface WelcomeNavbarProps {
+  showBecomeScout?: boolean
+  variant?: 'transparent' | 'visible'
+}
+
 export default function WelcomeNavbar({ showBecomeScout = true, variant = 'transparent' }: WelcomeNavbarProps) {
   const { openSignUp } = useAuthModal()
   const router = useRouter()
