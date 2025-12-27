@@ -68,6 +68,7 @@ export default function WelcomeContent({
     router.push('/playerparent?step=1')
   }
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
 
   const findCollegeMatch = (organization: string | null) => {
     if (!organization) return null
@@ -358,6 +359,251 @@ export default function WelcomeContent({
           </div>
         </div>
       )}
+
+      {/* FAQ Section */}
+      <div className="w-full py-16 md:py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-normal text-black mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+              Get quick answers to common questions about using Got1 for your recruiting journey.
+            </p>
+          </div>
+
+          <div className="space-y-4 mb-10">
+            {/* FAQ Item 1 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 0 ? null : 0)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  What is Got1?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 0 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 0 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    Got1 is a college sports recruiting platform that connects high school athletes with verified college scouts. You can submit your game film for professional evaluations and receive actionable feedback to advance your recruiting. Our network includes scouts from top programs like Michigan, Auburn, and more.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FAQ Item 2 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 1 ? null : 1)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  How do I get scout feedback on my game film?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 1 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 1 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    Sign up as an athlete, create your profile, and submit your highlights or full game film. Verified scouts will review it and provide detailed, professional evaluations with strengths, areas for improvement, and recruiting potential. We guarantee valuable feedback or your money back.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FAQ Item 3 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 2 ? null : 2)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  Are the scouts on Got1 verified and real college coaches?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 2 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 2 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    Yes — every scout on Got1 is verified to ensure they're actively involved in college recruiting. We connect you with scouts from Power 5 and other programs, giving you authentic insights you can trust.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FAQ Item 4 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 3 ? null : 3)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  Is Got1 free to use?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 3 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 3 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    Creating an athlete or scout profile and browsing is free. Submitting film for evaluations may involve a fee, but we offer a quality guarantee: If the feedback isn't valuable, you get your money back.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FAQ Item 5 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 4 ? null : 4)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  How does Got1 help with college recruiting?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 4 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 4 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    Beyond evaluations, you can connect with scouts on X (formerly Twitter), build your network, and take actionable steps toward the right university. Many athletes use our feedback to improve their highlights and get noticed by college programs.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FAQ Item 6 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 5 ? null : 5)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  What sports does Got1 support?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 5 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 5 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    We focus primarily on football, with verified scouts evaluating positions like QB, WR, and more. We're expanding to other sports — contact us if you're in another discipline!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FAQ Item 7 */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setOpenFaqIndex(openFaqIndex === 6 ? null : 6)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h3 className="text-lg font-medium text-black pr-4">
+                  How private is my information on Got1?
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    openFaqIndex === 6 ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openFaqIndex === 6 && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-600 leading-relaxed">
+                    Your full profile, film, and evaluations are private and only visible to verified scouts unless you choose otherwise. We prioritize privacy while helping you get exposure.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="text-center border-t border-gray-200 pt-10">
+            <p className="text-base md:text-lg text-gray-600 mb-6">
+              Have more questions? Check out our full FAQ page for in-depth answers on recruiting tips, scout verification, pricing, and more.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/faq"
+                className="inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-medium hover:opacity-90 transition-opacity text-base md:text-lg shadow-lg"
+                style={{ backgroundColor: '#233dff' }}
+              >
+                View Full FAQ
+              </Link>
+              <p className="text-sm md:text-base text-gray-600">
+                Or{' '}
+                <button
+                  onClick={handleGetStarted}
+                  className="text-blue-600 hover:text-blue-800 font-medium underline"
+                >
+                  sign up now
+                </button>
+                {' '}to start getting professional feedback today!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Final CTA */}
       <div className="w-full py-12 md:py-16 pb-24 md:pb-32 bg-white">
