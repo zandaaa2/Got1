@@ -1,26 +1,21 @@
 import WelcomeNavbar from '@/components/welcome/WelcomeNavbar'
 import WelcomeFooter from '@/components/welcome/WelcomeFooter'
 import Link from 'next/link'
+import { getAllBlogPosts } from '@/lib/blog-posts'
+// Simple date formatting function
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+import Image from 'next/image'
 
-const blogPosts = [
-  { 
-    title: 'How to Get Recruited by College Scouts', 
-    slug: '/blog/get-recruited',
-    excerpt: 'Learn the essential steps to get your game film noticed by college scouts and advance your recruiting journey.'
-  },
-  { 
-    title: 'What Scouts Look for in Game Film', 
-    slug: '/blog/scout-requirements',
-    excerpt: 'Discover what college scouts are actually looking for when they review your game film and how to present yourself effectively.'
-  },
-  { 
-    title: 'Understanding the Recruiting Process', 
-    slug: '/blog/recruiting-process',
-    excerpt: 'A comprehensive guide to understanding how college football recruiting works and how to navigate the process successfully.'
-  },
-]
+export default async function BlogPage() {
+  const blogPosts = await getAllBlogPosts()
 
-export default function BlogPage() {
   return (
     <div className="min-h-screen bg-white">
       <WelcomeNavbar showBecomeScout={true} variant="visible" />
@@ -31,18 +26,43 @@ export default function BlogPage() {
           </h1>
 
           <div className="space-y-8">
-            {blogPosts.map((post) => (
-              <article key={post.slug} className="border-b border-gray-200 pb-8 last:border-b-0">
-                <Link href={post.slug}>
-                  <h2 className="text-xl font-normal text-black mb-3 hover:text-blue-600 transition-colors">
-                    {post.title}
-                  </h2>
-                  <p className="text-gray-600 leading-relaxed">
-                    {post.excerpt}
-                  </p>
-                </Link>
-              </article>
-            ))}
+            {blogPosts.map((post) => {
+              const formattedDate = formatDate(post.publishedAt)
+              
+              return (
+                <article key={post.slug} className="border-b border-gray-200 pb-8 last:border-b-0">
+                  <Link href={`/blog/${post.slug}`} className="block group">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      {/* Thumbnail Image */}
+                      <div className="relative w-full md:w-48 h-32 md:h-24 rounded-lg overflow-hidden flex-shrink-0">
+                        <Image
+                          src={post.image}
+                          alt={post.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform"
+                          unoptimized
+                        />
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1">
+                        <h2 className="text-xl font-normal text-black mb-2 group-hover:text-blue-600 transition-colors">
+                          {post.title}
+                        </h2>
+                        <p className="text-gray-600 leading-relaxed mb-2">
+                          {post.excerpt}
+                        </p>
+                        <div className="flex items-center gap-3 text-sm text-gray-500">
+                          <span>By {post.author}</span>
+                          <span>•</span>
+                          <time dateTime={post.publishedAt}>{formattedDate}</time>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </article>
+              )
+            })}
           </div>
         </div>
       </main>

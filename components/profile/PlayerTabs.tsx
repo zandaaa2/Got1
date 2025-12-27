@@ -6,14 +6,18 @@ interface PlayerTabsProps {
   playerInfoContent: ReactNode
   evaluationsContent: ReactNode
   evaluationsCount: number
+  postsContent?: ReactNode
+  postsCount?: number
 }
 
 export default function PlayerTabs({ 
   playerInfoContent, 
   evaluationsContent, 
-  evaluationsCount 
+  evaluationsCount,
+  postsContent,
+  postsCount = 0
 }: PlayerTabsProps) {
-  const [activeTab, setActiveTab] = useState<'player-info' | 'evaluations'>('player-info')
+  const [activeTab, setActiveTab] = useState<'player-info' | 'evaluations' | 'posts'>('player-info')
 
   return (
     <section>
@@ -41,6 +45,18 @@ export default function PlayerTabs({
             >
               Evaluations ({evaluationsCount})
             </button>
+            {postsContent !== undefined && (
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`pb-3 px-1 text-sm md:text-base font-medium transition-colors ${
+                  activeTab === 'posts'
+                    ? 'text-black border-b-2 border-black'
+                    : 'text-gray-600 hover:text-black'
+                }`}
+              >
+                Posts ({postsCount})
+              </button>
+            )}
           </nav>
         </div>
       </div>
@@ -51,9 +67,13 @@ export default function PlayerTabs({
           <div>
             {playerInfoContent}
           </div>
-        ) : (
+        ) : activeTab === 'evaluations' ? (
           <div>
             {evaluationsContent}
+          </div>
+        ) : (
+          <div>
+            {postsContent}
           </div>
         )}
       </div>

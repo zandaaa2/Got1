@@ -151,18 +151,12 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
 
         {/* Mobile: Horizontal scroll with team images */}
         <div className="md:hidden mb-4">
-          {/* Fixed text above images */}
-          <div className="mb-4 text-center">
-            <p className="text-sm text-gray-600">
-              Our scouts have connections with these schools{' '}
-              <span className="mx-1">|</span>{' '}
-              <button
-                onClick={handleGetStarted}
-                className="text-blue-600 hover:text-blue-800 transition-colors underline font-medium"
-              >
-                See all schools
-              </button>
-            </p>
+          {/* Fixed header - matches evaluations section styling */}
+          <div className="mb-4">
+            <h2 className="text-lg sm:text-xl md:text-3xl">
+              <span className="text-black font-normal">Our scouts</span>{' '}
+              <span className="text-gray-400 font-normal">have connections with these schools.</span>
+            </h2>
           </div>
           
           {/* Scrollable images */}

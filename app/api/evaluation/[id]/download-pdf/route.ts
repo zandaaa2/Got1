@@ -1,0 +1,168 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { requireAuth, handleApiError } from '@/lib/api-helpers'
+
+/**
+ * Generates and downloads a PDF of the evaluation.
+ * Note: Requires pdfkit to be installed: npm install pdfkit @types/pdfkit
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authResult = await requireAuth(request)
+    if (authResult.response) {
+      return authResult.response
+    }
+    const { session, supabase } = authResult
+
+    const evaluationId = params.id
+
+    // Get evaluation with profiles
+    const { data: evaluation, error: evalError } = await supabase
+      .from('evaluations')
+      .select('*')
+      .eq('id', evaluationId)
+      .maybeSingle()
+
+    if (evalError || !evaluation) {
+      return NextResponse.json(
+        { error: 'Evaluation not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get scout profile
+    const { data: scoutProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', evaluation.scout_id)
+      .maybeSingle()
+
+    // Get player profile
+    const { data: playerProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', evaluation.player_id)
+      .maybeSingle()
+
+    // Allow downloads for completed evaluations (same access as viewing in feed)
+    // Only restrict non-completed evaluations to scout, player, or parent
+    if (evaluation.status !== 'completed') {
+      // Check if user has access (scout, player, or parent) for non-completed evaluations
+      const { data: parentLink } = await supabase
+        .from('parent_children')
+        .select('parent_id')
+        .eq('player_id', evaluation.player_id)
+        .eq('parent_id', session.user.id)
+        .maybeSingle()
+
+      const hasAccess = 
+        session.user.id === evaluation.scout_id ||
+        session.user.id === evaluation.player_id ||
+        !!parentLink
+
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'You do not have access to this evaluation' },
+          { status: 403 }
+        )
+      }
+    }
+    // Completed evaluations are viewable by all authenticated users (same as feed)
+
+    // Generate PDF using pdfkit
+    // Use require directly - Next.js API routes run in Node.js context
+    const PDFDocument = require('pdfkit')
+    
+    if (typeof PDFDocument !== 'function') {
+      console.error('PDFDocument is not a constructor, type:', typeof PDFDocument)
+      return NextResponse.json(
+        { error: 'PDF generation library not available. Please install pdfkit: npm install pdfkit @types/pdfkit' },
+        { status: 500 }
+      )
+    }
+    
+    // Wait for PDF to be generated
+    const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({
+        margin: 50,
+        size: 'LETTER',
+      })
+
+      const buffers: Buffer[] = []
+      doc.on('data', (chunk: Buffer) => buffers.push(chunk))
+      doc.on('end', () => resolve(Buffer.concat(buffers)))
+      doc.on('error', reject)
+
+      // Header
+      doc.fontSize(20).text('EVALUATION REPORT', { align: 'center' })
+      doc.moveDown(2)
+
+      // Scout Information
+      doc.fontSize(14).text('Scout Information', { underline: true })
+      doc.fontSize(12)
+      doc.text(`Name: ${scoutProfile?.full_name || 'Unknown Scout'}`)
+      if (scoutProfile?.organization) {
+        doc.text(`Organization: ${scoutProfile.organization}`)
+      }
+      if (scoutProfile?.position) {
+        doc.text(`Position: ${scoutProfile.position}`)
+      }
+      doc.moveDown()
+
+      // Player Information
+      doc.fontSize(14).text('Player Information', { underline: true })
+      doc.fontSize(12)
+      doc.text(`Name: ${playerProfile?.full_name || 'Unknown Player'}`)
+      if (playerProfile?.school) {
+        doc.text(`School: ${playerProfile.school}`)
+      }
+      if (playerProfile?.position) {
+        doc.text(`Position: ${playerProfile.position}`)
+      }
+      if (playerProfile?.graduation_year) {
+        doc.text(`Graduation Year: ${playerProfile.graduation_year}`)
+      }
+      doc.moveDown()
+
+      // Evaluation Details
+      doc.fontSize(14).text('Evaluation Details', { underline: true })
+      doc.fontSize(12)
+      doc.text(`Date: ${new Date(evaluation.completed_at || evaluation.created_at).toLocaleDateString()}`)
+      doc.text(`Status: ${evaluation.status.charAt(0).toUpperCase() + evaluation.status.slice(1)}`)
+      doc.moveDown()
+
+      // Evaluation Notes
+      if (evaluation.notes) {
+        doc.fontSize(14).text('Evaluation Notes', { underline: true })
+        doc.fontSize(12)
+        // Split notes into multiple lines if needed (pdfkit handles this automatically with width)
+        doc.text(evaluation.notes, {
+          align: 'left',
+          width: 500,
+        })
+        doc.moveDown()
+      }
+
+      // Footer
+      doc.fontSize(10)
+      doc.text(`Generated by Got1 - ${new Date().toLocaleString()}`, {
+        align: 'center',
+      })
+
+      doc.end()
+    })
+
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="evaluation-${evaluationId}.pdf"`,
+      },
+    })
+  } catch (error: any) {
+    console.error('Error generating evaluation PDF:', error)
+    return handleApiError(error, 'Internal server error')
+  }
+}

@@ -94,3 +94,4 @@ COMMENT ON COLUMN evaluations.purchased_by_type IS 'Type of purchaser: player or
 
 
 
+

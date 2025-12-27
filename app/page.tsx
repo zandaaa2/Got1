@@ -86,10 +86,10 @@ function HomeContent() {
           return
         }
 
-        // If user is signed in, redirect to browse page
+        // If user is signed in, redirect to home page
         // Otherwise, redirect to welcome page as the default landing page
         if (session) {
-          router.replace('/browse')
+          router.replace('/home')
         } else {
           router.replace('/welcome')
         }

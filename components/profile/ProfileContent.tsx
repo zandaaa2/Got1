@@ -15,7 +15,8 @@ import { collegeEntries } from '@/lib/college-data'
 import ParentDashboard from '@/components/profile/ParentDashboard'
 import PendingScoutApplication from '@/components/profile/PendingScoutApplication'
 import IntroVideo from '@/components/profile/IntroVideo'
-// import PostCard from '@/components/home/PostCard' // Temporarily disabled - home page feature
+import ScoutBlogsTab from '@/components/profile/ScoutBlogsTab'
+import PostCard from '@/components/home/PostCard'
 
 interface ProfileContentProps {
   profile: any
@@ -2080,9 +2081,9 @@ function StripeConnectSection({ profile }: { profile: any }) {
 
 export default function ProfileContent({ profile, hasPendingApplication, pendingScoutApplication, needsReferrerSelection = false }: ProfileContentProps) {
   const [isScoutStatusMinimized, setIsScoutStatusMinimized] = useState(false)
-  const [activeTab, setActiveTab] = useState<'offers' | 'intro-video'>('offers')
-  // const [posts, setPosts] = useState<any[]>([]) // Temporarily disabled - home page feature
-  // const [postsLoading, setPostsLoading] = useState(false) // Temporarily disabled - home page feature
+  const [activeTab, setActiveTab] = useState<'offers' | 'intro-video' | 'blogs' | 'posts'>('offers')
+  const [posts, setPosts] = useState<any[]>([])
+  const [postsLoading, setPostsLoading] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallButton, setShowInstallButton] = useState(false)
   const router = useRouter()
@@ -2092,27 +2093,55 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
     console.log('ProfileContent mounted', { profileId: profile?.id, role: profile?.role })
   }, [profile])
 
-  // Load posts when Posts tab is active - Temporarily disabled - home page feature
-  // useEffect(() => {
-  //   if (activeTab === 'posts' && profile.user_id) {
-  //     const loadPosts = async () => {
-  //       setPostsLoading(true)
-  //       try {
-  //         const response = await fetch(`/api/posts/user/${profile.user_id}`)
-  //         if (response.ok) {
-  //           const data = await response.json()
-  //           setPosts(data.posts || [])
-  //         }
-  //       } catch (error) {
-  //         console.error('Error loading posts:', error)
-  //         setPosts([])
-  //       } finally {
-  //         setPostsLoading(false)
-  //       }
-  //     }
-  //     loadPosts()
-  //   }
-  // }, [activeTab, profile.user_id])
+  // Load posts when Posts tab is active
+  useEffect(() => {
+    if (activeTab === 'posts' && profile.user_id) {
+      const loadPosts = async () => {
+        setPostsLoading(true)
+        console.log('🔄 Loading posts for user:', profile.user_id, 'activeTab:', activeTab)
+        try {
+          const response = await fetch(`/api/posts/user/${profile.user_id}`)
+          console.log('📡 API Response status:', response.status, response.statusText)
+          
+          if (response.ok) {
+            const data = await response.json()
+            console.log('✅ Posts loaded:', data.posts?.length || 0, 'posts')
+            console.log('📝 Posts data:', data.posts)
+            
+            // Only update state if we're still on the posts tab (prevent race conditions)
+            if (activeTab === 'posts') {
+              setPosts(data.posts || [])
+            }
+          } else {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+            console.error('❌ Error loading posts - response not ok:', response.status, errorData)
+            console.error('❌ Full error response:', errorData)
+            // Don't show alert, just log - less intrusive
+            if (activeTab === 'posts') {
+              setPosts([])
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error loading posts:', error)
+          if (activeTab === 'posts') {
+            setPosts([])
+          }
+        } finally {
+          if (activeTab === 'posts') {
+            setPostsLoading(false)
+          }
+        }
+      }
+      loadPosts()
+    } else if (activeTab !== 'posts') {
+      // Only clear posts when explicitly switching away from posts tab
+      // Don't clear on initial mount when activeTab is 'offers'
+      if (posts.length > 0) {
+        console.log('🧹 Clearing posts - switching away from posts tab')
+        setPosts([])
+      }
+    }
+  }, [activeTab, profile.user_id])
 
   // Handle PWA install prompt
   useEffect(() => {
@@ -2795,8 +2824,7 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
             >
               Eval Offers
             </button>
-            {/* Posts tab - Temporarily disabled - home page feature */}
-            {/* <button
+            <button
               onClick={() => setActiveTab('posts')}
               className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
                 activeTab === 'posts'
@@ -2805,7 +2833,17 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
               }`}
             >
               Posts
-            </button> */}
+            </button>
+            <button
+              onClick={() => setActiveTab('blogs')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'blogs'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Blogs
+            </button>
           </div>
         </div>
       )}
@@ -2832,8 +2870,12 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
               />
             </div>
           )}
-          {/* Posts tab content - Temporarily disabled - home page feature */}
-          {/* {activeTab === 'posts' && (
+          {activeTab === 'blogs' && (
+            <div>
+              <ScoutBlogsTab profile={profile} userId={profile.user_id} />
+            </div>
+          )}
+          {activeTab === 'posts' && (
             <div>
               {postsLoading ? (
                 <div className="text-center py-12 text-gray-500">Loading posts...</div>
@@ -2849,7 +2891,7 @@ export default function ProfileContent({ profile, hasPendingApplication, pending
                 </div>
               )}
             </div>
-          )} */}
+          )}
         </div>
       )}
 

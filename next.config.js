@@ -84,6 +84,14 @@ const nextConfig = {
       }
     }
     
+    // Don't bundle pdfkit - it needs to be loaded at runtime
+    if (isServer) {
+      config.externals = config.externals || []
+      config.externals.push({
+        'pdfkit': 'commonjs pdfkit',
+      })
+    }
+    
     // Suppress Stripe.js localization warnings
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),

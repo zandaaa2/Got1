@@ -48,7 +48,7 @@ export default async function SignInPage({
               </p>
             </div>
 
-            <AuthForm mode="signin" redirectParam={searchParams.redirect} />
+        <AuthForm mode="signin" redirectParam={searchParams.redirect} />
 
             {/* Help Text */}
             <div className="mt-6 text-center">

@@ -9,7 +9,7 @@ import Modal from '@/components/shared/Modal'
 import Logo from '@/components/shared/Logo'
 
 interface SidebarProps {
-  activePage?: 'discover' | 'browse' | 'my-evals' | 'notifications' | 'profile' | 'make-money' | 'help' | 'settings'
+  activePage?: 'home' | 'discover' | 'browse' | 'my-evals' | 'notifications' | 'profile' | 'make-money' | 'help' | 'settings'
   onToggle?: (isCollapsed: boolean) => void
 }
 
@@ -31,6 +31,7 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
   // Map 'browse' to 'discover' for internal consistency
   const normalizedActivePage = activePage === 'browse' ? 'discover' : activePage
   const currentActivePage = normalizedActivePage || (
+    pathname === '/home' ? 'home' :
     pathname === '/discover' || pathname === '/browse' || pathname === '/whats-this' ? 'discover' :
     pathname === '/my-evals' ? 'my-evals' :
     pathname === '/profile' ? 'profile' :
@@ -251,6 +252,32 @@ export default function Sidebar({ activePage, onToggle }: SidebarProps) {
       
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-0">
         <nav className="space-y-2">
+          {/* Home */}
+          <Link
+            href="/home"
+            className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-normal ${
+              currentActivePage === 'home'
+                ? 'bg-gray-100 text-black'
+                : 'text-black hover:bg-gray-50'
+            } ${!isCollapsed ? '' : 'justify-center'}`}
+            title={!isCollapsed ? undefined : 'Home'}
+          >
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+              />
+            </svg>
+            {!isCollapsed && <span>Home</span>}
+          </Link>
+
           {/* Browse */}
           <Link
             href="/browse"

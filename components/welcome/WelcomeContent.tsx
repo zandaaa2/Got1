@@ -13,7 +13,8 @@ import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getProfilePath } from '@/lib/profile-url'
 import { collegeEntries } from '@/lib/college-data'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase-client'
 
 interface Scout {
   id: string
@@ -32,6 +33,43 @@ interface Scout {
   college_connections?: any
 }
 
+interface Evaluation {
+  id: string
+  notes: string
+  completed_at: string | null
+  scout_id: string
+  player_id: string
+  scout: {
+    id: string
+    user_id: string | null
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+    organization: string | null
+    position: string | null
+  } | null
+  player: {
+    id: string
+    user_id: string | null
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+    school: string | null
+    position: string | null
+    graduation_year: number | null
+  } | null
+}
+
+interface BlogPost {
+  id?: string
+  slug: string
+  title: string
+  excerpt: string
+  image: string
+  author: string
+  publishedAt: string
+}
+
 interface WelcomeContentProps {
   collegeConnectionSlugs: string[]
   topScouts: Scout[]
@@ -43,6 +81,8 @@ interface WelcomeContentProps {
     avatar_url: string | null
     full_name: string | null
   }>
+  exampleEvaluations?: Evaluation[]
+  blogPosts?: BlogPost[]
 }
 
 export default function WelcomeContent({ 
@@ -52,9 +92,29 @@ export default function WelcomeContent({
   d1Scouts,
   d2Scouts,
   profileAvatars = [],
+  exampleEvaluations = [],
+  blogPosts = [],
 }: WelcomeContentProps) {
   const { openSignUp } = useAuthModal()
   const router = useRouter()
+  const [hasSession, setHasSession] = useState(false)
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      setHasSession(!!session)
+    }
+    checkSession()
+  }, [])
+
+  const handleEvaluationClick = (evaluationId: string) => {
+    if (!hasSession) {
+      openSignUp()
+    } else {
+      router.push(`/evaluations/${evaluationId}`)
+    }
+  }
   
   const handleGetStarted = () => {
     // Set flag that user wants to sign up for player/parent flow
@@ -294,6 +354,269 @@ export default function WelcomeContent({
         </div>
       </div>
 
+      {/* Example Evaluations Section */}
+      {exampleEvaluations.length > 0 && (
+        <div className="w-full py-16 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
+            {/* Header */}
+            <div className="mb-8">
+              <h2 className="text-lg sm:text-xl md:text-3xl">
+                <span className="text-black font-normal">Our evaluations</span>{' '}
+                <span className="text-gray-400 font-normal">look something like this</span>
+              </h2>
+            </div>
+
+            {/* Evaluation Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {exampleEvaluations.slice(0, 3).map((evaluation) => {
+                const scout = evaluation.scout
+                const player = evaluation.player
+                const scoutAvatarUrl = scout?.avatar_url && isMeaningfulAvatar(scout.avatar_url) 
+                  ? scout.avatar_url 
+                  : null
+                const playerAvatarUrl = player?.avatar_url && isMeaningfulAvatar(player.avatar_url)
+                  ? player.avatar_url
+                  : null
+
+                // Truncate notes to 5-6 lines (approximately 300 characters)
+                const truncatedNotes = evaluation.notes.length > 300
+                  ? evaluation.notes.substring(0, 300) + '...'
+                  : evaluation.notes
+
+                // Split into lines for display (approximately 5-6 lines)
+                const lines = truncatedNotes.split('\n').slice(0, 6)
+                const displayText = lines.join('\n')
+
+                return (
+                  <button
+                    key={evaluation.id}
+                    onClick={() => handleEvaluationClick(evaluation.id)}
+                    className="w-full text-left bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    {/* Scout and Player Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      {/* Scout */}
+                      {scout && (
+                        <>
+                          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                            {scoutAvatarUrl ? (
+                              <Image
+                                src={scoutAvatarUrl}
+                                alt={scout.full_name || 'Scout'}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className={`w-full h-full flex items-center justify-center ${getGradientForId(scout.id || 'scout')}`}>
+                                <span className="text-white text-sm font-semibold">
+                                  {scout.full_name?.charAt(0).toUpperCase() || 'S'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm text-black truncate">
+                              {scout.full_name || 'Scout'}
+                            </p>
+                            <p className="text-xs text-gray-600 truncate">
+                              {scout.organization || scout.position || ''}
+                            </p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Arrow */}
+                      <div className="text-gray-400 flex-shrink-0">→</div>
+
+                      {/* Player */}
+                      {player && (
+                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                          {playerAvatarUrl ? (
+                            <Image
+                              src={playerAvatarUrl}
+                              alt={player.full_name || 'Player'}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className={`w-full h-full flex items-center justify-center ${getGradientForId(player.id || 'player')}`}>
+                              <span className="text-white text-sm font-semibold">
+                                {player.full_name?.charAt(0).toUpperCase() || 'P'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Evaluation Notes Preview (5-6 lines) */}
+                    <div className="mb-4">
+                      <p className="text-gray-900 whitespace-pre-wrap break-words text-sm leading-relaxed line-clamp-6">
+                        {displayText}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Types Section */}
+      <div className="w-full py-16 md:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
+          {/* Header */}
+          <div className="mb-8">
+            <h2 className="text-lg sm:text-xl md:text-3xl">
+              <span className="text-black font-normal">Your role</span>{' '}
+              <span className="text-gray-400 font-normal">tailored to your experience</span>
+            </h2>
+          </div>
+
+          {/* Account Type Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {/* Player Account */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 md:p-8 hover:shadow-md transition-shadow">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-normal text-black mb-2">Player</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  High school athletes looking to get evaluated by verified college scouts. Submit your game film, receive professional feedback, and advance your recruiting journey.
+                </p>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Submit game film for evaluation</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Get professional feedback from verified scouts</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Build your recruiting profile</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Connect with scouts on X (formerly Twitter)</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Parent Account */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 md:p-8 hover:shadow-md transition-shadow">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-normal text-black mb-2">Parent</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Parents managing their child's recruiting journey. Create and manage player profiles, submit evaluations, and track progress all in one place.
+                </p>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Manage multiple player profiles</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Submit evaluations on behalf of your athlete</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Track evaluation progress and feedback</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Tag existing player profiles</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Scout Account */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 md:p-8 hover:shadow-md transition-shadow">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-normal text-black mb-2">Scout</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Verified college scouts and coaches providing professional evaluations. Build your reputation, connect with athletes, and monetize your expertise.
+                </p>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Provide professional evaluations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Set your own pricing for evaluations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Write blog posts and share insights</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Build your professional network</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="mt-12 text-center">
+            <button
+              onClick={handleGetStarted}
+              className="inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-medium hover:opacity-90 transition-opacity text-base md:text-lg shadow-lg"
+              style={{ backgroundColor: '#233dff' }}
+            >
+              Get Started for Free
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Team Logos Bar - Always show */}
       <TeamLogosBar collegeConnectionSlugs={collegeConnectionSlugs || []} />
 
@@ -362,14 +685,12 @@ export default function WelcomeContent({
 
       {/* FAQ Section */}
       <div className="w-full py-16 md:py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-normal text-black mb-4">
-              Frequently Asked Questions
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
+          <div className="mb-8">
+            <h2 className="text-lg sm:text-xl md:text-3xl">
+              <span className="text-black font-normal">Questions</span>{' '}
+              <span className="text-gray-400 font-normal">written just for you.</span>
             </h2>
-            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
-              Get quick answers to common questions about using Got1 for your recruiting journey.
-            </p>
           </div>
 
           <div className="space-y-4 mb-10">
@@ -379,9 +700,14 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 0 ? null : 0)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  What is Got1?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    What is Got1?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 0 ? 'rotate-180' : ''
@@ -408,9 +734,14 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 1 ? null : 1)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  How do I get scout feedback on my game film?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    How do I get scout feedback on my game film?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 1 ? 'rotate-180' : ''
@@ -437,9 +768,14 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 2 ? null : 2)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  Are the scouts on Got1 verified and real college coaches?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    Are the scouts on Got1 verified and real college coaches?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 2 ? 'rotate-180' : ''
@@ -466,9 +802,14 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 3 ? null : 3)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  Is Got1 free to use?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    Is Got1 free to use?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 3 ? 'rotate-180' : ''
@@ -495,9 +836,14 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 4 ? null : 4)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  How does Got1 help with college recruiting?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    How does Got1 help with college recruiting?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 4 ? 'rotate-180' : ''
@@ -524,9 +870,15 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 5 ? null : 5)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  What sports does Got1 support?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 2a15.3 15.3 0 0 1 4.1 2.2c1.1.7 2.1 1.5 3 2.4a15.3 15.3 0 0 1 2.2 4.1M12 22a15.3 15.3 0 0 1-4.1-2.2c-1.1-.7-2.1-1.5-3-2.4a15.3 15.3 0 0 1-2.2-4.1M2 12h20M12 2v20" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    What sports does Got1 support?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 5 ? 'rotate-180' : ''
@@ -553,9 +905,14 @@ export default function WelcomeContent({
                 onClick={() => setOpenFaqIndex(openFaqIndex === 6 ? null : 6)}
                 className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-medium text-black pr-4">
-                  How private is my information on Got1?
-                </h3>
+                <div className="flex items-center gap-3 pr-4 flex-1">
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <h3 className="text-base sm:text-lg font-normal text-black">
+                    How private is my information on Got1?
+                  </h3>
+                </div>
                 <svg
                   className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                     openFaqIndex === 6 ? 'rotate-180' : ''
@@ -578,45 +935,104 @@ export default function WelcomeContent({
           </div>
 
           {/* CTA Section */}
-          <div className="text-center border-t border-gray-200 pt-10">
-            <p className="text-base md:text-lg text-gray-600 mb-6">
-              Have more questions? Check out our full FAQ page for in-depth answers on recruiting tips, scout verification, pricing, and more.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="text-center pt-4">
+            <Link
+              href="/faq"
+              className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-gray-200 text-black font-medium hover:bg-gray-300 transition-colors text-base md:text-lg"
+            >
+              View FAQ page
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Blog/Resources Section */}
+      <div className="w-full py-16 md:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
+          {/* Header */}
+          <div className="mb-8">
+            <h2 className="text-lg sm:text-xl md:text-3xl">
+              <span className="text-black font-normal">Our blog</span>{' '}
+              <span className="text-gray-400 font-normal">written just for you.</span>
+            </h2>
+          </div>
+
+          {/* Blog Posts Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blogPosts.length > 0 ? blogPosts.map((post) => (
               <Link
-                href="/faq"
-                className="inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-medium hover:opacity-90 transition-opacity text-base md:text-lg shadow-lg"
-                style={{ backgroundColor: '#233dff' }}
+                key={post.slug}
+                href={`/blog/${post.slug}`}
+                className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow text-left flex flex-col"
               >
-                View Full FAQ
+                {/* Blog Post Image */}
+                <div className="relative w-full aspect-video bg-gray-100">
+                  <Image
+                    src={post.image}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                {/* Blog Post Content */}
+                <div className="p-6 flex-1">
+                  <h3 className="text-lg font-semibold text-black mb-3 hover:text-blue-600 transition-colors">
+                    {post.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
+                    {post.excerpt}
+                  </p>
+                </div>
               </Link>
-              <p className="text-sm md:text-base text-gray-600">
-                Or{' '}
-                <button
-                  onClick={handleGetStarted}
-                  className="text-blue-600 hover:text-blue-800 font-medium underline"
+            )) : (
+              // Fallback to placeholder if no blog posts
+              [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-gray-200 rounded-lg overflow-hidden text-left flex flex-col"
                 >
-                  sign up now
-                </button>
-                {' '}to start getting professional feedback today!
-              </p>
-            </div>
+                  <div className="relative w-full aspect-video bg-gray-100">
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="p-6 flex-1">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-3 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse" />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* CTA Section */}
+          <div className="text-center pt-4">
+            <Link
+              href="/blog"
+              className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-gray-200 text-black font-medium hover:bg-gray-300 transition-colors text-base md:text-lg"
+            >
+              View blog
+            </Link>
           </div>
         </div>
       </div>
 
       {/* Final CTA */}
-      <div className="w-full py-12 md:py-16 pb-24 md:pb-32 bg-white">
+      <div className="w-full py-20 md:py-28 pb-24 md:pb-32 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16 text-center">
-          <h2 className="text-2xl md:text-3xl font-normal text-black mb-4">
+          <h2 className="text-3xl md:text-5xl font-normal text-black mb-6 leading-tight">
             Ready to Get Started?
           </h2>
-          <p className="text-base md:text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-gray-700 mb-10 max-w-2xl mx-auto leading-relaxed">
             Join Got1 today and connect with verified college scouts who can help take your recruiting to the next level.
           </p>
           <button
             onClick={handleGetStarted}
-            className="inline-flex items-center justify-center px-8 py-3 rounded-full text-white font-medium hover:opacity-90 transition-opacity text-base md:text-lg shadow-lg"
+            className="inline-flex items-center justify-center px-10 py-4 rounded-full text-white font-semibold hover:opacity-90 transition-all text-lg md:text-xl shadow-2xl transform hover:scale-105"
             style={{ backgroundColor: '#233dff' }}
           >
             Get Started for Free

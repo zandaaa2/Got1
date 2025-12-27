@@ -2,20 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { useRouter } from 'next/navigation'
 import Logo from '@/components/shared/Logo'
-
-interface WelcomeNavbarProps {
-  showBecomeScout?: boolean
-  variant?: 'transparent' | 'visible'
-}
-
-const blogPosts = [
-  { title: 'How to Get Recruited by College Scouts', slug: '/blog/get-recruited' },
-  { title: 'What Scouts Look for in Game Film', slug: '/blog/scout-requirements' },
-  { title: 'Understanding the Recruiting Process', slug: '/blog/recruiting-process' },
-]
+import { createClient } from '@/lib/supabase-client'
 
 export default function WelcomeNavbar({ showBecomeScout = true, variant = 'transparent' }: WelcomeNavbarProps) {
   const { openSignUp } = useAuthModal()
@@ -36,6 +27,13 @@ export default function WelcomeNavbar({ showBecomeScout = true, variant = 'trans
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [isAppInstalled, setIsAppInstalled] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [blogPosts, setBlogPosts] = useState<Array<{
+    slug: string
+    title: string
+    image: string
+    excerpt: string
+  }>>([])
+  const [loadingBlogs, setLoadingBlogs] = useState(false)
   
   const handleBecomeScoutClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -50,6 +48,38 @@ export default function WelcomeNavbar({ showBecomeScout = true, variant = 'trans
     // Navigate to new scout onboarding flow
     window.location.href = '/scout'
   }
+
+  // Fetch blog posts
+  useEffect(() => {
+    const fetchBlogPosts = async () => {
+      try {
+        setLoadingBlogs(true)
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .select('slug, title, image, excerpt')
+          .order('published_at', { ascending: false })
+          .limit(5)
+
+        if (error) throw error
+
+        if (data) {
+          setBlogPosts(data.map(post => ({
+            slug: `/blog/${post.slug}`,
+            title: post.title,
+            image: post.image || '/placeholder-blog.jpg',
+            excerpt: post.excerpt || ''
+          })))
+        }
+      } catch (error) {
+        console.error('Error fetching blog posts:', error)
+      } finally {
+        setLoadingBlogs(false)
+      }
+    }
+
+    fetchBlogPosts()
+  }, [])
 
   // Check if app is installed and handle PWA install prompt
   useEffect(() => {
@@ -165,17 +195,50 @@ export default function WelcomeNavbar({ showBecomeScout = true, variant = 'trans
                     className="fixed inset-0 z-10"
                     onClick={() => setShowBlogDropdown(false)}
                   />
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg z-20 py-2">
-                    {blogPosts.map((post) => (
-                      <Link
-                        key={post.slug}
-                        href={post.slug}
-                        onClick={() => setShowBlogDropdown(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
-                      >
-                        {post.title}
-                      </Link>
-                    ))}
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg z-20 py-2 max-h-96 overflow-y-auto">
+                    {loadingBlogs ? (
+                      <div className="px-4 py-2 text-sm text-gray-500">Loading blogs...</div>
+                    ) : blogPosts.length === 0 ? (
+                      <div className="px-4 py-2 text-sm text-gray-500">No blogs available</div>
+                    ) : (
+                      blogPosts.map((post) => (
+                        <Link
+                          key={post.slug}
+                          href={post.slug}
+                          onClick={() => setShowBlogDropdown(false)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
+                        >
+                          {/* Small thumbnail image */}
+                          <div className="relative w-16 h-12 flex-shrink-0 rounded overflow-hidden">
+                            <Image
+                              src={post.image}
+                              alt={post.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform"
+                              unoptimized
+                            />
+                          </div>
+                          {/* Title */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                              {post.title}
+                            </p>
+                          </div>
+                        </Link>
+                      ))
+                    )}
+                    {/* View all blogs link */}
+                    {blogPosts.length > 0 && (
+                      <div className="border-t border-gray-200 mt-2 pt-2">
+                        <Link
+                          href="/blog"
+                          onClick={() => setShowBlogDropdown(false)}
+                          className="block px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-gray-50 transition-colors text-center"
+                        >
+                          View all blogs →
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

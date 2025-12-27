@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
+import EvaluationFooter from '@/components/home/EvaluationFooter'
 import AuthModal from '@/components/auth/AuthModal'
 import { collegeEntries } from '@/lib/college-data'
 import PlayerOffersSection from '@/components/profile/PlayerOffersSection'
@@ -21,6 +22,8 @@ import PlayerTabs from '@/components/profile/PlayerTabs'
 import JoinWaitlist from '@/components/profile/JoinWaitlist'
 import ScoutProfileSections from '@/components/profile/ScoutProfileSections'
 import PurchaseEvaluation from '@/components/profile/PurchaseEvaluation'
+import FollowButton from '@/components/shared/FollowButton'
+import PostCard from '@/components/home/PostCard'
 
 
 const cardClass = 'bg-white border border-gray-200 rounded-2xl shadow-sm'
@@ -145,12 +148,17 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
   const [bioExpanded, setBioExpanded] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'offers' | 'posts' | 'evaluations'>('offers')
+  const [activeTab, setActiveTab] = useState<'offers' | 'posts' | 'evaluations' | 'blogs'>('offers')
+  const [posts, setPosts] = useState<any[]>([])
+  const [postsLoading, setPostsLoading] = useState(false)
+  const [blogs, setBlogs] = useState<any[]>([])
+  const [blogsLoading, setBlogsLoading] = useState(false)
   const [videoSize, setVideoSize] = useState<{ width: number; height: number } | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [videoWatched, setVideoWatched] = useState(false)
+  const [followerCount, setFollowerCount] = useState<number | null>(null)
   const router = useRouter()
   const supabase = createClient()
   const profileAvatarUrl = isMeaningfulAvatar(profile.avatar_url) ? profile.avatar_url : null
@@ -322,6 +330,72 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
     getCurrentUser()
   }, [])
 
+  // Load posts when Posts tab is active (for scouts) or always for players (PlayerTabs manages its own state)
+  useEffect(() => {
+    if (!profile.user_id) return
+    
+    const shouldLoadPosts = profile.role === 'scout' 
+      ? activeTab === 'posts'  // For scouts, only load when posts tab is active
+      : true                    // For players, always load (PlayerTabs manages visibility)
+    
+    if (shouldLoadPosts) {
+      const loadPosts = async () => {
+        setPostsLoading(true)
+        try {
+          console.log('🔍 Loading posts for user_id:', profile.user_id)
+          const response = await fetch(`/api/posts/user/${profile.user_id}`)
+          console.log('📡 Response status:', response.status)
+          if (response.ok) {
+            const data = await response.json()
+            console.log('✅ Posts data received:', data)
+            console.log('📝 Number of posts:', data.posts?.length || 0)
+            setPosts(data.posts || [])
+          } else {
+            const errorData = await response.json().catch(() => ({}))
+            console.error('❌ Error loading posts:', response.status, errorData)
+            setPosts([])
+          }
+        } catch (error) {
+          console.error('❌ Error loading posts:', error)
+          setPosts([])
+        } finally {
+          setPostsLoading(false)
+        }
+      }
+      loadPosts()
+    }
+  }, [activeTab, profile.user_id, profile.role])
+
+  // Load blogs when Blogs tab is active
+  useEffect(() => {
+    if (!profile.user_id || profile.role !== 'scout') return
+    
+    if (activeTab === 'blogs') {
+      const loadBlogs = async () => {
+        setBlogsLoading(true)
+        try {
+          const supabase = createClient()
+          const { data, error } = await supabase
+            .from('blog_posts')
+            .select('*')
+            .eq('scout_id', profile.user_id)
+            .order('pinned', { ascending: false, nullsFirst: false })
+            .order('published_at', { ascending: false })
+            .order('created_at', { ascending: false })
+
+          if (error) throw error
+          setBlogs(data || [])
+        } catch (error) {
+          console.error('Error loading blogs:', error)
+          setBlogs([])
+        } finally {
+          setBlogsLoading(false)
+        }
+      }
+      loadBlogs()
+    }
+  }, [activeTab, profile.user_id, profile.role])
+
   // Load evaluations when Evaluations tab is active
   useEffect(() => {
     if (profile.role === 'scout' && activeTab === 'evaluations') {
@@ -338,6 +412,39 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   useEffect(() => {
     loadEvaluations()
   }, [profile.id, profile.role])
+
+  // Load follower count
+  useEffect(() => {
+    const loadFollowerCount = async () => {
+      if (!profile.user_id) return
+      
+      try {
+        const response = await fetch(`/api/follows/count?userId=${profile.user_id}`)
+        const result = await response.json()
+        
+        if (response.ok && result.followerCount !== undefined) {
+          setFollowerCount(result.followerCount)
+        }
+      } catch (err) {
+        console.error('Error loading follower count:', err)
+      }
+    }
+    
+    loadFollowerCount()
+    
+    // Listen for follow status changes to update follower count
+    const handleFollowChange = (event: CustomEvent) => {
+      if (event.detail.userId === profile.user_id) {
+        // Reload follower count when someone follows/unfollows
+        loadFollowerCount()
+      }
+    }
+    
+    window.addEventListener('follow-status-changed', handleFollowChange as EventListener)
+    return () => {
+      window.removeEventListener('follow-status-changed', handleFollowChange as EventListener)
+    }
+  }, [profile.user_id])
 
   // Track profile view (only for external views, not own profile)
   useEffect(() => {
@@ -875,6 +982,24 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               )}
             </>
           }
+          postsContent={
+            <div>
+              {postsLoading ? (
+                <div className="text-center py-12 text-gray-500">Loading posts...</div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  No posts yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {posts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
+            </div>
+          }
+          postsCount={posts.length}
           evaluationsContent={
             <div className="mb-6 md:mb-8 relative">
               {loading ? (
@@ -1005,29 +1130,9 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                                 </div>
                               )}
                             </Link>
-                            {/* Share button and View Count - bottom left underneath evaluation (always visible) */}
-                            <div className="pl-0 md:pl-20 mt-4 md:mt-2 flex items-center gap-4">
-                              <ShareButton 
-                                evaluationId={evaluation.id} 
-                                {...(currentUserId && { userId: currentUserId })}
-                                evaluation={{
-                                  id: evaluation.id,
-                                  share_token: evaluation.share_token || null,
-                                  status: 'completed',
-                                  ...(evaluation.player_id && { player_id: evaluation.player_id }),
-                                  scout: evaluation.scout ? {
-                                    full_name: evaluation.scout.full_name,
-                                    organization: evaluation.scout.organization,
-                                  } : null,
-                                }}
-                              />
-                              {/* View Count */}
-                              {/* TODO: Re-enable view count display when ready */}
-                              {/* {evaluation.view_count !== undefined && evaluation.view_count !== null && (
-                                <div className="text-sm text-gray-600">
-                                  {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
-                                </div>
-                              )} */}
+                            {/* Footer Row: Likes/Comments on left, Share/Download on right */}
+                            <div className="pl-0 md:pl-20 mt-4 md:mt-2">
+                              <EvaluationFooter evaluationId={evaluation.id} />
                             </div>
                           </div>
                         )
@@ -1364,29 +1469,30 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               </div>
             </div>
 
-            {/* View Count Row with Edit Profile Button */}
-            {/* TODO: Re-enable view count display when ready */}
-            {/* <div className="text-sm text-gray-600 flex items-center gap-3">
-              {isOwnProfile && (
+            {/* View Count Row with Edit Profile Button / Follow Button */}
+            <div className="text-sm text-gray-600 flex items-center gap-3 flex-wrap">
+              {isOwnProfile ? (
                 <a
                   href="/profile/edit"
                   className="interactive-press inline-flex items-center px-3 py-1.5 bg-gray-200 text-black rounded-lg hover:bg-gray-300 font-medium text-sm"
                 >
                   Edit Profile
                 </a>
-              )}
-              <span>{(profile.view_count ?? 0).toLocaleString()} {(profile.view_count ?? 0) === 1 ? 'view' : 'views'}</span>
-            </div> */}
-            {isOwnProfile && (
-              <div className="text-sm text-gray-600 flex items-center gap-3">
-                <a
-                  href="/profile/edit"
-                  className="interactive-press inline-flex items-center px-3 py-1.5 bg-gray-200 text-black rounded-lg hover:bg-gray-300 font-medium text-sm"
-                >
-                  Edit Profile
-                </a>
+              ) : isSignedIn ? (
+                <FollowButton userId={profile.user_id} className="px-3 py-1.5 text-sm" />
+              ) : null}
+              <div className="flex items-center gap-3">
+                {(profile.view_count ?? 0) > 0 && (
+                  <>
+                    <span>{(profile.view_count ?? 0).toLocaleString()} {(profile.view_count ?? 0) === 1 ? 'view' : 'views'}</span>
+                    {followerCount !== null && <span>•</span>}
+                  </>
+                )}
+                {followerCount !== null && (
+                  <span>{followerCount.toLocaleString()} {followerCount === 1 ? 'follower' : 'followers'}</span>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Divider Line */}
             <div className="border-t border-gray-200"></div>
@@ -1445,7 +1551,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
         )}
       </div>
 
-      {/* Tabs - Only show for scouts */}
+      {/* Tabs - Only show for scouts (players use PlayerTabs) */}
       {profile.role === 'scout' && (
         <div className="mb-6 md:mb-8">
           <div className="flex gap-2 md:gap-4 border-b border-gray-200">
@@ -1479,11 +1585,21 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             >
               Posts
             </button>
+            <button
+              onClick={() => setActiveTab('blogs')}
+              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
+                activeTab === 'blogs'
+                  ? 'bg-gray-100 border-b-2 border-black text-black'
+                  : 'text-black hover:bg-gray-50'
+              }`}
+            >
+              Blogs
+            </button>
           </div>
         </div>
       )}
 
-      {/* Tab Content - Only show for scouts */}
+      {/* Tab Content - Only show for scouts (players use PlayerTabs) */}
       {profile.role === 'scout' && (
         <div className="mb-6 md:mb-8">
           {activeTab === 'offers' && (
@@ -1674,8 +1790,74 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
             </div>
           )}
           {activeTab === 'posts' && (
-            <div className="text-center py-12 text-gray-500">
-              Posts coming soon
+            <div>
+              {postsLoading ? (
+                <div className="text-center py-12 text-gray-500">Loading posts...</div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  No posts yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {posts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === 'blogs' && (
+            <div>
+              {blogsLoading ? (
+                <div className="text-center py-12 text-gray-500">Loading blogs...</div>
+              ) : blogs.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  No blog posts yet
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {blogs.map((blog) => (
+                    <Link
+                      key={blog.id}
+                      href={`/blog/${blog.slug}`}
+                      className="block border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow relative group"
+                    >
+                      {/* Pinned Indicator */}
+                      {blog.pinned && (
+                        <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-2 py-1 bg-white/90 backdrop-blur-sm rounded text-xs text-gray-600">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                          <span>Pinned</span>
+                        </div>
+                      )}
+                      {/* Header Image */}
+                      <div className="relative w-full h-48 overflow-hidden bg-gray-100">
+                        <Image
+                          src={blog.image}
+                          alt={blog.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-lg font-medium text-black mb-2 group-hover:text-blue-600 transition-colors">
+                          {blog.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">{blog.excerpt}</p>
+                        <div className="text-xs text-gray-500">
+                          {new Date(blog.published_at || blog.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {activeTab === 'evaluations' && (
@@ -1792,30 +1974,10 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
                               </p>
                             </Link>
                           )}
-                          {/* Share button and View Count */}
+                          {/* Footer Row: Likes/Comments on left, Share/Download on right */}
                           {!isMinimized && (
-                            <div className="pl-0 md:pl-20 mt-6 flex items-center gap-4">
-                              <ShareButton 
-                                evaluationId={evaluation.id} 
-                                userId={currentUserId || undefined}
-                                evaluation={{
-                                  id: evaluation.id,
-                                  share_token: evaluation.share_token || null,
-                                  status: 'completed',
-                                  player_id: evaluation.player_id || undefined,
-                                  scout: profile.role === 'scout' ? {
-                                    full_name: profile.full_name,
-                                    organization: profile.organization,
-                                  } : null,
-                                }}
-                              />
-                              {/* View Count */}
-                              {/* TODO: Re-enable view count display when ready */}
-                              {/* {evaluation.view_count !== undefined && evaluation.view_count !== null && (
-                                <div className="text-sm text-gray-600">
-                                  {(evaluation.view_count ?? 0).toLocaleString()} {(evaluation.view_count ?? 0) === 1 ? 'view' : 'views'}
-                                </div>
-                              )} */}
+                            <div className="pl-0 md:pl-20 mt-6">
+                              <EvaluationFooter evaluationId={evaluation.id} />
                             </div>
                           )}
                         </div>

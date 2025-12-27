@@ -15,11 +15,15 @@ export default function BackButton({ fallbackUrl = '/browse', className = '', sh
     e.preventDefault()
     e.stopPropagation()
     
-    console.log('Back button clicked, navigating to:', fallbackUrl) // Debug log
-    
-    // Use window.location.href for guaranteed navigation
-    if (typeof window !== 'undefined' && fallbackUrl) {
-      window.location.href = fallbackUrl
+    // Use browser history to go back
+    if (typeof window !== 'undefined') {
+      // Check if we can go back (there's history)
+      if (window.history.length > 1) {
+        router.back()
+      } else if (fallbackUrl) {
+        // Fallback to provided URL if no history
+        router.push(fallbackUrl)
+      }
     }
   }
 
@@ -51,7 +55,7 @@ export default function BackButton({ fallbackUrl = '/browse', className = '', sh
           d="M15 19l-7-7 7-7"
         />
       </svg>
-      {showArrow && <span className="md:hidden">Back</span>}
+      <span>Back</span>
     </button>
   )
 }

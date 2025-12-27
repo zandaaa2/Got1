@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import WelcomeContent from '@/components/welcome/WelcomeContent'
 import WelcomeNavbar from '@/components/welcome/WelcomeNavbar'
 import { collegeEntries } from '@/lib/college-data'
+import { getAllBlogPosts } from '@/lib/blog-posts'
 
 // Helper function to match organization name to college slug
 function findCollegeSlugByOrganization(organization: string | null): string | null {
@@ -220,6 +221,41 @@ export default async function WelcomePage() {
     ?.filter((p) => isMeaningfulAvatar(p.avatar_url))
     .slice(0, 5) || []
 
+  // Fetch completed evaluations for the examples section
+  // Since evaluations reference auth.users, we need to manually join with profiles
+  const { data: evaluationsData } = await supabase
+    .from('evaluations')
+    .select('id, notes, completed_at, scout_id, player_id')
+    .eq('status', 'completed')
+    .not('notes', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(6)
+
+  // Manually join with profiles
+  let exampleEvaluations: any[] = []
+  if (evaluationsData && evaluationsData.length > 0) {
+    const userIds = [
+      ...evaluationsData.map(e => e.scout_id),
+      ...evaluationsData.map(e => e.player_id)
+    ].filter(Boolean) as string[]
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, user_id, username, full_name, avatar_url, organization, position, school, graduation_year')
+      .in('user_id', userIds)
+
+    exampleEvaluations = evaluationsData.map((evaluation) => ({
+      ...evaluation,
+      scout: profiles?.find((p) => p.user_id === evaluation.scout_id) || null,
+      player: profiles?.find((p) => p.user_id === evaluation.player_id) || null,
+    }))
+  }
+
+  // Fetch blog posts for the welcome page
+  const blogPosts = await getAllBlogPosts()
+  // Limit to 5 most recent blog posts
+  const recentBlogPosts = blogPosts.slice(0, 5)
+
   return (
     <div className="min-h-screen bg-white">
       <div className="relative">
@@ -231,6 +267,8 @@ export default async function WelcomePage() {
           d1Scouts={d1Scouts}
           d2Scouts={d2Scouts}
           profileAvatars={profileAvatars}
+          exampleEvaluations={exampleEvaluations}
+          blogPosts={recentBlogPosts}
         />
       </div>
     </div>

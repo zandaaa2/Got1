@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import HeaderMenu from '@/components/shared/HeaderMenu'
+import BackButton from '@/components/shared/BackButton'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from './ShareButton'
@@ -958,176 +959,57 @@ export default function EvaluationDetail({
           <div></div>
         </div>
 
-        {/* Reorder based on fromProfile - Scout view always shows scout first */}
-        {fromProfile === 'player' ? (
-          <>
-            {/* Player Profile Card - First when coming from player's profile */}
-            {player && (
-              <div className="mb-6 md:mb-8">
-                <Link
-                  href={player.id ? getProfilePath(player.id, player.username) : `/profile/${player.id || ''}`}
-                  className="flex items-start gap-3 md:gap-4 mb-4 hover:opacity-90 transition-opacity"
-                >
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                    {isMeaningfulAvatar(player.avatar_url) ? (
-                      <Image
-                        src={player.avatar_url}
-                        alt={player.full_name || 'Player'}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center ${getGradientForId(
-                        player.user_id || evaluation.player_id || player.id || evaluation.id
-                      )}`}>
-                        <span className="text-white text-xl font-semibold">
-                          {player.full_name?.charAt(0).toUpperCase() || '?'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-black text-base md:text-lg mb-1 truncate">
-                      {player.full_name || 'Unknown Player'}
-                    </h3>
-                    <p className="text-black text-xs md:text-sm mb-1 truncate">
-                      {player.school || 'Unknown School'}
-                      {player.school && player.graduation_year && ', '}
-                      {player.graduation_year && `${player.graduation_year}`}
-                    </p>
-                    <p className="text-black text-xs md:text-sm text-gray-600">
-                      {formatDate(evaluation.created_at)}
-                    </p>
-                  </div>
-                </Link>
+        {/* Always show scout first, player second - Add back button above scout when coming from home feed */}
+        <>
+          {/* Scout Profile Card - Always first */}
+          <div className="mb-6 md:mb-8">
+            {/* Back button - show when coming from home feed (fromProfile is undefined) */}
+            {!fromProfile && (
+              <div className="mb-4">
+                <BackButton fallbackUrl="/home" />
               </div>
             )}
-
-            {/* Eval Offer Box */}
-            {(() => {
-              const isFreeEval = evaluation.price === 0
-              const offerTitle = isFreeEval ? 'Free Evaluation' : (scout?.offer_title || 'Standard Evaluation')
-              const offerDescription = isFreeEval ? scout?.free_eval_description : scout?.bio
-              const offerPrice = evaluation.price || 0
-
-              return (
-                <div className="border border-gray-200 rounded-lg p-6 mb-6 md:mb-8 hover:border-gray-300 hover:shadow-sm transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-black">{offerTitle}</h3>
-                    <span className="text-lg font-bold text-black">${offerPrice.toFixed(2)}</span>
+            <Link 
+              href={scout?.id ? getProfilePath(scout.id, scout.username) : `/profile/${scout?.id || ''}`}
+              className="flex items-center gap-3 md:gap-4 mb-4 hover:opacity-90 transition-opacity"
+            >
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                {isMeaningfulAvatar(scout?.avatar_url) ? (
+                  <Image
+                    src={scout.avatar_url}
+                    alt={scout.full_name || 'Scout'}
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full flex items-center justify-center text-xl md:text-2xl font-semibold text-white ${getGradientForId(
+                      scout?.user_id || evaluation.scout_id || scout?.id || evaluation.id
+                    )}`}
+                  >
+                    {scout?.full_name?.charAt(0).toUpperCase() || '?'}
                   </div>
-                  {offerDescription && (
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {offerDescription}
-                    </p>
-                  )}
-                  <div className="mt-4">
-                    <Link
-                      href={scout?.id ? `${getProfilePath(scout.id, scout.username)}?tab=offers` : `/profile/${scout?.id || ''}?tab=offers`}
-                      className={`block w-full px-6 py-3 rounded-lg font-medium text-sm md:text-base transition-colors text-center ${
-                        isFreeEval
-                          ? 'bg-gray-200 text-black hover:bg-gray-300'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                      style={!isFreeEval ? { backgroundColor: '#233dff' } : undefined}
-                    >
-                      {isFreeEval ? 'Request Free Evaluation' : 'Purchase Evaluation'}
-                    </Link>
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Scout Profile Card - Second when coming from player's profile */}
-            <div className="mb-6 md:mb-8">
-              <Link 
-                href={scout?.id ? getProfilePath(scout.id, scout.username) : `/profile/${scout?.id || ''}`}
-                className="flex items-center gap-3 md:gap-4 mb-4 hover:opacity-90 transition-opacity"
-              >
-                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                  {isMeaningfulAvatar(scout?.avatar_url) ? (
-                    <Image
-                      src={scout.avatar_url}
-                      alt={scout.full_name || 'Scout'}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className={`w-full h-full flex items-center justify-center text-xl md:text-2xl font-semibold text-white ${getGradientForId(
-                        scout?.user_id || evaluation.scout_id || scout?.id || evaluation.id
-                      )}`}
-                    >
-                      {scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg md:text-xl font-bold text-black mb-1">
-                    {scout?.full_name || 'Unknown Scout'}
-                  </h2>
-                  {(scout?.position || scout?.organization) && (
-                    <p className="text-sm text-gray-600">
-                      {scout?.position && scout?.organization
-                        ? `${scout.position} at ${scout.organization}`
-                        : scout?.position
-                        ? scout.position
-                        : scout?.organization
-                        ? scout.organization
-                        : ''}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Scout Profile Card - First when coming from scout's profile or default */}
-            <div className="mb-6 md:mb-8">
-              <Link 
-                href={scout?.id ? getProfilePath(scout.id, scout.username) : `/profile/${scout?.id || ''}`}
-                className="flex items-center gap-3 md:gap-4 mb-4 hover:opacity-90 transition-opacity"
-              >
-                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                  {isMeaningfulAvatar(scout?.avatar_url) ? (
-                    <Image
-                      src={scout.avatar_url}
-                      alt={scout.full_name || 'Scout'}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className={`w-full h-full flex items-center justify-center text-xl md:text-2xl font-semibold text-white ${getGradientForId(
-                        scout?.user_id || evaluation.scout_id || scout?.id || evaluation.id
-                      )}`}
-                    >
-                      {scout?.full_name?.charAt(0).toUpperCase() || '?'}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg md:text-xl font-bold text-black mb-1">
-                    {scout?.full_name || 'Unknown Scout'}
-                  </h2>
-                  {(scout?.position || scout?.organization) && (
-                    <p className="text-sm text-gray-600">
-                      {scout?.position && scout?.organization
-                        ? `${scout.position} at ${scout.organization}`
-                        : scout?.position
-                        ? scout.position
-                        : scout?.organization
-                        ? scout.organization
-                        : ''}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg md:text-xl font-bold text-black mb-1">
+                  {scout?.full_name || 'Unknown Scout'}
+                </h2>
+                {(scout?.position || scout?.organization) && (
+                  <p className="text-sm text-gray-600">
+                    {scout?.position && scout?.organization
+                      ? `${scout.position} at ${scout.organization}`
+                      : scout?.position
+                      ? scout.position
+                      : scout?.organization
+                      ? scout.organization
+                      : ''}
+                  </p>
+                )}
+              </div>
+            </Link>
+          </div>
 
             {/* Eval Offer Box */}
             {(() => {
@@ -1207,7 +1089,6 @@ export default function EvaluationDetail({
               </div>
             )}
           </>
-        )}
 
         {/* Evaluation Notes */}
         {evaluation.notes && (

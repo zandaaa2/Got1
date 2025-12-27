@@ -34,7 +34,7 @@ export default async function SignUpPage() {
               </p>
             </div>
 
-            <AuthForm mode="signup" />
+        <AuthForm mode="signup" />
 
             {/* Help Text */}
             <div className="mt-6 text-center">

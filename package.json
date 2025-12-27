@@ -18,12 +18,14 @@
     "next": "^14.2.33",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "pdfkit": "^0.17.2",
     "react-easy-crop": "^5.5.3",
     "resend": "^3.0.0",
     "stripe": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.3",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
