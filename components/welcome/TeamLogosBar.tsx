@@ -115,7 +115,7 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
                         alt={team.name}
                         fill
                         className="object-cover"
-                        unoptimized
+                        loading="lazy"
                       />
                       
                       {/* Gradient overlay */}
@@ -130,7 +130,7 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
                             width={48}
                             height={48}
                             className="object-contain"
-                            unoptimized
+                            loading="lazy"
                           />
                         </div>
                       </div>
@@ -178,7 +178,7 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
                         alt={team.name}
                         fill
                         className="object-cover"
-                        unoptimized
+                        loading="lazy"
                       />
                       
                       {/* Gradient overlay for logo readability */}
@@ -193,7 +193,7 @@ export default function TeamLogosBar({ collegeConnectionSlugs = [] }: TeamLogosB
                             width={40}
                             height={40}
                             className="object-contain"
-                            unoptimized
+                            loading="lazy"
                           />
                         </div>
                       </div>

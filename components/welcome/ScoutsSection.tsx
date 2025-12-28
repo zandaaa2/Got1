@@ -259,7 +259,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
                           alt={scout.full_name || 'Scout'}
                           fill
                           className="object-cover"
-                          unoptimized
+                          loading="lazy"
                         />
                       ) : (
                         <div
@@ -285,7 +285,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
                                 width={32}
                                 height={32}
                                 className="object-contain"
-                                unoptimized
+                                loading="lazy"
                               />
                             </div>
                           ))}
@@ -357,7 +357,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
                           alt={scout.full_name || 'Scout'}
                           fill
                           className="object-cover"
-                          unoptimized
+                          loading="lazy"
                         />
                       ) : (
                         <div
@@ -383,7 +383,7 @@ export default function ScoutsSection({ scouts: scoutsProp = [] }: ScoutsSection
                                 width={28}
                                 height={28}
                                 className="object-contain"
-                                unoptimized
+                                loading="lazy"
                               />
                             </div>
                           ))}

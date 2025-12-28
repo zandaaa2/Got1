@@ -146,7 +146,7 @@ export default function TopScouts({ scouts = [] }: TopScoutsProps) {
                         alt={scout.full_name || 'Scout'}
                         fill
                         className="object-cover"
-                        unoptimized
+                        loading="lazy"
                       />
                     ) : (
                       <div
@@ -175,7 +175,7 @@ export default function TopScouts({ scouts = [] }: TopScoutsProps) {
                               width={32}
                               height={32}
                               className="object-contain"
-                              unoptimized
+                              loading="lazy"
                             />
                           </div>
                         ))}

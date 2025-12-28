@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  compress: true, // Enable gzip compression
   // Ensure webhook routes are not parsed
   experimental: {
     serverActions: {

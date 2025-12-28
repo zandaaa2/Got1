@@ -92,9 +92,18 @@ export function handleApiError(error: any, defaultMessage: string = 'An error oc
 }
 
 /**
- * Standardized success response
+ * Standardized success response with optional cache headers
  */
-export function successResponse(data: any, status: number = 200): NextResponse {
-  return NextResponse.json(data, { status })
+export function successResponse(
+  data: any, 
+  status: number = 200,
+  cacheSeconds: number = 60
+): NextResponse {
+  return NextResponse.json(data, { 
+    status,
+    headers: {
+      'Cache-Control': `public, s-maxage=${cacheSeconds}, stale-while-revalidate=${cacheSeconds * 5}`,
+    }
+  })
 }
 

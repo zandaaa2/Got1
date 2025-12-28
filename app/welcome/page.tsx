@@ -33,7 +33,7 @@ function findCollegeSlugByOrganization(organization: string | null): string | nu
 }
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 3600 // Revalidate every hour (ISR for better performance)
 
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'

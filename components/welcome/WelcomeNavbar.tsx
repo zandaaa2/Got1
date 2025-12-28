@@ -220,7 +220,7 @@ export default function WelcomeNavbar({ showBecomeScout = true, variant = 'trans
                               alt={post.title}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform"
-                              unoptimized
+                              loading="lazy"
                             />
                           </div>
                           {/* Title */}

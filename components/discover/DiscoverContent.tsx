@@ -11,6 +11,7 @@ import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getProfilePath } from '@/lib/profile-url'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { useRouter } from 'next/navigation'
+import { clientLog } from '@/lib/logger'
 
 interface DiscoverContentProps {
   session: any
@@ -61,7 +62,7 @@ export default function DiscoverContent({
   hasSession, 
   profileAvatars 
 }: DiscoverContentProps) {
-  console.log('🎯 DiscoverContent component rendered', { hasSession, organizationsCount: organizations.length })
+  clientLog.log('🎯 DiscoverContent component rendered', { hasSession, organizationsCount: organizations.length })
   
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,62 +79,70 @@ export default function DiscoverContent({
   const router = useRouter()
 
   const loadProfiles = useCallback(async () => {
-    console.log('🔄 ===== loadProfiles CALLED =====')
-    console.log('🔄 Session check:', session ? 'Has session' : 'No session')
+    clientLog.log('🔄 ===== loadProfiles CALLED =====')
+    clientLog.log('🔄 Session check:', session ? 'Has session' : 'No session')
     setLoading(true)
     
     try {
       // Verify Supabase client is working
-      console.log('🔄 Testing Supabase client...')
+      clientLog.log('🔄 Testing Supabase client...')
       const { data: testData, error: testError } = await supabase.auth.getSession()
-      console.log('🔄 Session test result:', { 
+      clientLog.log('🔄 Session test result:', { 
         hasSession: !!testData?.session, 
         userId: testData?.session?.user?.id,
         error: testError 
       })
       
-      console.log('🔄 Starting profiles query...')
+      clientLog.log('🔄 Starting profiles query...')
       const queryStartTime = Date.now()
-      const { data, error } = await supabase
+      // Filter suspended scouts at database level and add limit for better performance
+      const now = new Date().toISOString()
+      let query = supabase
         .from('profiles')
         .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until, positions, college_connections, bio, credentials, scout_category')
         .order('full_name', { ascending: true })
+        .limit(500) // Add reasonable limit to prevent excessive data transfer
+      
+      // Filter out suspended scouts at database level (where suspended_until is null or in the past)
+      query = query.or(`suspended_until.is.null,suspended_until.lte.${now}`)
+      
+      const { data, error } = await query
       const queryEndTime = Date.now()
 
-      console.log('🔄 Query completed in', queryEndTime - queryStartTime, 'ms')
-      console.log('🔄 Query result - Error:', error)
-      console.log('🔄 Query result - Data length:', data?.length ?? 0)
+      clientLog.log('🔄 Query completed in', queryEndTime - queryStartTime, 'ms')
+      clientLog.log('🔄 Query result - Error:', error)
+      clientLog.log('🔄 Query result - Data length:', data?.length ?? 0)
       
       if (error) {
-        console.error('❌ ===== QUERY ERROR =====')
-        console.error('❌ Error code:', error.code)
-        console.error('❌ Error message:', error.message)
-        console.error('❌ Error details:', error.details)
-        console.error('❌ Error hint:', error.hint)
-        console.error('❌ Full error object:', JSON.stringify(error, null, 2))
+        clientLog.error('❌ ===== QUERY ERROR =====')
+        clientLog.error('❌ Error code:', error.code)
+        clientLog.error('❌ Error message:', error.message)
+        clientLog.error('❌ Error details:', error.details)
+        clientLog.error('❌ Error hint:', error.hint)
+        clientLog.error('❌ Full error object:', JSON.stringify(error, null, 2))
       }
       
       if (data && data.length > 0) {
-        console.log('✅ Got data! First profile:', data[0])
+        clientLog.log('✅ Got data! First profile:', data[0])
       } else if (!error) {
-        console.warn('⚠️ Query succeeded but returned 0 rows')
+        clientLog.warn('⚠️ Query succeeded but returned 0 rows')
       }
 
       if (error) {
-        console.error('❌ Error loading profiles:', error)
-        console.error('❌ Error details:', JSON.stringify(error, null, 2))
+        clientLog.error('❌ Error loading profiles:', error)
+        clientLog.error('❌ Error details:', JSON.stringify(error, null, 2))
         setProfiles([])
         setLoading(false)
         return
       }
       
-      // Filter client-side: exclude suspended scouts and basic users
-      const now = new Date()
+      // Note: Suspended scouts are now filtered at database level for better performance
+      // Additional client-side filtering for business logic (test accounts, specific users, etc.)
       const isProduction = typeof window !== 'undefined' && 
         !window.location.hostname.includes('localhost') && 
         !window.location.hostname.includes('127.0.0.1')
       
-      console.log('🔄 Filtering profiles. Raw count:', data?.length || 0)
+      clientLog.log('🔄 Filtering profiles. Raw count:', data?.length || 0)
       
       const activeProfiles = (data || []).filter(p => {
         // Hide "ella k" in production
@@ -146,28 +155,19 @@ export default function DiscoverContent({
           return false
         }
         
-        // If it's a scout and suspended, exclude it
-        if (p.role === 'scout') {
-          const suspendedUntil = p.suspended_until
-          // If no suspension date or empty string, scout is active
-          if (!suspendedUntil || typeof suspendedUntil !== 'string') return true
-          // If suspension date is in the future, scout is suspended (exclude)
-          // If suspension date is in the past, scout is active (include)
-          return new Date(suspendedUntil) <= now
-        }
-        
+        // Suspended scouts are already filtered at database level, so all remaining are active
         return true
       })
       
-      console.log('✅ Discover: Loaded profiles from database:', data?.length || 0)
+      clientLog.log('✅ Discover: Loaded profiles from database:', data?.length || 0)
       if (data && data.length > 0) {
-        console.log('✅ Discover: Sample profiles:', data.slice(0, 3).map(p => ({ 
+        clientLog.log('✅ Discover: Sample profiles:', data.slice(0, 3).map(p => ({ 
           id: p.id, 
           name: p.full_name, 
           role: p.role,
           suspended: p.suspended_until 
         })))
-        console.log('✅ Discover: Role distribution:', {
+        clientLog.log('✅ Discover: Role distribution:', {
           scout: data.filter(p => p.role === 'scout').length,
           player: data.filter(p => p.role === 'player').length,
           parent: data.filter(p => p.role === 'parent').length,
@@ -175,17 +175,17 @@ export default function DiscoverContent({
           other: data.filter(p => !['scout', 'player', 'parent', 'user'].includes(p.role)).length
         })
       } else {
-        console.warn('⚠️ Discover: Query returned 0 profiles from database')
+        clientLog.warn('⚠️ Discover: Query returned 0 profiles from database')
       }
-      console.log('✅ Discover: Active profiles after filtering:', activeProfiles.length)
-      console.log('✅ Discover: Scouts count:', activeProfiles.filter(p => p.role === 'scout').length)
-      console.log('✅ Discover: Players count:', activeProfiles.filter(p => p.role === 'player').length)
-      console.log('✅ Discover: All roles:', Array.from(new Set(activeProfiles.map(p => p.role))))
+      clientLog.log('✅ Discover: Active profiles after filtering:', activeProfiles.length)
+      clientLog.log('✅ Discover: Scouts count:', activeProfiles.filter(p => p.role === 'scout').length)
+      clientLog.log('✅ Discover: Players count:', activeProfiles.filter(p => p.role === 'player').length)
+      clientLog.log('✅ Discover: All roles:', Array.from(new Set(activeProfiles.map(p => p.role))))
       
       setProfiles(activeProfiles)
     } catch (error: any) {
-      console.error('❌ Exception in loadProfiles:', error)
-      console.error('❌ Exception stack:', error?.stack)
+      clientLog.error('❌ Exception in loadProfiles:', error)
+      clientLog.error('❌ Exception stack:', error?.stack)
       setProfiles([])
     } finally {
       setLoading(false)
@@ -194,7 +194,7 @@ export default function DiscoverContent({
 
   // Directly call loadProfiles on mount - simpler approach
   useEffect(() => {
-    console.log('🔄 ===== MOUNT: Calling loadProfiles directly =====')
+    clientLog.log('🔄 ===== MOUNT: Calling loadProfiles directly =====')
     loadProfiles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run once on mount - loadProfiles is stable via useCallback
@@ -208,7 +208,7 @@ export default function DiscoverContent({
           .select('profile_id, school, school_slug')
 
         if (error) {
-          console.error('Error loading player offers:', error)
+          clientLog.error('Error loading player offers:', error)
           return
         }
 
@@ -227,7 +227,7 @@ export default function DiscoverContent({
 
         setPlayerOffers(offersMap)
       } catch (error) {
-        console.error('Error loading player offers:', error)
+        clientLog.error('Error loading player offers:', error)
       }
     }
 
@@ -429,7 +429,7 @@ export default function DiscoverContent({
   }, [openSignUp, router, session, currentUserRole])
 
   const handleScoutsClick = () => {
-    console.log('🔵 handleScoutsClick called, current viewMode:', viewMode, 'roleFilter:', roleFilter)
+    clientLog.log('🔵 handleScoutsClick called, current viewMode:', viewMode, 'roleFilter:', roleFilter)
     if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('scout')
@@ -437,12 +437,12 @@ export default function DiscoverContent({
     }
     // Toggle: if already on scout, go to all. Otherwise go to scout.
     const newFilter = roleFilter === 'scout' ? 'all' : 'scout'
-    console.log('🔵 Setting roleFilter to:', newFilter)
+    clientLog.log('🔵 Setting roleFilter to:', newFilter)
     setRoleFilter(newFilter)
   }
 
   const handlePlayersClick = () => {
-    console.log('🔵 handlePlayersClick called, current viewMode:', viewMode, 'roleFilter:', roleFilter)
+    clientLog.log('🔵 handlePlayersClick called, current viewMode:', viewMode, 'roleFilter:', roleFilter)
     if (viewMode === 'universities') {
       setViewMode('profiles')
       setRoleFilter('player')
@@ -450,7 +450,7 @@ export default function DiscoverContent({
     }
     // Toggle: if already on player, go to all. Otherwise go to player.
     const newFilter = roleFilter === 'player' ? 'all' : 'player'
-    console.log('🔵 Setting roleFilter to:', newFilter)
+    clientLog.log('🔵 Setting roleFilter to:', newFilter)
     setRoleFilter(newFilter)
   }
 
@@ -569,7 +569,7 @@ export default function DiscoverContent({
   }, [findCollegeMatch, getProfileSubtitle, imageErrors, roleFilter])
 
   const filteredProfiles = useMemo(() => {
-    console.log('🔍 filteredProfiles calculation started:', {
+    clientLog.log('🔍 filteredProfiles calculation started:', {
       profilesCount: profiles.length,
       roleFilter,
       trimmedQuery: trimmedQuery || '(none)',
@@ -589,11 +589,11 @@ export default function DiscoverContent({
         if (roleFilter === 'all') {
           // Default to scouts only when no filter/search
           const isScout = profile.role === 'scout'
-          console.log(`  Profile ${profile.id} (${profile.full_name}): role=${profile.role}, roleFilter=all, isScout=${isScout}`)
+          clientLog.log(`  Profile ${profile.id} (${profile.full_name}): role=${profile.role}, roleFilter=all, isScout=${isScout}`)
           return isScout
         }
         const matchesRole = profile.role === roleFilter
-        console.log(`  Profile ${profile.id} (${profile.full_name}): role=${profile.role}, roleFilter=${roleFilter}, matches=${matchesRole}`)
+        clientLog.log(`  Profile ${profile.id} (${profile.full_name}): role=${profile.role}, roleFilter=${roleFilter}, matches=${matchesRole}`)
         return matchesRole
       }
       
@@ -665,9 +665,9 @@ export default function DiscoverContent({
       return matchesSearch && matchesRole
     })
     
-    console.log('🔍 filteredProfiles result:', filtered.length, 'profiles')
+    clientLog.log('🔍 filteredProfiles result:', filtered.length, 'profiles')
     if (filtered.length > 0) {
-      console.log('  First few:', filtered.slice(0, 3).map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+      clientLog.log('  First few:', filtered.slice(0, 3).map(p => ({ id: p.id, name: p.full_name, role: p.role })))
     }
     
     return filtered
@@ -680,30 +680,30 @@ export default function DiscoverContent({
     // Otherwise use filteredProfiles
     if (!trimmedQuery && roleFilter === 'all' && viewMode === 'profiles') {
       const allScouts = profiles.filter(p => p.role === 'scout')
-      console.log('✅ Discover: scoutsForCategories (from profiles):', allScouts.length)
+      clientLog.log('✅ Discover: scoutsForCategories (from profiles):', allScouts.length)
       return allScouts
     }
     const filteredScouts = filteredProfiles.filter(p => p.role === 'scout')
-    console.log('✅ Discover: scoutsForCategories (from filteredProfiles):', filteredScouts.length)
+    clientLog.log('✅ Discover: scoutsForCategories (from filteredProfiles):', filteredScouts.length)
     return filteredScouts
   }, [profiles, filteredProfiles, trimmedQuery, roleFilter, viewMode])
 
   // Group profiles by category
   const proScouts = useMemo(() => {
     const pro = scoutsForCategories.filter(p => p.scout_category === 'pro')
-    console.log('✅ Discover: proScouts count:', pro.length)
+    clientLog.log('✅ Discover: proScouts count:', pro.length)
     return pro
   }, [scoutsForCategories])
   
   const d1CollegeScouts = useMemo(() => {
     const d1 = scoutsForCategories.filter(p => p.scout_category === 'd1-college')
-    console.log('✅ Discover: d1CollegeScouts count:', d1.length)
+    clientLog.log('✅ Discover: d1CollegeScouts count:', d1.length)
     return d1
   }, [scoutsForCategories])
   
   const smallerCollegeScouts = useMemo(() => {
     const smaller = scoutsForCategories.filter(p => p.scout_category === 'smaller-college')
-    console.log('✅ Discover: smallerCollegeScouts count:', smaller.length)
+    clientLog.log('✅ Discover: smallerCollegeScouts count:', smaller.length)
     return smaller
   }, [scoutsForCategories])
 
@@ -814,21 +814,21 @@ export default function DiscoverContent({
   
   // Debug logging
   useEffect(() => {
-    console.log('✅ Discover Debug:')
-    console.log('  - profiles.length:', profiles.length)
-    console.log('  - profiles (roles):', profiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
-    console.log('  - filteredProfiles.length:', filteredProfiles.length)
-    console.log('  - filteredProfiles (roles):', filteredProfiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
-    console.log('  - scoutsForCategories.length:', scoutsForCategories.length)
-    console.log('  - featuredScouts.length:', featuredScouts.length)
-    console.log('  - proScouts.length:', proScouts.length)
-    console.log('  - d1CollegeScouts.length:', d1CollegeScouts.length)
-    console.log('  - smallerCollegeScouts.length:', smallerCollegeScouts.length)
-    console.log('  - showDiscoverSections:', showDiscoverSections)
-    console.log('  - trimmedQuery:', trimmedQuery)
-    console.log('  - roleFilter:', roleFilter)
-    console.log('  - viewMode:', viewMode)
-    console.log('  - loading:', loading)
+    clientLog.log('✅ Discover Debug:')
+    clientLog.log('  - profiles.length:', profiles.length)
+    clientLog.log('  - profiles (roles):', profiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+    clientLog.log('  - filteredProfiles.length:', filteredProfiles.length)
+    clientLog.log('  - filteredProfiles (roles):', filteredProfiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+    clientLog.log('  - scoutsForCategories.length:', scoutsForCategories.length)
+    clientLog.log('  - featuredScouts.length:', featuredScouts.length)
+    clientLog.log('  - proScouts.length:', proScouts.length)
+    clientLog.log('  - d1CollegeScouts.length:', d1CollegeScouts.length)
+    clientLog.log('  - smallerCollegeScouts.length:', smallerCollegeScouts.length)
+    clientLog.log('  - showDiscoverSections:', showDiscoverSections)
+    clientLog.log('  - trimmedQuery:', trimmedQuery)
+    clientLog.log('  - roleFilter:', roleFilter)
+    clientLog.log('  - viewMode:', viewMode)
+    clientLog.log('  - loading:', loading)
   }, [profiles, filteredProfiles, scoutsForCategories.length, featuredScouts.length, proScouts.length, d1CollegeScouts.length, smallerCollegeScouts.length, showDiscoverSections, trimmedQuery, roleFilter, viewMode, loading])
 
   return (
@@ -866,7 +866,7 @@ export default function DiscoverContent({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
-                console.log('🔵 Scouts button clicked')
+                clientLog.log('🔵 Scouts button clicked')
                 handleScoutsClick()
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -879,7 +879,7 @@ export default function DiscoverContent({
             </button>
             <button
               onClick={() => {
-                console.log('🔵 Players button clicked')
+                clientLog.log('🔵 Players button clicked')
                 handlePlayersClick()
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${

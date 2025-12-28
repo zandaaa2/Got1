@@ -91,7 +91,7 @@ export default function Modal({ isOpen, onClose, children, title }: ModalProps) 
         </button>
 
         {/* Content */}
-        <div className="p-4 md:p-8">
+        <div className="p-3 md:p-8">
           {title && (
             <h2 id={`${titleId}-heading`} className="text-3xl font-bold text-black mb-8">{title}</h2>
           )}

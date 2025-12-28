@@ -166,7 +166,7 @@ export default function WelcomeContent({
               alt={scout.full_name || 'Profile'}
               fill
               className="object-cover"
-              unoptimized
+              loading="lazy"
             />
           ) : (
             <div
@@ -201,7 +201,7 @@ export default function WelcomeContent({
                     width={20}
                     height={20}
                     className="object-contain w-full h-full"
-                    unoptimized
+                    loading="lazy"
                   />
                 </div>
               )}
@@ -281,7 +281,7 @@ export default function WelcomeContent({
                         width={48}
                         height={48}
                         className="w-full h-full object-cover rounded-full"
-                        unoptimized
+                        loading="lazy"
                         onError={() => {
                           setImageErrors(prev => new Set(prev).add(profile.id))
                         }}
@@ -407,7 +407,7 @@ export default function WelcomeContent({
                                 width={40}
                                 height={40}
                                 className="w-full h-full object-cover"
-                                unoptimized
+                                loading="lazy"
                               />
                             ) : (
                               <div className={`w-full h-full flex items-center justify-center ${getGradientForId(scout.id || 'scout')}`}>
@@ -973,7 +973,7 @@ export default function WelcomeContent({
                     alt={post.title}
                     fill
                     className="object-cover"
-                    unoptimized
+                    loading="lazy"
                   />
                 </div>
                 {/* Blog Post Content */}

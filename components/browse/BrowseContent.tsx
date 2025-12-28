@@ -12,6 +12,7 @@ import { isMeaningfulAvatar } from '@/lib/avatar'
 import { getProfilePath } from '@/lib/profile-url'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { useRouter } from 'next/navigation'
+import { clientLog } from '@/lib/logger'
 
 interface BrowseContentProps {
   session: any
@@ -95,44 +96,51 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }
 
   const loadProfiles = useCallback(async () => {
-    console.log('🔄 loadProfiles called')
+    clientLog.log('🔄 loadProfiles called')
     setLoading(true)
     try {
-      console.log('🔄 Starting Supabase query...')
+      clientLog.log('🔄 Starting Supabase query...')
       // Build query step by step to avoid any construction issues
-      const { data, error } = await supabase
+      // Add limit and filter suspended scouts at database level for better performance
+      const now = new Date().toISOString()
+      let query = supabase
         .from('profiles')
         .select('id, user_id, username, full_name, organization, position, school, graduation_year, avatar_url, role, price_per_eval, turnaround_time, suspended_until, positions, college_connections, stripe_account_id, free_eval_enabled, free_eval_description')
         .order('full_name', { ascending: true })
+        .limit(500) // Add reasonable limit to prevent excessive data transfer
+      
+      // Filter out suspended scouts at database level (where suspended_until is null or in the past)
+      query = query.or(`suspended_until.is.null,suspended_until.lte.${now}`)
+      
+      const { data, error } = await query
 
-      console.log('🔄 Query completed. Error:', error, 'Data length:', data?.length ?? 0)
+      clientLog.log('🔄 Query completed. Error:', error, 'Data length:', data?.length ?? 0)
 
       if (error) {
-        console.error('❌ Error loading profiles:', error)
-        console.error('❌ Error details:', JSON.stringify(error, null, 2))
-        console.error('❌ Error code:', error.code)
-        console.error('❌ Error message:', error.message)
+        clientLog.error('❌ Error loading profiles:', error)
+        clientLog.error('❌ Error details:', JSON.stringify(error, null, 2))
+        clientLog.error('❌ Error code:', error.code)
+        clientLog.error('❌ Error message:', error.message)
         setProfiles([])
         setLoading(false)
         return
       }
       
-      console.log('✅ Loaded profiles from database:', data?.length || 0)
+      clientLog.log('✅ Loaded profiles from database:', data?.length || 0)
       if (data && data.length > 0) {
-        console.log('✅ First few profiles:', data.slice(0, 3).map(p => ({ id: p.id, name: p.full_name, role: p.role })))
-        console.log('✅ Role distribution:', {
+        clientLog.log('✅ First few profiles:', data.slice(0, 3).map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+        clientLog.log('✅ Role distribution:', {
           scout: data.filter(p => p.role === 'scout').length,
           player: data.filter(p => p.role === 'player').length,
           parent: data.filter(p => p.role === 'parent').length,
           user: data.filter(p => p.role === 'user').length
         })
       } else {
-        console.warn('⚠️ Query returned 0 profiles from database')
+        clientLog.warn('⚠️ Query returned 0 profiles from database')
       }
       
-      // Filter client-side: exclude suspended scouts (not players)
-      // Note: suspended_until column may not exist yet - check for it before filtering
-      const now = new Date()
+      // Note: Suspended scouts are now filtered at database level for better performance
+      // Additional client-side filtering for business logic (test accounts, specific users, etc.)
       // Check if we're in production (not localhost)
       // Only show "ella k" on localhost - hide on all other domains (got1.app, gotone.app, vercel.app, etc.)
       const isProduction = typeof window !== 'undefined' && 
@@ -173,13 +181,13 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         return true
       })
       
-      console.log('✅ Filtered active profiles:', activeProfiles.length)
-      console.log('Active profiles:', activeProfiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
+      clientLog.log('✅ Filtered active profiles:', activeProfiles.length)
+      clientLog.log('Active profiles:', activeProfiles.map(p => ({ id: p.id, name: p.full_name, role: p.role })))
       
       // Debug: Check for specific players that should be visible
       const harrisonProfile = (data || []).find(p => p.full_name?.toLowerCase().includes('harrison') && p.full_name?.toLowerCase().includes('houch'))
       if (harrisonProfile) {
-        console.log('🔍 Harrison Houch profile found:', {
+        clientLog.log('🔍 Harrison Houch profile found:', {
           id: harrisonProfile.id,
           full_name: harrisonProfile.full_name,
           role: harrisonProfile.role,
@@ -193,7 +201,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       // Debug: Check for zanderplayer account
       const zanderPlayerProfile = (data || []).find(p => p.username?.toLowerCase() === 'zanderplayer' || p.full_name?.toLowerCase().includes('zanderplayer'))
       if (zanderPlayerProfile) {
-        console.log('🔍 Zanderplayer profile found:', {
+        clientLog.log('🔍 Zanderplayer profile found:', {
           id: zanderPlayerProfile.id,
           full_name: zanderPlayerProfile.full_name,
           role: zanderPlayerProfile.role,
@@ -206,8 +214,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       
       setProfiles(activeProfiles)
     } catch (error: any) {
-      console.error('Error loading profiles:', error)
-      console.error('Error message:', error?.message)
+      clientLog.error('Error loading profiles:', error)
+      clientLog.error('Error message:', error?.message)
       setProfiles([]) // Set empty array on error
     } finally {
       setLoading(false)
@@ -215,7 +223,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }, [supabase])
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered - calling loadProfiles')
+    clientLog.log('🔄 useEffect triggered - calling loadProfiles')
     loadProfiles()
   }, [loadProfiles])
 
@@ -228,7 +236,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           .select('profile_id, school, school_slug')
 
         if (error) {
-          console.error('Error loading player offers:', error)
+          clientLog.error('Error loading player offers:', error)
           return
         }
 
@@ -246,10 +254,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           })
         }
 
-        console.log('✅ Loaded player offers:', offersMap.size, 'players with offers')
+        clientLog.log('✅ Loaded player offers:', offersMap.size, 'players with offers')
         setPlayerOffers(offersMap)
       } catch (error) {
-        console.error('Error loading player offers:', error)
+        clientLog.error('Error loading player offers:', error)
       }
     }
 
@@ -289,7 +297,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   // Set up real-time subscription for profile changes
   useEffect(() => {
-    console.log('🔄 Setting up real-time subscription for profiles')
+    clientLog.log('🔄 Setting up real-time subscription for profiles')
     
     const channel = supabase
       .channel('profiles-changes')
@@ -301,7 +309,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           table: 'profiles',
         },
         (payload) => {
-          console.log('🔄 Profile change detected:', payload.eventType, payload.new || payload.old)
+          clientLog.log('🔄 Profile change detected:', payload.eventType, payload.new || payload.old)
           // Reload profiles when any change occurs
           loadProfiles()
         }
@@ -309,7 +317,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       .subscribe()
 
     return () => {
-      console.log('🔄 Cleaning up real-time subscription')
+      clientLog.log('🔄 Cleaning up real-time subscription')
       supabase.removeChannel(channel)
     }
   }, [supabase, loadProfiles])
@@ -322,11 +330,11 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     event.stopPropagation()
     event.preventDefault()
     
-    console.log('🔵 Purchase button clicked for profile:', profile.id, profile.full_name)
-    console.log('🔵 Current user role:', currentUserRole)
+    clientLog.log('🔵 Purchase button clicked for profile:', profile.id, profile.full_name)
+    clientLog.log('🔵 Current user role:', currentUserRole)
     
     if (!session) {
-      console.log('🔵 No session, opening sign up modal')
+      clientLog.log('🔵 No session, opening sign up modal')
       openSignUp()
       return
     }
@@ -334,15 +342,15 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     if (profile.role === 'scout') {
       // Check if user is a player before navigating
       if (currentUserRole !== 'player') {
-        console.log('🔵 User is not a player, showing alert')
+        clientLog.log('🔵 User is not a player, showing alert')
         alert('Only players can purchase evaluations. Please create a player profile to purchase evaluations.')
         return
       }
       
-      console.log('🔵 Navigating to purchase page:', `/profile/${profile.id}/purchase`)
+      clientLog.log('🔵 Navigating to purchase page:', `/profile/${profile.id}/purchase`)
       router.push(`/profile/${profile.id}/purchase`)
     } else {
-      console.log('🔵 Not a scout, navigating to profile')
+      clientLog.log('🔵 Not a scout, navigating to profile')
       router.push(getProfilePath(profile.id, profile.username))
     }
   }, [openSignUp, router, session, currentUserRole, getProfilePath])
@@ -372,10 +380,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   const normalizedColleges = useMemo(() => {
     if (!colleges || !Array.isArray(colleges)) {
-      console.warn('⚠️ colleges array is empty or not an array:', colleges)
+      clientLog.warn('⚠️ colleges array is empty or not an array:', colleges)
       return []
     }
-    console.log('✅ Normalizing colleges:', colleges.length, 'total colleges')
+    clientLog.log('✅ Normalizing colleges:', colleges.length, 'total colleges')
     return colleges.map((college) => ({
       ...college,
       normalizedName: college.name.toLowerCase(),
@@ -694,7 +702,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
         <button
           onClick={(event) => {
-            console.log('🔵 Button clicked directly')
+            clientLog.log('🔵 Button clicked directly')
             handlePrimaryAction(event, profile)
           }}
           className="mt-auto inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg relative z-10"
@@ -764,7 +772,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
 
   const teamEntries = useMemo<TeamEntry[]>(() => {
     if (!normalizedColleges || normalizedColleges.length === 0) {
-      console.warn('⚠️ normalizedColleges is empty')
+      clientLog.warn('⚠️ normalizedColleges is empty')
       return []
     }
     const entries = normalizedColleges
@@ -792,7 +800,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
         }
         return a.name.localeCompare(b.name)
       })
-    console.log('✅ Created teamEntries:', entries.length, 'teams')
+    clientLog.log('✅ Created teamEntries:', entries.length, 'teams')
     return entries
   }, [normalizedColleges, organizationCounts, connectionCounts])
 
@@ -819,7 +827,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
     !window.location.hostname.includes('127.0.0.1')
 
   const filteredProfiles = useMemo(() => {
-    console.log('🔍 filteredProfiles calculation:', {
+    clientLog.log('🔍 filteredProfiles calculation:', {
       profilesCount: profiles.length,
       roleFilter,
       trimmedQuery: trimmedQuery || '(none)',
@@ -981,7 +989,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
             }
           } catch (error) {
             // Silently fail if there's an error matching
-            console.error('Error matching college:', error)
+            clientLog.error('Error matching college:', error)
           }
         }
       }
@@ -1019,7 +1027,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
       return matchesSearch && matchesRole
     })
     
-    console.log('🔍 filteredProfiles result:', filtered.length, 'profiles after filtering')
+    clientLog.log('🔍 filteredProfiles result:', filtered.length, 'profiles after filtering')
     
     // Randomize order for scouts when showing all, scouts filter, or free evals
     if (roleFilter === 'all' || roleFilter === 'scout' || viewMode === 'free-evals') {
@@ -1382,7 +1390,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                                 height={64}
                                 className="object-contain"
                                 onError={(e) => {
-                                  console.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
+                                  clientLog.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
                                   e.currentTarget.style.display = 'none';
                                 }}
                               />
@@ -1431,7 +1439,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                               height={64}
                               className="object-contain"
                               onError={(e) => {
-                                console.warn(`Logo failed to load for ${team.name}: ${team.logo}`);
+                                clientLog.warn(`Logo failed to load for ${team.name}: ${team.logo}`);
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
@@ -1506,7 +1514,7 @@ export default function BrowseContent({ session }: BrowseContentProps) {
                           className="w-full h-full object-contain"
                           unoptimized
                           onError={(e) => {
-                            console.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
+                            clientLog.warn(`❌ Logo failed: ${team.name} - ${team.logo}`);
                             e.currentTarget.style.display = 'none';
                           }}
                         />

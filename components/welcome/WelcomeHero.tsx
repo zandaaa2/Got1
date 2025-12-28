@@ -13,7 +13,6 @@ export default function WelcomeHero() {
           fill
           className="object-cover rounded-b-3xl"
           priority
-          unoptimized
         />
         {/* Black transparent overlay */}
         <div className="absolute inset-0 bg-black/60 rounded-b-3xl" />
@@ -27,7 +26,6 @@ export default function WelcomeHero() {
           fill
           className="object-cover rounded-b-3xl"
           priority
-          unoptimized
         />
         {/* Black transparent overlay */}
         <div className="absolute inset-0 bg-black/60 rounded-b-3xl" />
