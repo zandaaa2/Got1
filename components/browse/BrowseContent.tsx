@@ -163,18 +163,14 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           return false
         }
         
-        // If it's a scout, check if they have Stripe setup and are not suspended
+        // If it's a scout, check if they have Stripe setup
+        // Note: Suspended scouts are already filtered at database level
         if (p.role === 'scout') {
           // Exclude scouts without Stripe account setup
           if (!p.stripe_account_id || p.stripe_account_id.trim() === '') {
             return false
           }
-          
-          // Exclude suspended scouts
-          const suspendedUntil = p.suspended_until
-          if (suspendedUntil && typeof suspendedUntil === 'string') {
-          return new Date(suspendedUntil) <= now
-          }
+          // Suspended scouts are already filtered at database level
           return true
         }
         
