@@ -2,8 +2,10 @@ import { createServerClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import WelcomeContent from '@/components/welcome/WelcomeContent'
 import WelcomeNavbar from '@/components/welcome/WelcomeNavbar'
+import StructuredData from '@/components/welcome/StructuredData'
 import { collegeEntries } from '@/lib/college-data'
 import { getAllBlogPosts } from '@/lib/blog-posts'
+import type { Metadata } from 'next'
 
 // Helper function to match organization name to college slug
 function findCollegeSlugByOrganization(organization: string | null): string | null {
@@ -32,6 +34,67 @@ function findCollegeSlugByOrganization(organization: string | null): string | nu
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'
+  
+  return {
+    title: 'Got1 - Get Professional Football Evaluations from Verified College Scouts',
+    description: 'Connect with verified college football scouts from top programs. Get professional game film evaluations, recruiting feedback, and expert insights to advance your football career. Fast turnaround, guaranteed quality.',
+    keywords: [
+      'college football recruiting',
+      'football evaluation',
+      'verified college scouts',
+      'game film analysis',
+      'football recruiting platform',
+      'college scout feedback',
+      'high school football recruiting',
+      'football player evaluation',
+      'college football scouting',
+      'recruiting evaluation service',
+      'football recruiting help',
+      'college football connections',
+      'football recruiting advice',
+      'verified scouts',
+      'professional football evaluation'
+    ],
+    alternates: {
+      canonical: '/welcome',
+    },
+    openGraph: {
+      title: 'Got1 - Professional Football Evaluations from Verified College Scouts',
+      description: 'Get expert game film evaluations from verified college scouts. Fast feedback, guaranteed quality. Connect with scouts from top programs like Michigan, Auburn, and more.',
+      url: `${baseUrl}/welcome`,
+      siteName: 'Got1',
+      images: [
+        { 
+          url: `${baseUrl}/social/og-default.png?v=2`, 
+          width: 1200, 
+          height: 630, 
+          alt: 'Got1 - Professional Football Evaluations from Verified College Scouts' 
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Got1 - Professional Football Evaluations',
+      description: 'Get expert game film evaluations from verified college scouts. Fast feedback, guaranteed quality.',
+      images: [`${baseUrl}/social/og-default.png?v=2`],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+  }
+}
 
 export default async function WelcomePage() {
   const supabase = createServerClient()
@@ -256,8 +319,103 @@ export default async function WelcomePage() {
   // Limit to 5 most recent blog posts
   const recentBlogPosts = blogPosts.slice(0, 5)
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'
+
+  // Structured data for SEO
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Got1',
+    url: baseUrl,
+    description: 'Professional football evaluations from verified college scouts',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${baseUrl}/browse?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Got1',
+    url: baseUrl,
+    logo: `${baseUrl}/got1app.png`,
+    description: 'Platform connecting high school football players with verified college scouts for professional game film evaluations',
+    sameAs: [
+      // Add social media URLs when available
+    ],
+  }
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is Got1?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Got1 is a college sports recruiting platform that connects high school athletes with verified college scouts. You can submit your game film for professional evaluations and receive actionable feedback to advance your recruiting. Our network includes scouts from top programs like Michigan, Auburn, and more.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How do I get scout feedback on my game film?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Sign up as an athlete, create your profile, and submit your highlights or full game film. Verified scouts will review it and provide detailed, professional evaluations with strengths, areas for improvement, and recruiting potential. We guarantee valuable feedback or your money back.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Are the scouts on Got1 verified and real college coaches?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes — every scout on Got1 is verified to ensure they\'re actively involved in college recruiting. We connect you with scouts from Power 5 and other programs, giving you authentic insights you can trust.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is Got1 free to use?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Creating an athlete or scout profile and browsing is free. Submitting film for evaluations may involve a fee, but we offer a quality guarantee: If the feedback isn\'t valuable, you get your money back.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How does Got1 help with college recruiting?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Beyond evaluations, you can connect with scouts on X (formerly Twitter), build your network, and take actionable steps toward the right university. Many athletes use our feedback to improve their highlights and get noticed by college programs.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What sports does Got1 support?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'We focus primarily on football, with verified scouts evaluating positions like QB, WR, and more. We\'re expanding to other sports — contact us if you\'re in another discipline!',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How private is my information on Got1?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Your full profile, film, and evaluations are private and only visible to verified scouts unless you choose otherwise. We prioritize privacy while helping you get exposure.',
+        },
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-white">
+      <StructuredData data={[structuredData, organizationSchema, faqSchema]} />
       <div className="relative">
         <WelcomeNavbar showBecomeScout={true} />
         <WelcomeContent 

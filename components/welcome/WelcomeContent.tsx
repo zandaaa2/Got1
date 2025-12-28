@@ -222,14 +222,15 @@ export default function WelcomeContent({
   }
 
   return (
-    <div className="w-full">
-      {/* Hero Section with Background Image */}
-      <div className="relative">
-        <WelcomeHero />
-      </div>
+    <>
+      <main className="w-full">
+        {/* Hero Section with Background Image */}
+        <section className="relative" aria-label="Hero section">
+          <WelcomeHero />
+        </section>
 
-      {/* Hero Text Section */}
-      <div className="w-full py-12 md:py-16 bg-white">
+        {/* Hero Text Section */}
+        <section className="w-full py-12 md:py-16 bg-white" aria-label="Introduction">
         <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16 text-center">
           {/* Small text */}
           <p className="text-sm md:text-base text-gray-600 mb-4">
@@ -276,7 +277,7 @@ export default function WelcomeContent({
                     {hasValidAvatar ? (
                       <Image
                         src={avatarUrl}
-                        alt=""
+                        alt={profile.full_name || 'User profile'}
                         width={48}
                         height={48}
                         className="w-full h-full object-cover rounded-full"
@@ -317,10 +318,10 @@ export default function WelcomeContent({
             Trusted by parents across the country.
           </p>
         </div>
-      </div>
+        </section>
 
       {/* How It Works Section */}
-      <div className="w-full py-20 md:py-28 bg-white">
+      <section className="w-full py-20 md:py-28 bg-white" aria-label="How it works">
         <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
             <div className="relative pl-8 md:pl-12">
@@ -329,7 +330,7 @@ export default function WelcomeContent({
                 Connect with verified scouts
               </h3>
               <p className="text-sm md:text-base text-gray-600 leading-relaxed">
-                Browse verified college scouts and get professional feedback on your game film.
+                <Link href="/browse" className="text-blue-600 hover:text-blue-700 underline">Browse verified college scouts</Link> and get professional feedback on your game film.
               </p>
             </div>
             <div className="relative pl-8 md:pl-12">
@@ -352,11 +353,11 @@ export default function WelcomeContent({
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Example Evaluations Section */}
       {exampleEvaluations.length > 0 && (
-        <div className="w-full py-16 bg-gray-50">
+        <section className="w-full py-16 bg-gray-50" aria-label="Example evaluations">
           <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
             {/* Header */}
             <div className="mb-8">
@@ -464,11 +465,11 @@ export default function WelcomeContent({
               })}
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Account Types Section */}
-      <div className="w-full py-16 md:py-20 bg-white">
+      <section className="w-full py-16 md:py-20 bg-white" aria-label="Account types">
         <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
           {/* Header */}
           <div className="mb-8">
@@ -615,7 +616,7 @@ export default function WelcomeContent({
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Team Logos Bar - Always show */}
       <TeamLogosBar collegeConnectionSlugs={collegeConnectionSlugs || []} />
@@ -684,7 +685,7 @@ export default function WelcomeContent({
       )}
 
       {/* FAQ Section */}
-      <div className="w-full py-16 md:py-20 bg-white">
+      <section className="w-full py-16 md:py-20 bg-white" aria-label="Frequently asked questions">
         <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
           <div className="mb-8">
             <h2 className="text-lg sm:text-xl md:text-3xl">
@@ -944,10 +945,10 @@ export default function WelcomeContent({
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Blog/Resources Section */}
-      <div className="w-full py-16 md:py-20 bg-white">
+      <section className="w-full py-16 md:py-20 bg-white" aria-label="Recruiting resources and blog">
         <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
           {/* Header */}
           <div className="mb-8">
@@ -960,11 +961,11 @@ export default function WelcomeContent({
           {/* Blog Posts Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {blogPosts.length > 0 ? blogPosts.map((post) => (
-              <Link
-                key={post.slug}
-                href={`/blog/${post.slug}`}
-                className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow text-left flex flex-col"
-              >
+              <article key={post.slug}>
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow text-left flex flex-col"
+                >
                 {/* Blog Post Image */}
                 <div className="relative w-full aspect-video bg-gray-100">
                   <Image
@@ -984,7 +985,8 @@ export default function WelcomeContent({
                     {post.excerpt}
                   </p>
                 </div>
-              </Link>
+                </Link>
+              </article>
             )) : (
               // Fallback to placeholder if no blog posts
               [1, 2, 3].map((i) => (
@@ -1019,10 +1021,10 @@ export default function WelcomeContent({
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Final CTA */}
-      <div className="w-full py-20 md:py-28 pb-24 md:pb-32 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <section className="w-full py-20 md:py-28 pb-24 md:pb-32 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50" aria-label="Call to action">
         <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16 text-center">
           <h2 className="text-3xl md:text-5xl font-normal text-black mb-6 leading-tight">
             Ready to Get Started?
@@ -1038,11 +1040,12 @@ export default function WelcomeContent({
             Get Started for Free
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Footer */}
       <WelcomeFooter />
-    </div>
+      </main>
+    </>
   )
 }
 
