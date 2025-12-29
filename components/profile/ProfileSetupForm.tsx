@@ -261,10 +261,17 @@ export default function ProfileSetupForm({
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
+      // Validate full_name is required
+      if (!formData.full_name || formData.full_name.trim() === '') {
+        setError('Full name is required.')
+        setLoading(false)
+        return
+      }
+
       const profileData: any = {
         user_id: session.user.id,
         role: role || 'user', // Default to 'user' if no role selected
-        full_name: formData.full_name || null,
+        full_name: formData.full_name.trim(), // Required - ensure it's not null
         username: normalizedUsername,
         avatar_url: sanitizedAvatar,
         birthday: formData.birthday || null,

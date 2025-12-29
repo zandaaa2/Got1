@@ -59,6 +59,11 @@ export async function POST(request: NextRequest) {
       graduation_year,
     })
 
+    // Validate required fields
+    if (!full_name || typeof full_name !== 'string' || full_name.trim() === '') {
+      return NextResponse.json({ error: 'Player name (full_name) is required' }, { status: 400 })
+    }
+
     // Normalize username helper function
     const normalizeUsername = (value: string) => {
       return value
@@ -138,7 +143,17 @@ export async function POST(request: NextRequest) {
       // This ensures they show up in the browse/search
       updateData.role = 'player'
       
-      if (full_name !== undefined && full_name !== null && full_name.trim() !== '') {
+      // CRITICAL: full_name is required - validate before updating role to 'player'
+      if (!full_name || typeof full_name !== 'string' || full_name.trim() === '') {
+        // If existing profile doesn't have full_name either, we can't proceed
+        if (!existingProfile.full_name || existingProfile.full_name.trim() === '') {
+          return NextResponse.json({ 
+            error: 'Cannot set role to player without a full_name. Player name is required.' 
+          }, { status: 400 })
+        }
+        // If existing profile has full_name, use it
+        updateData.full_name = existingProfile.full_name
+      } else {
         updateData.full_name = full_name.trim()
       }
       if (social_link !== undefined && social_link !== null && social_link.trim() !== '') {
@@ -196,19 +211,45 @@ export async function POST(request: NextRequest) {
         }
       } else if (existingProfile.role !== 'player') {
         // Even if no other data to update, ensure role is 'player'
-        console.log('🔄 Updating role to "player" for existing profile')
-        const { data: updated, error: updateError } = await adminSupabase
-          .from('profiles')
-          .update({ role: 'player' })
-          .eq('user_id', playerUserId)
-          .select()
-          .single()
+        // BUT: full_name is required - check if it exists
+        if (!existingProfile.full_name || existingProfile.full_name.trim() === '') {
+          // If no full_name provided in request and existing profile doesn't have one, error
+          if (!full_name || typeof full_name !== 'string' || full_name.trim() === '') {
+            return NextResponse.json({ 
+              error: 'Cannot set role to player without a full_name. Player name is required.' 
+            }, { status: 400 })
+          }
+          // Use provided full_name
+          console.log('🔄 Updating role to "player" and setting full_name for existing profile')
+          const { data: updated, error: updateError } = await adminSupabase
+            .from('profiles')
+            .update({ role: 'player', full_name: full_name.trim() })
+            .eq('user_id', playerUserId)
+            .select()
+            .single()
 
-        if (updateError) {
-          console.error('Error updating role:', updateError)
-        } else if (updated) {
-          updatedProfile = updated
-          console.log('✅ Successfully updated role to "player"')
+          if (updateError) {
+            console.error('Error updating role and full_name:', updateError)
+          } else if (updated) {
+            updatedProfile = updated
+            console.log('✅ Successfully updated role to "player" and set full_name')
+          }
+        } else {
+          // Existing profile has full_name, just update role
+          console.log('🔄 Updating role to "player" for existing profile')
+          const { data: updated, error: updateError } = await adminSupabase
+            .from('profiles')
+            .update({ role: 'player' })
+            .eq('user_id', playerUserId)
+            .select()
+            .single()
+
+          if (updateError) {
+            console.error('Error updating role:', updateError)
+          } else if (updated) {
+            updatedProfile = updated
+            console.log('✅ Successfully updated role to "player"')
+          }
         }
       }
 
@@ -240,17 +281,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create player profile with the created user_id
-    // Include all provided data, or create minimal profile if no data provided
+    // full_name is REQUIRED - already validated above
     const playerProfileData: any = {
       user_id: playerUserId,
       role: 'player',
       username: finalUsername, // Required field
+      full_name: full_name.trim(), // Required - already validated
     }
 
     // Add optional fields if provided (check for existence and non-empty strings)
-    if (full_name !== undefined && full_name !== null && full_name.trim() !== '') {
-      playerProfileData.full_name = full_name.trim()
-    }
     if (social_link !== undefined && social_link !== null && social_link.trim() !== '') {
       playerProfileData.social_link = social_link.trim()
     }

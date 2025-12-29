@@ -13,6 +13,7 @@ import { getProfilePath } from '@/lib/profile-url'
 import { useAuthModal } from '@/contexts/AuthModalContext'
 import { useRouter } from 'next/navigation'
 import { clientLog } from '@/lib/logger'
+import PullToRefresh from '@/components/shared/PullToRefresh'
 
 interface BrowseContentProps {
   session: any
@@ -1154,7 +1155,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
   }
 
   return (
-    <div>
+    <PullToRefresh onRefresh={loadProfiles}>
+      <div>
       <div className="mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-black">Browse</h1>
       </div>
@@ -1583,7 +1585,8 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }
 

@@ -4,7 +4,7 @@ export interface Profile {
   id: string
   user_id: string
   role: UserRole
-  full_name: string | null
+  full_name: string | null // NOTE: After running make-full-name-required.sql migration, this should be changed to `string` (non-nullable)
   avatar_url: string | null
   username: string
   created_at: string

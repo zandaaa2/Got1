@@ -41,6 +41,19 @@ export async function POST(request: NextRequest) {
       const hasPlayerData = !!(profile.hudl_link || profile.position || profile.school)
 
       if (needsFix) {
+        // Validate full_name is required before setting role to 'player'
+        if (!profile.full_name || profile.full_name.trim() === '') {
+          results.push({
+            profile_id: profile.id,
+            full_name: profile.full_name,
+            old_role: profile.role,
+            new_role: 'player',
+            status: 'error',
+            error: 'Cannot set role to player without a full_name. Full name is required.'
+          })
+          continue
+        }
+
         // Update role to 'player'
         const { data: updated, error: updateError } = await adminSupabase
           .from('profiles')

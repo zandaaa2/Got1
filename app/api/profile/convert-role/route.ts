@@ -79,6 +79,13 @@ export async function POST(request: NextRequest) {
       updateData.turnaround_time = null
       updateData.social_link = null
     } else if (newRole === 'player') {
+      // Validate full_name is required for players
+      if (!profile.full_name || profile.full_name.trim() === '') {
+        return NextResponse.json(
+          { error: 'Full name is required to convert to player role. Please update your profile with a name first.' },
+          { status: 400 }
+        )
+      }
       // Clear scout-specific fields
       updateData.organization = null
       updateData.sports = null

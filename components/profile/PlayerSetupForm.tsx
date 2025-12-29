@@ -127,6 +127,14 @@ export default function PlayerSetupForm({ profile }: PlayerSetupFormProps) {
         sport: hl.sport,
       }))
 
+      // Validate full_name is required
+      const finalFullName = profile?.full_name || authName
+      if (!finalFullName || finalFullName.trim() === '') {
+        setError('Full name is required. Please update your profile with a name first.')
+        setLoading(false)
+        return
+      }
+
       // Update profile to player role
       // IMPORTANT: Preserve existing fields, or pull from auth.users if missing
       const updateData: any = {
@@ -142,7 +150,7 @@ export default function PlayerSetupForm({ profile }: PlayerSetupFormProps) {
         parent_name: formData.parent_name?.trim() || null,
         bio: formData.bio?.trim() || null,
         // Preserve existing fields from profile, or pull from auth.users if missing
-        full_name: profile?.full_name || authName || null,
+        full_name: finalFullName.trim(), // Required - ensure it's not null
         username: profile?.username || null,
         avatar_url: profile?.avatar_url || authAvatar || null,
         birthday: profile?.birthday || null,

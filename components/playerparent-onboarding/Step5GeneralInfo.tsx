@@ -254,9 +254,10 @@ export default function Step5GeneralInfo({ profile, playerProfile, accountType, 
       }
     }
     
-    // For parents creating a new player, player name is required
-    if (accountType === 'parent' && (!playerProfile?.full_name || playerProfile?.full_name.trim() === '') && !playerName.trim()) {
+    // For parents, player name is always required
+    if (accountType === 'parent' && !playerName.trim()) {
       setError('Player name is required')
+      setLoading(false)
       return
     }
 

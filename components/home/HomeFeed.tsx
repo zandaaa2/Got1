@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import CreatePost from './CreatePost'
 import FeedItem from './FeedItem'
+import PullToRefresh from '@/components/shared/PullToRefresh'
 
 type FeedMode = 'trending' | 'following'
 
@@ -60,7 +61,8 @@ export default function HomeFeed() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto w-full">
+    <PullToRefresh onRefresh={loadFeed}>
+      <div className="max-w-2xl mx-auto w-full">
       {/* Header with tabs */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
@@ -196,6 +198,7 @@ export default function HomeFeed() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }

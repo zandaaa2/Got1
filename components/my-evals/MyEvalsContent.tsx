@@ -11,6 +11,7 @@ import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import ShareButton from '@/components/evaluations/ShareButton'
 import { getProfilePath } from '@/lib/profile-url'
+import PullToRefresh from '@/components/shared/PullToRefresh'
 
 interface MyEvalsContentProps {
   role: 'player' | 'scout' | 'parent'
@@ -304,7 +305,8 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
 
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <PullToRefresh onRefresh={loadEvaluations}>
+      <div className="mx-auto w-full max-w-5xl">
       <div className="mb-4 md:mb-6">
         <div className="flex gap-2 md:gap-4 border-b border-gray-200">
           <button
@@ -555,6 +557,7 @@ export default function MyEvalsContent({ role, userId }: MyEvalsContentProps) {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }

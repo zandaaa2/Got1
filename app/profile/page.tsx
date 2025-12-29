@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DynamicLayout from '@/components/layout/DynamicLayout'
 import AuthRefreshHandler from '@/components/shared/AuthRefreshHandler'
+import ProfileRefreshWrapper from '@/components/profile/ProfileRefreshWrapper'
 import dynamicImport from 'next/dynamic'
 
 const ProfileContent = dynamicImport(() => import('@/components/profile/ProfileContent'), {
@@ -117,12 +118,14 @@ export default async function ProfilePage() {
       <Sidebar />
       <DynamicLayout header={null}>
         <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading profile...</div>}>
-        <ProfileContent 
-          profile={profile} 
-          hasPendingApplication={!!scoutApplication}
-          pendingScoutApplication={scoutApplication || null}
-          needsReferrerSelection={needsReferrerSelection}
-        />
+          <ProfileRefreshWrapper>
+            <ProfileContent 
+              profile={profile} 
+              hasPendingApplication={!!scoutApplication}
+              pendingScoutApplication={scoutApplication || null}
+              needsReferrerSelection={needsReferrerSelection}
+            />
+          </ProfileRefreshWrapper>
         </Suspense>
       </DynamicLayout>
     </div>

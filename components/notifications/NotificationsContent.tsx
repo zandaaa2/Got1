@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
+import PullToRefresh from '@/components/shared/PullToRefresh'
 
 interface Notification {
   id: string
@@ -23,69 +24,79 @@ export default function NotificationsContent({ userId }: { userId: string }) {
   const router = useRouter()
   const channelRef = useRef<any>(null) // RealtimeChannel type from @supabase/supabase-js
   const tableExistsRef = useRef<boolean | null>(null)
+  const isMountedRef = useRef(true)
 
-  useEffect(() => {
-    let isMounted = true
+  const loadNotifications = useCallback(async () => {
     const supabase = createClient()
+    
+    try {
+      if (!isMountedRef.current) return
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('read', { ascending: true }) // Unread first (false comes before true)
+        .order('created_at', { ascending: false }) // Then by date within each group
+        .limit(50)
 
-    const loadNotifications = async () => {
-      try {
-        if (!isMounted) return
-        
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', userId)
-          .order('read', { ascending: true }) // Unread first (false comes before true)
-          .order('created_at', { ascending: false }) // Then by date within each group
-          .limit(50)
+      if (!isMountedRef.current) return
 
-        if (!isMounted) return
-
-        if (error) {
-          // If table doesn't exist, show empty state gracefully
-          if (error.code === '42P01' || error.message?.includes('does not exist')) {
-            console.warn('Notifications table does not exist. Please run the SQL migration.')
-            setHasTableError(true)
-            tableExistsRef.current = false
-            setNotifications([])
-            setUnreadCount(0)
-            setLoading(false)
-            return
-          }
-          // For other errors, log but don't crash
-          console.error('Error loading notifications:', error)
+      if (error) {
+        // If table doesn't exist, show empty state gracefully
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.warn('Notifications table does not exist. Please run the SQL migration.')
+          setHasTableError(true)
+          tableExistsRef.current = false
           setNotifications([])
           setUnreadCount(0)
           setLoading(false)
           return
         }
-        
-        // Success - table exists
-        setHasTableError(false)
-        tableExistsRef.current = true
-
-        setNotifications(data || [])
-        setUnreadCount(data?.filter(n => !n.read).length || 0)
-        setLoading(false)
-      } catch (error: any) {
-        if (!isMounted) return
-        
-        // Handle any unexpected errors gracefully
-        if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
-          console.warn('Notifications table does not exist. Please run the SQL migration.')
-          setHasTableError(true)
-          tableExistsRef.current = false
-        } else {
-          console.error('Error loading notifications:', error)
-        }
+        // For other errors, log but don't crash
+        console.error('Error loading notifications:', error)
         setNotifications([])
         setUnreadCount(0)
         setLoading(false)
+        return
       }
-    }
+      
+      // Success - table exists
+      setHasTableError(false)
+      tableExistsRef.current = true
 
+      setNotifications(data || [])
+      setUnreadCount(data?.filter(n => !n.read).length || 0)
+      setLoading(false)
+    } catch (error: any) {
+      if (!isMountedRef.current) return
+      
+      // Handle any unexpected errors gracefully
+      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+        console.warn('Notifications table does not exist. Please run the SQL migration.')
+        setHasTableError(true)
+        tableExistsRef.current = false
+      } else {
+        console.error('Error loading notifications:', error)
+      }
+      setNotifications([])
+      setUnreadCount(0)
+      setLoading(false)
+    }
+  }, [userId])
+
+  useEffect(() => {
+    isMountedRef.current = true
     loadNotifications()
+    
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [loadNotifications])
+
+  useEffect(() => {
+    let isMounted = true
+    const supabase = createClient()
     
     // Set up real-time subscription only if table exists
     // Use a ref to track table existence to avoid dependency issues
@@ -156,7 +167,7 @@ export default function NotificationsContent({ userId }: { userId: string }) {
         }
       }
     }
-  }, [userId])
+  }, [userId, loadNotifications])
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -399,7 +410,8 @@ export default function NotificationsContent({ userId }: { userId: string }) {
   const hasError = notifications.length === 0 && !loading
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <PullToRefresh onRefresh={loadNotifications}>
+      <div className="mx-auto w-full max-w-5xl">
       {notifications.length > 0 && unreadCount > 0 && (
         <div className="mb-4 flex justify-end">
           <button
@@ -515,7 +527,8 @@ export default function NotificationsContent({ userId }: { userId: string }) {
           )}
         </>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }
 
