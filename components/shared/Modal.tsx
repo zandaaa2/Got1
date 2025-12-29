@@ -7,9 +7,16 @@ interface ModalProps {
   onClose: () => void
   children: React.ReactNode
   title?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl'
 }
 
-export default function Modal({ isOpen, onClose, children, title }: ModalProps) {
+export default function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalProps) {
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+  }
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
@@ -60,7 +67,7 @@ export default function Modal({ isOpen, onClose, children, title }: ModalProps) 
       {/* Modal */}
       <div
         ref={dialogRef}
-        className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 md:mx-0 max-h-[90vh] overflow-y-auto animate-scale-in"
+        className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 md:mx-0 max-h-[90vh] overflow-y-auto animate-scale-in`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

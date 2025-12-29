@@ -10,6 +10,7 @@ import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
 import VerificationBadge from '@/components/shared/VerificationBadge'
 import SelectChildrenModal from '@/components/profile/SelectChildrenModal'
+import Modal from '@/components/shared/Modal'
 import { collegeEntries } from '@/lib/college-data'
 
 interface PurchaseEvaluationProps {
@@ -44,6 +45,12 @@ const getStripeKey = () => {
 const stripePromise = getStripeKey() 
   ? loadStripe(getStripeKey()!, { locale: 'auto' }) 
   : null
+
+// Helper function to truncate text
+const truncateText = (text: string, maxLength: number = 80): string => {
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength).trim() + '...'
+}
 
 // Evaluation Card Component
 function EvalCard({
@@ -98,45 +105,6 @@ function EvalCard({
             It looks like you're a parent account. Please select which child(ren) you're purchasing evaluations for.
           </p>
         </div>
-      )}
-      
-      {/* Purchase Button - Moved to top for immediate visibility */}
-      {!isSignedIn ? (
-        <>
-          <button
-            onClick={() => {
-              if (isFree) {
-                onButtonClick()
-              } else {
-                if (onSignUpClick) {
-                  onSignUpClick()
-                } else {
-                  router.push('/auth/signup')
-                }
-              }
-            }}
-            className="w-full px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-base transition-colors mb-4"
-            style={{ backgroundColor: '#233dff' }}
-          >
-            {isFree ? buttonText : `Request + Pay Now - $${price.toFixed(2)}`}
-          </button>
-          <p className="text-sm text-gray-600 mb-6 text-center">
-            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
-          </p>
-        </>
-      ) : (
-        <>
-          <button
-            onClick={onButtonClick}
-            disabled={processing}
-            className="w-full px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base mb-4"
-          >
-            {processing ? 'Processing...' : buttonText}
-          </button>
-          <p className="text-sm text-gray-600 mb-6 text-center">
-            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
-          </p>
-        </>
       )}
 
       {/* Bio - Show only for paid eval */}
@@ -255,6 +223,45 @@ function EvalCard({
           })()}
         </div>
       </div>
+
+      {/* Purchase Button - At bottom of modal */}
+      {!isSignedIn ? (
+        <>
+          <button
+            onClick={() => {
+              if (isFree) {
+                onButtonClick()
+              } else {
+                if (onSignUpClick) {
+                  onSignUpClick()
+                } else {
+                  router.push('/auth/signup')
+                }
+              }
+            }}
+            className="w-full px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-base transition-colors"
+            style={{ backgroundColor: '#233dff' }}
+          >
+            {isFree ? buttonText : `Request + Pay Now - $${price.toFixed(2)}`}
+          </button>
+          <p className="text-sm text-gray-600 mt-2 text-center mb-0">
+            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
+          </p>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={onButtonClick}
+            disabled={processing}
+            className="w-full px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base"
+          >
+            {processing ? 'Processing...' : buttonText}
+          </button>
+          <p className="text-sm text-gray-600 mt-2 text-center mb-0">
+            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
+          </p>
+        </>
+      )}
     </div>
   )
 }
@@ -281,6 +288,8 @@ export default function PurchaseEvaluation({
   const [childrenCount, setChildrenCount] = useState<number>(0)
   const [singleChildId, setSingleChildId] = useState<string | null>(null)
   const [isSignedInState, setIsSignedInState] = useState(false)
+  const [purchaseCounts, setPurchaseCounts] = useState<{ free: number; paid: number }>({ free: 0, paid: 0 })
+  const [showModal, setShowModal] = useState<{ type: 'free' | 'paid' } | null>(null)
   const router = useRouter()
   const supabase = createClient()
   
@@ -335,6 +344,50 @@ export default function PurchaseEvaluation({
       checkUserRole()
     }
   }, [supabase, isSignedInProp])
+
+  // Fetch purchase counts for both free and paid evaluations
+  useEffect(() => {
+    const fetchPurchaseCounts = async () => {
+      if (!scout?.user_id) return
+
+      try {
+        // Count all paid evaluations (payment_status = 'paid' and not cancelled/denied)
+        const { count: paidCount, error: paidError } = await supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true })
+          .eq('scout_id', scout.user_id)
+          .eq('payment_status', 'paid')
+          .not('status', 'eq', 'cancelled')
+          .not('status', 'eq', 'denied')
+
+        if (paidError) {
+          console.error('Error fetching paid count:', paidError)
+        }
+
+        // Count free evaluations (price = 0 and not cancelled/denied)
+        const { count: freeCount, error: freeError } = await supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true })
+          .eq('scout_id', scout.user_id)
+          .eq('price', 0)
+          .not('status', 'eq', 'cancelled')
+          .not('status', 'eq', 'denied')
+
+        if (freeError) {
+          console.error('Error fetching free count:', freeError)
+        }
+
+        setPurchaseCounts({
+          paid: paidCount || 0,
+          free: freeCount || 0,
+        })
+      } catch (error) {
+        console.error('Error fetching purchase counts:', error)
+      }
+    }
+
+    fetchPurchaseCounts()
+  }, [scout?.user_id, supabase])
 
 
   /**
@@ -649,13 +702,103 @@ export default function PurchaseEvaluation({
   const hasFreeEval = scout.free_eval_enabled && scout.free_eval_description
   const offerCount = hasFreeEval ? 2 : 1
 
+  // Helper function to get description snippet
+  const getDescriptionSnippet = (isFree: boolean): string => {
+    if (isFree) {
+      return scout.free_eval_description ? truncateText(scout.free_eval_description) : ''
+    }
+    return scout.bio ? truncateText(scout.bio) : ''
+  }
+
+  // Compact Card Component
+  const CompactEvalCard = ({ 
+    title, 
+    price, 
+    isFree, 
+    purchaseCount,
+    onCardClick,
+    onButtonClick,
+  }: {
+    title: string
+    price: number
+    isFree: boolean
+    purchaseCount: number
+    onCardClick: () => void
+    onButtonClick: (e: React.MouseEvent) => void
+  }) => {
+    const gradientClass = getGradientForId(scout.id)
+    const descriptionSnippet = getDescriptionSnippet(isFree)
+    const showPurchaseCount = purchaseCount > 0
+    const subtitleText = showPurchaseCount 
+      ? `${purchaseCount} ${purchaseCount === 1 ? 'person has' : 'people have'} purchased this`
+      : descriptionSnippet
+
+    return (
+      <div 
+        className="border border-gray-200 rounded-lg p-4 mb-4 cursor-pointer hover:border-gray-300 transition-colors"
+        onClick={onCardClick}
+      >
+        <div className="flex items-center gap-4">
+          {/* Color Circle */}
+          <div className={`w-12 h-12 rounded-full flex-shrink-0 ${gradientClass}`} />
+
+          {/* Middle Section */}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-black mb-1">{title}</h3>
+            {subtitleText && (
+              <p className="text-sm text-gray-600 line-clamp-2">{subtitleText}</p>
+            )}
+          </div>
+
+          {/* Purchase Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onButtonClick(e)
+            }}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-base transition-colors flex-shrink-0 whitespace-nowrap"
+            style={{ backgroundColor: '#233dff' }}
+          >
+            {isFree ? 'Request' : `$${price.toFixed(2)}`}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={offerCount === 1 ? 'max-w-2xl' : 'w-full'}>
-      {/* Evaluation Offers */}
-      {scout.free_eval_enabled && scout.free_eval_description ? (
-        <div className="flex flex-col md:flex-row md:gap-6 space-y-6 md:space-y-0">
-          {/* Free Eval Card - Separate */}
-          <div className="flex-1">
+      {/* Compact Evaluation Cards */}
+      <div className="space-y-4">
+        {scout.free_eval_enabled && scout.free_eval_description && (
+          <CompactEvalCard
+            title="Free Evaluation"
+            price={0}
+            isFree={true}
+            purchaseCount={purchaseCounts.free}
+            onCardClick={() => setShowModal({ type: 'free' })}
+            onButtonClick={handleRequestFreeEval}
+          />
+        )}
+
+        <CompactEvalCard
+          title={scout.offer_title || 'Standard Evaluation'}
+          price={scout.price_per_eval || 99}
+          isFree={false}
+          purchaseCount={purchaseCounts.paid}
+          onCardClick={() => setShowModal({ type: 'paid' })}
+          onButtonClick={handlePurchase}
+        />
+      </div>
+
+      {/* Modal with Full EvalCard Details */}
+      {showModal && (
+        <Modal
+          isOpen={!!showModal}
+          onClose={() => setShowModal(null)}
+          size="lg"
+        >
+          {showModal.type === 'free' ? (
             <EvalCard
               title="Free Evaluation"
               price={0}
@@ -672,10 +815,7 @@ export default function PurchaseEvaluation({
               router={router}
               processing={processing}
             />
-          </div>
-
-          {/* Standard Eval Card - Separate */}
-          <div className="flex-1">
+          ) : (
             <EvalCard
               title={scout.offer_title || 'Standard Evaluation'}
               price={scout.price_per_eval || 99}
@@ -692,27 +832,9 @@ export default function PurchaseEvaluation({
               router={router}
               processing={processing}
             />
-          </div>
-        </div>
-        ) : (
-        /* Standard Eval Card - when free eval not enabled */
-        <EvalCard
-          title={scout.offer_title || 'Standard Evaluation'}
-          price={scout.price_per_eval || 99}
-          description={null}
-          onButtonClick={handlePurchase}
-          buttonText={`Request Evaluation - $${scout.price_per_eval || 99}`}
-          isFree={false}
-          scout={scout}
-          error={error}
-          isParent={isParent}
-          player={player}
-          isSignedIn={isSignedIn}
-          onSignUpClick={onSignUpClick}
-          router={router}
-          processing={processing}
-        />
-        )}
+          )}
+        </Modal>
+      )}
 
       {/* Children Selection Modal for Parents */}
       {isParent && parentId && (

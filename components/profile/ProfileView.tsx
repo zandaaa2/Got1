@@ -149,6 +149,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   const [bioExpanded, setBioExpanded] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'about' | 'offers' | 'posts' | 'evaluations' | 'blogs'>('about')
+  const [serviceType, setServiceType] = useState<'services' | 'products'>('services')
   const [posts, setPosts] = useState<any[]>([])
   const [postsLoading, setPostsLoading] = useState(false)
   const [blogs, setBlogs] = useState<any[]>([])
@@ -1687,21 +1688,56 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
           )}
           {activeTab === 'offers' && (
             <div className="space-y-6">
-              {/* Purchase Evaluation Card - Show for others */}
+              {/* Service Type Tabs - Show for others */}
               {!isOwnProfile && (
-                <PurchaseEvaluation 
-                  scout={profile} 
-                  player={currentUserProfile?.role === 'player' ? currentUserProfile : null}
-                  isSignedIn={isSignedIn}
-                  onSignInClick={() => {
-                    setShowSignUpModal(true)
-                    setAuthMode('signin')
-                  }}
-                  onSignUpClick={() => {
-                    setShowSignUpModal(true)
-                    setAuthMode('signup')
-                  }}
-                />
+                <>
+                  <div className="flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                    <button
+                      onClick={() => setServiceType('services')}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        serviceType === 'services'
+                          ? 'bg-gray-100 text-black'
+                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Services
+                    </button>
+                    <button
+                      onClick={() => setServiceType('products')}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        serviceType === 'products'
+                          ? 'bg-gray-100 text-black'
+                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Products
+                    </button>
+                  </div>
+
+                  {/* Services Tab Content */}
+                  {serviceType === 'services' && (
+                    <PurchaseEvaluation 
+                      scout={profile} 
+                      player={currentUserProfile?.role === 'player' ? currentUserProfile : null}
+                      isSignedIn={isSignedIn}
+                      onSignInClick={() => {
+                        setShowSignUpModal(true)
+                        setAuthMode('signin')
+                      }}
+                      onSignUpClick={() => {
+                        setShowSignUpModal(true)
+                        setAuthMode('signup')
+                      }}
+                    />
+                  )}
+
+                  {/* Products Tab Content */}
+                  {serviceType === 'products' && (
+                    <div className="text-center py-12 text-gray-500">
+                      Products coming soon
+                    </div>
+                  )}
+                </>
               )}
               
               {/* Own Profile - Show Eval Offers Preview */}
