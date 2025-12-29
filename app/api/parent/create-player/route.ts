@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     // Check if a profile already exists for this user_id (in case of retry)
     const { data: existingProfile } = await adminSupabase
       .from('profiles')
-      .select('id, user_id, role, username')
+      .select('id, user_id, role, username, full_name')
       .eq('user_id', playerUserId)
       .maybeSingle()
 
