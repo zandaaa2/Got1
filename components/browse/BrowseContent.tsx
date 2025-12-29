@@ -164,14 +164,10 @@ export default function BrowseContent({ session }: BrowseContentProps) {
           return false
         }
         
-        // If it's a scout, check if they have Stripe setup
+        // If it's a scout, include them (Stripe account check removed)
         // Note: Suspended scouts are already filtered at database level
+        // Scouts without Stripe accounts can still be viewed, they just can't receive payments yet
         if (p.role === 'scout') {
-          // Exclude scouts without Stripe account setup
-          if (!p.stripe_account_id || p.stripe_account_id.trim() === '') {
-            return false
-          }
-          // Suspended scouts are already filtered at database level
           return true
         }
         
