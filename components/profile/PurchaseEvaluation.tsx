@@ -84,6 +84,61 @@ function EvalCard({
         {title}
       </h2>
       
+      {/* Error Message - Show at top if present */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Parent Message - Show at top if present */}
+      {isParent && !player && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            It looks like you're a parent account. Please select which child(ren) you're purchasing evaluations for.
+          </p>
+        </div>
+      )}
+      
+      {/* Purchase Button - Moved to top for immediate visibility */}
+      {!isSignedIn ? (
+        <>
+          <button
+            onClick={() => {
+              if (isFree) {
+                onButtonClick()
+              } else {
+                if (onSignUpClick) {
+                  onSignUpClick()
+                } else {
+                  router.push('/auth/signup')
+                }
+              }
+            }}
+            className="w-full px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-base transition-colors mb-4"
+            style={{ backgroundColor: '#233dff' }}
+          >
+            {isFree ? buttonText : `Request + Pay Now - $${price.toFixed(2)}`}
+          </button>
+          <p className="text-sm text-gray-600 mb-6 text-center">
+            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
+          </p>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={onButtonClick}
+            disabled={processing}
+            className="w-full px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base mb-4"
+          >
+            {processing ? 'Processing...' : buttonText}
+          </button>
+          <p className="text-sm text-gray-600 mb-6 text-center">
+            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
+          </p>
+        </>
+      )}
+
       {/* Bio - Show only for paid eval */}
       {!isFree && scout.bio && (
         <div className="mb-6">
@@ -200,58 +255,6 @@ function EvalCard({
           })()}
         </div>
       </div>
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {isParent && !player && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            It looks like you're a parent account. Please select which child(ren) you're purchasing evaluations for.
-          </p>
-        </div>
-      )}
-      
-      {!isSignedIn ? (
-        <>
-          <button
-            onClick={() => {
-              if (isFree) {
-                onButtonClick()
-              } else {
-                if (onSignUpClick) {
-                  onSignUpClick()
-                } else {
-                  router.push('/auth/signup')
-                }
-              }
-            }}
-            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg transition-colors"
-            style={{ backgroundColor: '#233dff' }}
-          >
-            {isFree ? buttonText : `Request + Pay Now - $${price.toFixed(2)}`}
-          </button>
-          <p className="text-sm text-gray-600 mt-2 text-center mb-0">
-            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
-          </p>
-        </>
-      ) : (
-        <>
-          <button
-            onClick={onButtonClick}
-            disabled={processing}
-            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
-          >
-            {processing ? 'Processing...' : buttonText}
-          </button>
-          <p className="text-sm text-gray-600 mt-2 text-center mb-0">
-            {isFree ? '' : 'Payment is charged immediately and held in escrow. Full refund if scout denies.'}
-          </p>
-        </>
-      )}
     </div>
   )
 }

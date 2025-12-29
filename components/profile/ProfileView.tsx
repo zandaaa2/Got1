@@ -148,7 +148,7 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup')
   const [bioExpanded, setBioExpanded] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'offers' | 'posts' | 'evaluations' | 'blogs'>('offers')
+  const [activeTab, setActiveTab] = useState<'about' | 'offers' | 'posts' | 'evaluations' | 'blogs'>('about')
   const [posts, setPosts] = useState<any[]>([])
   const [postsLoading, setPostsLoading] = useState(false)
   const [blogs, setBlogs] = useState<any[]>([])
@@ -1494,42 +1494,49 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
               </div>
             </div>
 
-            {/* Divider Line */}
-            <div className="border-t border-gray-200"></div>
-
-            {/* Work History - Show for all users */}
-            {profile.work_history && (
-              <div>
-                <h3 className="text-sm font-semibold text-black mb-2">Work History</h3>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {profile.work_history}
-                </p>
-              </div>
+            {/* Divider Line - Only show for non-scouts */}
+            {profile.role !== 'scout' && (
+              <div className="border-t border-gray-200"></div>
             )}
 
-            {/* Additional Info - Show under work history if available */}
-            {profile.additional_info && (
-              <div>
-                <h3 className="text-sm font-semibold text-black mb-2">Additional Information</h3>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {profile.additional_info}
-                </p>
-              </div>
-            )}
+            {/* Work History, Additional Info, and Social Media - Only show for non-scouts */}
+            {profile.role !== 'scout' && (
+              <>
+                {/* Work History */}
+                {profile.work_history && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-black mb-2">Work History</h3>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {profile.work_history}
+                    </p>
+                  </div>
+                )}
 
-            {/* Social Media Links */}
-            {profile.social_link && (
-              <div>
-                <h3 className="text-sm font-semibold text-black mb-2">Social Media</h3>
-                <a
-                  href={profile.social_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-                >
-                  {profile.social_link.replace(/^https?:\/\//, '')}
-                </a>
-              </div>
+                {/* Additional Info */}
+                {profile.additional_info && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-black mb-2">Additional Information</h3>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {profile.additional_info}
+                    </p>
+                  </div>
+                )}
+
+                {/* Social Media Links */}
+                {profile.social_link && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-black mb-2">Social Media</h3>
+                    <a
+                      href={profile.social_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                    >
+                      {profile.social_link.replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1554,47 +1561,79 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
       {/* Tabs - Only show for scouts (players use PlayerTabs) */}
       {profile.role === 'scout' && (
         <div className="mb-6 md:mb-8">
-          <div className="flex gap-2 md:gap-4 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('offers')}
-              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
-                activeTab === 'offers'
-                  ? 'bg-gray-100 border-b-2 border-black text-black'
-                  : 'text-black hover:bg-gray-50'
-              }`}
-            >
-              Eval Offers
-            </button>
-            <button
-              onClick={() => setActiveTab('evaluations')}
-              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
-                activeTab === 'evaluations'
-                  ? 'bg-gray-100 border-b-2 border-black text-black'
-                  : 'text-black hover:bg-gray-50'
-              }`}
-            >
-              Evaluations
-            </button>
-            <button
-              onClick={() => setActiveTab('posts')}
-              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
-                activeTab === 'posts'
-                  ? 'bg-gray-100 border-b-2 border-black text-black'
-                  : 'text-black hover:bg-gray-50'
-              }`}
-            >
-              Posts
-            </button>
-            <button
-              onClick={() => setActiveTab('blogs')}
-              className={`interactive-press px-3 md:px-4 py-2 font-medium text-sm md:text-base transition-colors ${
-                activeTab === 'blogs'
-                  ? 'bg-gray-100 border-b-2 border-black text-black'
-                  : 'text-black hover:bg-gray-50'
-              }`}
-            >
-              Blogs
-            </button>
+          <div className="-mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 md:gap-4 border-b border-gray-200 min-w-full">
+              <button
+                onClick={() => setActiveTab('about')}
+                className={`interactive-press flex-1 md:flex-initial flex-shrink-0 px-2 md:px-4 py-2 font-medium text-xs md:text-base transition-colors ${
+                  activeTab === 'about'
+                    ? 'bg-gray-100 border-b-2 border-black text-black'
+                    : 'text-black hover:bg-gray-50'
+                } flex flex-col md:flex-row items-center gap-1 md:gap-2`}
+              >
+                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="hidden md:inline">About</span>
+                <span className="md:hidden text-[10px] leading-tight">About</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('evaluations')}
+                className={`interactive-press flex-1 md:flex-initial flex-shrink-0 px-2 md:px-4 py-2 font-medium text-xs md:text-base transition-colors ${
+                  activeTab === 'evaluations'
+                    ? 'bg-gray-100 border-b-2 border-black text-black'
+                    : 'text-black hover:bg-gray-50'
+                } flex flex-col md:flex-row items-center gap-1 md:gap-2`}
+              >
+                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="hidden md:inline">Evaluations</span>
+                <span className="md:hidden text-[10px] leading-tight">Evals</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('offers')}
+                className={`interactive-press flex-1 md:flex-initial flex-shrink-0 px-2 md:px-4 py-2 font-medium text-xs md:text-base transition-colors ${
+                  activeTab === 'offers'
+                    ? 'bg-gray-100 border-b-2 border-black text-black'
+                    : 'text-black hover:bg-gray-50'
+                } flex flex-col md:flex-row items-center gap-1 md:gap-2`}
+              >
+                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span className="hidden md:inline">Purchase</span>
+                <span className="md:hidden text-[10px] leading-tight">Buy</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`interactive-press flex-1 md:flex-initial flex-shrink-0 px-2 md:px-4 py-2 font-medium text-xs md:text-base transition-colors ${
+                  activeTab === 'posts'
+                    ? 'bg-gray-100 border-b-2 border-black text-black'
+                    : 'text-black hover:bg-gray-50'
+                } flex flex-col md:flex-row items-center gap-1 md:gap-2`}
+              >
+                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="hidden md:inline">Posts</span>
+                <span className="md:hidden text-[10px] leading-tight">Posts</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('blogs')}
+                className={`interactive-press flex-1 md:flex-initial flex-shrink-0 px-2 md:px-4 py-2 font-medium text-xs md:text-base transition-colors ${
+                  activeTab === 'blogs'
+                    ? 'bg-gray-100 border-b-2 border-black text-black'
+                    : 'text-black hover:bg-gray-50'
+                } flex flex-col md:flex-row items-center gap-1 md:gap-2`}
+              >
+                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span className="hidden md:inline">Blogs</span>
+                <span className="md:hidden text-[10px] leading-tight">Blogs</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1602,6 +1641,50 @@ export default function ProfileView({ profile, isOwnProfile, parentProfile }: Pr
       {/* Tab Content - Only show for scouts (players use PlayerTabs) */}
       {profile.role === 'scout' && (
         <div className="mb-6 md:mb-8">
+          {activeTab === 'about' && (
+            <div className="space-y-6">
+              {/* Work History */}
+              {profile.work_history && (
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-black mb-3">Work History</h3>
+                  <p className="text-sm md:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {profile.work_history}
+                  </p>
+                </div>
+              )}
+
+              {/* Additional Info */}
+              {profile.additional_info && (
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-black mb-3">Additional Information</h3>
+                  <p className="text-sm md:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {profile.additional_info}
+                  </p>
+                </div>
+              )}
+
+              {/* Social Media Links */}
+              {profile.social_link && (
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-black mb-3">Social Media</h3>
+                  <a
+                    href={profile.social_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm md:text-base text-blue-600 hover:text-blue-800 underline break-all"
+                  >
+                    {profile.social_link.replace(/^https?:\/\//, '')}
+                  </a>
+                </div>
+              )}
+
+              {!profile.work_history && !profile.additional_info && !profile.social_link && (
+                <div className="text-center py-12 text-gray-500">
+                  No additional information available
+                </div>
+              )}
+            </div>
+          )}
           {activeTab === 'offers' && (
             <div className="space-y-6">
               {/* Purchase Evaluation Card - Show for others */}
