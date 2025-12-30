@@ -74,9 +74,9 @@ export default function PlayerSetupForm({ profile }: PlayerSetupFormProps) {
 
       // Validate sport for each link
       for (const link of validHudlLinks) {
-        const validSports = ['football', 'mens-basketball']
+        const validSports = ['football', '7on7', 'mens-basketball']
         if (!link.sport || !validSports.includes(link.sport)) {
-          setError('Please select a sport (football or men\'s basketball) for each film link.')
+          setError('Please select a sport (football, 7on7, or men\'s basketball) for each film link.')
           setLoading(false)
           return
         }

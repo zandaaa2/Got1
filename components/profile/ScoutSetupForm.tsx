@@ -38,17 +38,17 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
       }
 
       if (!formData.sports || formData.sports.length === 0) {
-        setError('Please select at least one sport you evaluate (football or men\'s basketball).')
+        setError('Please select at least one sport you evaluate (football, 7on7, or men\'s basketball).')
         setLoading(false)
         return
       }
 
-      // Validate sports are only football or men's basketball
+      // Validate sports are only football, 7on7, or men's basketball
       const validSports = formData.sports.filter((sport: string) => 
-        sport === 'football' || sport === 'mens-basketball'
+        sport === 'football' || sport === '7on7' || sport === 'mens-basketball'
       )
       if (validSports.length === 0) {
-        setError('Please select football or men\'s basketball as the sport you evaluate.')
+        setError('Please select football, 7on7, or men\'s basketball as the sport you evaluate.')
         setLoading(false)
         return
       }
@@ -188,7 +188,7 @@ export default function ScoutSetupForm({ profile }: ScoutSetupFormProps) {
             availableSports={['football', 'basketball']}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Select the sport(s) you evaluate. Currently, we support football and men's basketball.
+            Select the sport(s) you evaluate. Currently, we support football, 7on7, and men's basketball.
           </p>
         </div>
 

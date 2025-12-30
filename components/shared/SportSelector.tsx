@@ -8,6 +8,7 @@ interface SportOption {
 
 const SPORTS: SportOption[] = [
   { emoji: '🏈', name: 'Football', value: 'football' },
+  { emoji: '🏈', name: '7on7', value: '7on7' },
   { emoji: '🏀', name: "Men's Basketball", value: 'mens-basketball' },
   { emoji: '🏀', name: "Women's Basketball", value: 'womens-basketball' },
   { emoji: '⚽', name: 'Soccer', value: 'soccer' },
@@ -34,9 +35,9 @@ export function SportSelector({ selectedSport, onSelect, label = 'Sport', availa
   // Filter sports if availableSports is provided
   const filteredSports = availableSports 
     ? SPORTS.filter(sport => {
-        // Only show football and men's basketball
+        // Only show football, 7on7, and men's basketball
         if (availableSports.includes('basketball')) {
-          return sport.value === 'football' || sport.value === 'mens-basketball'
+          return sport.value === 'football' || sport.value === '7on7' || sport.value === 'mens-basketball'
         }
         return availableSports.includes(sport.value)
       })
@@ -93,9 +94,9 @@ export function MultiSportSelector({ selectedSports, onToggle, label = 'Sports',
   // Only show football and men's basketball
   const filteredSports = availableSports 
     ? SPORTS.filter(sport => {
-        // Only show football and men's basketball
+        // Only show football, 7on7, and men's basketball
         if (availableSports.includes('basketball')) {
-          return sport.value === 'football' || sport.value === 'mens-basketball'
+          return sport.value === 'football' || sport.value === '7on7' || sport.value === 'mens-basketball'
         }
         return availableSports.includes(sport.value)
       })
