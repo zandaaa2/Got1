@@ -24,9 +24,13 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
+  console.log('DiscoverMore: Component rendered', { currentPostId, userId })
+
   useEffect(() => {
+    console.log('DiscoverMore: useEffect running', { currentPostId, userId })
     const fetchFeed = async () => {
       try {
+        console.log('DiscoverMore: fetchFeed started')
         let feedItems: FeedItem[] = []
 
         // Try feed API first if authenticated
