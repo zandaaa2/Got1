@@ -65,9 +65,9 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
             .limit(5)
 
           if (!postsError && posts) {
-            // Fetch profiles for posts
-            const userIds = [...new Set(posts.map(p => p.user_id))]
-            const { data: profiles } = await supabase
+          // Fetch profiles for posts
+          const userIds = Array.from(new Set(posts.map(p => p.user_id)))
+          const { data: profiles } = await supabase
               .from('profiles')
               .select('id, user_id, username, full_name, avatar_url, organization, school, position')
               .in('user_id', userIds)
