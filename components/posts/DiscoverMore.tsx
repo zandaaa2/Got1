@@ -64,13 +64,27 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
             .order('created_at', { ascending: false })
             .limit(5)
 
-          if (!postsError && posts) {
-          // Fetch profiles for posts
-          const userIds = Array.from(new Set(posts.map(p => p.user_id)))
-          const { data: profiles } = await supabase
+          if (postsError) {
+            console.error('DiscoverMore: Posts query error:', postsError)
+          } else {
+            console.log('DiscoverMore: Posts fetched:', posts?.length || 0)
+          }
+
+          if (!postsError && posts && posts.length > 0) {
+            // Fetch profiles for posts
+            const userIds = Array.from(new Set(posts.map(p => p.user_id)))
+            console.log('DiscoverMore: Fetching profiles for user IDs:', userIds)
+            
+            const { data: profiles, error: profilesError } = await supabase
               .from('profiles')
               .select('id, user_id, username, full_name, avatar_url, organization, school, position')
               .in('user_id', userIds)
+
+            if (profilesError) {
+              console.error('DiscoverMore: Profiles query error:', profilesError)
+            } else {
+              console.log('DiscoverMore: Profiles fetched:', profiles?.length || 0)
+            }
 
             const profilesMap: Record<string, any> = {}
             profiles?.forEach(p => {
@@ -95,7 +109,13 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
             .order('published_at', { ascending: false })
             .limit(3)
 
-          if (!blogsError && blogs) {
+          if (blogsError) {
+            console.error('DiscoverMore: Blog posts query error:', blogsError)
+          } else {
+            console.log('DiscoverMore: Blog posts fetched:', blogs?.length || 0)
+          }
+
+          if (!blogsError && blogs && blogs.length > 0) {
             feedItems.push(...blogs.map(blog => ({
               type: 'blog' as const,
               id: blog.id,
@@ -136,7 +156,16 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
   }
 
   if (items.length === 0) {
-    // Don't show section if no items
+    // Show debug info in development
+    if (process.env.NODE_ENV === 'development') {
+      return (
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold text-black mb-4">Discover more</h2>
+          <p className="text-sm text-gray-500">No items found. Check console for errors.</p>
+        </div>
+      )
+    }
+    // Don't show section if no items in production
     return null
   }
 
