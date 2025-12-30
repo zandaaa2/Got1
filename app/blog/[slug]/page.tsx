@@ -37,13 +37,36 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
   }
 
+  // Get base URL for absolute image URLs
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://got1.app'
+  
+  // Ensure image URL is absolute
+  const imageUrl = post.image.startsWith('http') 
+    ? post.image 
+    : `${baseUrl}${post.image.startsWith('/') ? post.image : '/' + post.image}`
+
   return {
     title: `${post.title} | Got1 Blog`,
     description: post.excerpt,
     openGraph: {
       title: post.title,
       description: post.excerpt,
-      images: [post.image],
+      url: `${baseUrl}/blog/${post.slug}`,
+      type: 'article',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt,
+      images: [imageUrl],
     },
   }
 }
