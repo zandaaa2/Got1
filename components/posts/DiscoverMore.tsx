@@ -27,34 +27,90 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
   useEffect(() => {
     const fetchFeed = async () => {
       try {
-        // Feed API requires authentication
-        if (!userId) {
-          console.log('DiscoverMore: No userId, skipping fetch')
-          setLoading(false)
-          return
+        let feedItems: FeedItem[] = []
+
+        // Try feed API first if authenticated
+        if (userId) {
+          console.log('DiscoverMore: Fetching feed for userId:', userId)
+          try {
+            const response = await fetch('/api/posts/feed?mode=trending&limit=15')
+            
+            if (response.ok) {
+              const data = await response.json()
+              console.log('DiscoverMore: Feed API response:', data)
+              console.log('DiscoverMore: Items count:', data.items?.length || 0)
+              
+              if (data.items && data.items.length > 0) {
+                feedItems = data.items
+              }
+            } else {
+              console.warn('DiscoverMore: Feed API error:', response.status, response.statusText)
+            }
+          } catch (error) {
+            console.warn('DiscoverMore: Feed API fetch error:', error)
+          }
         }
 
-        console.log('DiscoverMore: Fetching feed for userId:', userId)
-        const response = await fetch('/api/posts/feed?mode=trending&limit=15')
-        
-        if (!response.ok) {
-          console.error('DiscoverMore: Feed API error:', response.status, response.statusText)
-          const errorText = await response.text()
-          console.error('DiscoverMore: Error response:', errorText)
-          setLoading(false)
-          return
+        // If feed API didn't return items, fetch directly from Supabase
+        if (feedItems.length === 0) {
+          console.log('DiscoverMore: Fetching directly from Supabase')
+          
+          // Fetch posts
+          const { data: posts, error: postsError } = await supabase
+            .from('posts')
+            .select('id, user_id, content, image_url, video_url, video_thumbnail_url, created_at')
+            .is('deleted_at', null)
+            .neq('id', currentPostId)
+            .order('created_at', { ascending: false })
+            .limit(5)
+
+          if (!postsError && posts) {
+            // Fetch profiles for posts
+            const userIds = [...new Set(posts.map(p => p.user_id))]
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, user_id, username, full_name, avatar_url, organization, school, position')
+              .in('user_id', userIds)
+
+            const profilesMap: Record<string, any> = {}
+            profiles?.forEach(p => {
+              profilesMap[p.user_id] = p
+            })
+
+            feedItems.push(...posts.map(post => ({
+              type: 'post' as const,
+              id: post.id,
+              created_at: post.created_at,
+              data: {
+                ...post,
+                profiles: profilesMap[post.user_id] || null,
+              },
+            })))
+          }
+
+          // Fetch blog posts
+          const { data: blogs, error: blogsError } = await supabase
+            .from('blog_posts')
+            .select('id, slug, title, excerpt, image, published_at')
+            .order('published_at', { ascending: false })
+            .limit(3)
+
+          if (!blogsError && blogs) {
+            feedItems.push(...blogs.map(blog => ({
+              type: 'blog' as const,
+              id: blog.id,
+              created_at: blog.published_at || new Date().toISOString(),
+              data: blog,
+            })))
+          }
         }
 
-        const data = await response.json()
-        console.log('DiscoverMore: Feed API response:', data)
-        console.log('DiscoverMore: Items count:', data.items?.length || 0)
-        
         // Filter out the current post and limit to 10 items
-        const filteredItems = data.items
-          ?.filter((item: FeedItem) => item.id !== currentPostId)
-          .slice(0, 10) || []
+        const filteredItems = feedItems
+          .filter((item: FeedItem) => item.id !== currentPostId)
+          .slice(0, 10)
         
-        console.log('DiscoverMore: Filtered items count:', filteredItems.length)
+        console.log('DiscoverMore: Final filtered items count:', filteredItems.length)
         setItems(filteredItems)
       } catch (error) {
         console.error('DiscoverMore: Error fetching discover more:', error)
@@ -64,7 +120,7 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
     }
 
     fetchFeed()
-  }, [currentPostId, userId])
+  }, [currentPostId, userId, supabase])
 
   if (loading) {
     return (
