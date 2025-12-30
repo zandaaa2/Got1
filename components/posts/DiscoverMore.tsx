@@ -29,21 +29,35 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
       try {
         // Feed API requires authentication
         if (!userId) {
+          console.log('DiscoverMore: No userId, skipping fetch')
           setLoading(false)
           return
         }
 
+        console.log('DiscoverMore: Fetching feed for userId:', userId)
         const response = await fetch('/api/posts/feed?mode=trending&limit=15')
-        if (response.ok) {
-          const data = await response.json()
-          // Filter out the current post and limit to 10 items
-          const filteredItems = data.items
-            ?.filter((item: FeedItem) => item.id !== currentPostId)
-            .slice(0, 10) || []
-          setItems(filteredItems)
+        
+        if (!response.ok) {
+          console.error('DiscoverMore: Feed API error:', response.status, response.statusText)
+          const errorText = await response.text()
+          console.error('DiscoverMore: Error response:', errorText)
+          setLoading(false)
+          return
         }
+
+        const data = await response.json()
+        console.log('DiscoverMore: Feed API response:', data)
+        console.log('DiscoverMore: Items count:', data.items?.length || 0)
+        
+        // Filter out the current post and limit to 10 items
+        const filteredItems = data.items
+          ?.filter((item: FeedItem) => item.id !== currentPostId)
+          .slice(0, 10) || []
+        
+        console.log('DiscoverMore: Filtered items count:', filteredItems.length)
+        setItems(filteredItems)
       } catch (error) {
-        console.error('Error fetching discover more:', error)
+        console.error('DiscoverMore: Error fetching discover more:', error)
       } finally {
         setLoading(false)
       }
@@ -66,6 +80,7 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
   }
 
   if (items.length === 0) {
+    // Don't show section if no items
     return null
   }
 
