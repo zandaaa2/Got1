@@ -406,7 +406,7 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content - Clickable to go to post page */}
       {isEditing ? (
         <div className="mb-4">
           <textarea
@@ -431,38 +431,44 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
           </div>
         </div>
       ) : (
-        post.content && (
-          <div className="mb-4">
-            <p className="text-gray-900 whitespace-pre-wrap break-words">{post.content}</p>
-          </div>
-        )
-      )}
+        <Link 
+          href={`/posts/${post.id}`}
+          className="block mb-4 cursor-pointer hover:opacity-95 transition-opacity"
+        >
+          {post.content && (
+            <div>
+              <p className="text-gray-900 whitespace-pre-wrap break-words">{post.content}</p>
+            </div>
+          )}
 
-      {/* Media */}
-      {post.image_url && (
-        <div className="mb-4 rounded-lg overflow-hidden">
-          <Image
-            src={post.image_url}
-            alt="Post image"
-            width={800}
-            height={600}
-            className="w-full h-auto object-contain max-h-96"
-            loading="lazy"
-          />
-        </div>
-      )}
+          {/* Media */}
+          {post.image_url && (
+            <div className="mt-4 rounded-lg overflow-hidden">
+              <Image
+                src={post.image_url}
+                alt="Post image"
+                width={800}
+                height={600}
+                className="w-full h-auto object-contain max-h-96"
+                loading="lazy"
+              />
+            </div>
+          )}
 
-      {post.video_url && (
-        <div className="mb-4 rounded-lg overflow-hidden bg-black">
-          <video
-            src={post.video_url}
-            controls
-            poster={post.video_thumbnail_url || undefined}
-            className="w-full max-h-96"
-          >
-            Your browser does not support the video tag.
-          </video>
-        </div>
+          {post.video_url && (
+            <div className="mt-4 rounded-lg overflow-hidden bg-black">
+              <video
+                src={post.video_url}
+                controls
+                poster={post.video_thumbnail_url || undefined}
+                className="w-full max-h-96"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          )}
+        </Link>
       )}
 
       {/* Footer Row: Likes/Comments on left, Share/Download on right */}
@@ -471,7 +477,10 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
         <div className="flex items-center gap-4">
           {/* Like button */}
           <button
-            onClick={handleLike}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleLike()
+            }}
             className="flex items-center gap-1.5 text-gray-600 hover:text-red-600 transition-colors"
           >
             <svg
@@ -492,7 +501,10 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
 
           {/* Comment button */}
           <button
-            onClick={handleCommentClick}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleCommentClick()
+            }}
             className="flex items-center gap-1.5 text-gray-600 hover:text-blue-600 transition-colors"
           >
             <svg
@@ -516,7 +528,10 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
         <div className="flex items-center gap-3">
           {/* Share button */}
           <button
-            onClick={handleShare}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleShare()
+            }}
             className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors rounded-full hover:bg-gray-100"
             title="Share post"
           >
