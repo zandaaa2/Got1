@@ -243,7 +243,7 @@ export default function PostCard({ post, onPinToggle }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    const postUrl = `${window.location.origin}/home`
+    const postUrl = `${window.location.origin}/posts/${post.id}`
     try {
       if (navigator.share) {
         await navigator.share({
