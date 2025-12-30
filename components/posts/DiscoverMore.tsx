@@ -140,7 +140,8 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
     }
 
     fetchFeed()
-  }, [currentPostId, userId, supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPostId, userId])
 
   if (loading) {
     return (
