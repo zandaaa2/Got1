@@ -215,12 +215,6 @@ export default async function PostPage({ params }: { params: { id: string } }) {
               userId={session?.user?.id || null}
             />
           </div>
-
-          {/* Discover More Section */}
-          <DiscoverMore 
-            currentPostId={post.id}
-            userId={session?.user?.id || null}
-          />
         </div>
       </main>
     </div>
