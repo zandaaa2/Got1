@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getGradientForId } from '@/lib/gradients'
 import { isMeaningfulAvatar } from '@/lib/avatar'
+import PostInteractions from '@/components/posts/PostInteractions'
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const supabase = createServerClient()
@@ -207,6 +208,12 @@ export default async function PostPage({ params }: { params: { id: string } }) {
                 </video>
               </div>
             )}
+
+            {/* Interaction Row */}
+            <PostInteractions 
+              postId={post.id} 
+              userId={session?.user?.id || null}
+            />
           </div>
         </div>
       </main>
