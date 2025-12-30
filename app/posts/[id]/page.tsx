@@ -36,12 +36,18 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     ? (post.content.length > 200 ? post.content.substring(0, 200) + '...' : post.content)
     : 'Post on Got1'
 
-  // Use post image if available, otherwise no image (text will show)
-  const imageUrl = post.image_url 
-    ? (post.image_url.startsWith('http') 
-        ? post.image_url 
-        : `${baseUrl}${post.image_url.startsWith('/') ? post.image_url : '/' + post.image_url}`)
-    : undefined
+  // Use post image if available, otherwise use poster's avatar, otherwise no image
+  let imageUrl: string | undefined
+  if (post.image_url) {
+    imageUrl = post.image_url.startsWith('http') 
+      ? post.image_url 
+      : `${baseUrl}${post.image_url.startsWith('/') ? post.image_url : '/' + post.image_url}`
+  } else if (profile?.avatar_url && profile.avatar_url) {
+    // Use poster's avatar if no post image
+    imageUrl = profile.avatar_url.startsWith('http')
+      ? profile.avatar_url
+      : `${baseUrl}${profile.avatar_url.startsWith('/') ? profile.avatar_url : '/' + profile.avatar_url}`
+  }
 
   const posterName = profile?.full_name || 'User'
 
@@ -49,8 +55,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     title: `${posterName}'s Post | Got1`,
     description: contentPreview,
     openGraph: {
-      title: contentPreview,
-      description: posterName,
+      title: contentPreview, // Content at the top
+      description: posterName, // Profile name at the bottom
       url: postUrl, // Full URL to the post page
       type: 'article',
       ...(imageUrl && {
@@ -66,8 +72,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     },
     twitter: {
       card: imageUrl ? 'summary_large_image' : 'summary',
-      title: contentPreview,
-      description: posterName,
+      title: contentPreview, // Content at the top
+      description: posterName, // Profile name at the bottom
       ...(imageUrl && {
         images: [imageUrl],
       }),
