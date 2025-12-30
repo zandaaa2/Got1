@@ -24,13 +24,12 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  console.log('DiscoverMore: Component rendered', { currentPostId, userId })
-
   useEffect(() => {
-    console.log('DiscoverMore: useEffect running', { currentPostId, userId })
+    console.log('🔍 DiscoverMore: Component mounted', { currentPostId, userId, hasSupabase: !!supabase })
+    
     const fetchFeed = async () => {
+      console.log('🔍 DiscoverMore: fetchFeed started')
       try {
-        console.log('DiscoverMore: fetchFeed started')
         let feedItems: FeedItem[] = []
 
         // Try feed API first if authenticated
@@ -146,6 +145,9 @@ export default function DiscoverMore({ currentPostId, userId }: DiscoverMoreProp
     fetchFeed()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPostId, userId])
+
+  // Always show something so we can verify component is rendering
+  console.log('🔍 DiscoverMore: Render', { loading, itemsCount: items.length, currentPostId, userId })
 
   if (loading) {
     return (
