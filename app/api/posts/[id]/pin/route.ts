@@ -50,6 +50,21 @@ export async function PATCH(
       )
     }
 
+    // If pinning this post, first unpin all other posts by this user
+    if (pinned) {
+      const { error: unpinError } = await supabase
+        .from('posts')
+        .update({ pinned: false })
+        .eq('user_id', session.user.id)
+        .neq('id', postId)
+        .is('deleted_at', null)
+
+      if (unpinError) {
+        console.error('Error unpinning other posts:', unpinError)
+        return handleApiError(unpinError, 'Failed to unpin other posts')
+      }
+    }
+
     // Update the pin status
     const { data: updatedPost, error: updateError } = await supabase
       .from('posts')
