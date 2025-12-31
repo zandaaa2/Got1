@@ -49,6 +49,20 @@ export async function PATCH(
       )
     }
 
+    // If pinning this blog post, first unpin all other blog posts by this user
+    if (pinned) {
+      const { error: unpinError } = await supabase
+        .from('blog_posts')
+        .update({ pinned: false })
+        .eq('scout_id', session.user.id)
+        .neq('id', blogPost.id)
+
+      if (unpinError) {
+        console.error('Error unpinning other blog posts:', unpinError)
+        return handleApiError(unpinError, 'Failed to unpin other blog posts')
+      }
+    }
+
     // Update the pin status
     const { data: updatedBlog, error: updateError } = await supabase
       .from('blog_posts')
